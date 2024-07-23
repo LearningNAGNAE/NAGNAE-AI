@@ -9,6 +9,8 @@ pip install insightface
 
 pip install transformers
 
+pip install happytransformer
+
 pip install fastapi
 
 pip install "uvicorn[standard]"
