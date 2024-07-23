@@ -1,0 +1,9 @@
+# requirements.txt
+
+fastapi
+uvicorn
+transformers
+torch
+happytransformer
+insightface
+#mysql-connector-python sqlalchemy
