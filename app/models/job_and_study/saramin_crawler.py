@@ -6,7 +6,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 
-def jobkorea_search_crawler(search_query):
+def saramin_search_crawler(search_query):
     # ChromeDriver 경로 설정
     chrome_driver_path = r"C:\chromedriver\chromedriver.exe"  # 실제 경로로 변경하세요
 
@@ -25,21 +25,24 @@ def jobkorea_search_crawler(search_query):
     try:
         all_results = []
         for search_query in search_queries:
-            driver.get("https://www.jobkorea.co.kr/")
+            driver.get("https://www.saramin.co.kr/")
 
-            search_box = driver.find_element(By.NAME, "stext")
+            driver.find_element(By.ID, "btn_search").click()
+
+            search_box = driver.find_element(By.ID, "ipt_keyword_recruit")
             search_box.send_keys(search_query)
-            search_box.send_keys(Keys.RETURN)
+            # search_box.send_keys(Keys.RETURN)
+            driver.find_element(By.ID, "btn_search_recruit").click()
 
             WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "div.list-default"))
+                EC.presence_of_element_located((By.CLASS_NAME, "content"))
             )
 
-            search_results = driver.find_elements(By.CSS_SELECTOR, "div.lists")
+            search_results = driver.find_elements(By.CLASS_NAME, "item_recruit")
 
             results = []
             for result in search_results[:5]:
-                title_element = result.find_element(By.CSS_SELECTOR, ".title")
+                title_element = result.find_element(By.CSS_SELECTOR, "a.data_layer")
                 link_element = title_element.get_attribute("href")
                 title = title_element.text
                 results.append({"title": title, "link": link_element})
@@ -52,7 +55,7 @@ def jobkorea_search_crawler(search_query):
         driver.quit()
 
 search_queries = ["외국인 직원", "외국인 가능"]
-results = jobkorea_search_crawler(search_queries)
+results = saramin_search_crawler(search_queries)
 
 for idx, result in enumerate(results, 1):
     print(f"{idx}. Title: {result['title']}")
