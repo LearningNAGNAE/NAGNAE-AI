@@ -1,3 +1,10 @@
+from langchain_openai import OpenAIEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain.agents import AgentExecutor, create_openai_tools_agent, Tool
+from langchain import hub
+from langchain_openai import ChatOpenAI
+from langchain.callbacks.manager import CallbackManager
+from typing import List, Dict
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -9,6 +16,11 @@ import requests
 import os
 import time
 import PyPDF2
+import numpy as np
+import faiss
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def download_pdf(url, output_path):
     response = requests.get(url)
@@ -24,7 +36,8 @@ def extract_text_from_pdf(pdf_path):
             page = reader.pages[page_num]
             text += page.extract_text()
     return text
-def google_search_crawler(search_query):
+
+def google_search_crawler(search_query: str) -> str:
     # ChromeDriver 경로 설정
     chrome_driver_path = r"C:\chromedriver\chromedriver.exe"  # 실제 경로로 변경하세요
 
@@ -38,8 +51,6 @@ def google_search_crawler(search_query):
     prefs = {"download.default_directory": download_folder}
     chrome_options.add_experimental_option("prefs", prefs)
     chrome_options.add_argument("--no-sandbox")
-    # chrome_options.add_argument("--headless")  # 헤드리스 모드 추가
-    # chrome_options.add_argument("--disable-gpu")  # Windows에서 헤드리스 모드 사용 시 필요할 수 있음
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--window-size=1920x1080")  # 창 크기 설정
 
@@ -92,13 +103,10 @@ def google_search_crawler(search_query):
 
         # 다운로드된 파일의 경로 확인
         files_before = set(os.listdir(download_folder))
-        print(f"Files before download: {files_before}")  # 디버깅 출력
         time.sleep(10)  # 다운로드 대기
         files_after = set(os.listdir(download_folder))
-        print(f"Files after download: {files_after}")  # 디버깅 출력
 
         new_files = files_after - files_before
-        print(f"New files: {new_files}")  # 디버깅 출력
 
         if not new_files:
             raise FileNotFoundError("PDF 파일을 찾을 수 없습니다. 다운로드 폴더: {}".format(download_folder))
@@ -115,13 +123,79 @@ def google_search_crawler(search_query):
 
         # PDF 파일에서 텍스트 추출
         pdf_text = extract_text_from_pdf(pdf_path)
-        print(pdf_text)
-
+        
         return pdf_text
     finally:
         # 브라우저 종료
         driver.quit()
 
-# 크롤러 실행
-search_query = "외국인 특별전형 시행계획"
-results = google_search_crawler(search_query)
+def create_faiss_index(texts: List[str], embedder) -> FAISS:
+    # Generate embeddings
+    embeddings = np.array([embedder.embed_query(text) for text in texts])
+    dimension = embeddings.shape[1]
+    
+    # Create FAISS index
+    index = faiss.IndexFlatL2(dimension)
+    index.add(embeddings)
+    
+    # Create a simple docstore and index_to_docstore_id mapping
+    docstore = {i: text for i, text in enumerate(texts)}
+    index_to_docstore_id = {i: str(i) for i in range(len(texts))}
+    
+    return FAISS(index=index, embedding_function=embedder, docstore=docstore, index_to_docstore_id=index_to_docstore_id)
+
+def search_faiss_index(query: str, faiss_index: FAISS) -> List[Dict[str, str]]:
+    query_embedding = embedder.embed_query(query)
+    query_embedding = np.array([query_embedding])
+    D, I = faiss_index.index.search(query_embedding, k=3)
+    results = [{"index": idx, "distance": dist, "document": faiss_index.docstore[idx]} for idx, dist in zip(I[0], D[0])]
+    return results
+
+# Define the tool
+tools = [
+    Tool(
+        name="Google_Search_and_PDF_Extractor",
+        func=google_search_crawler,
+        description="Searches for a query on Google, downloads the first PDF result, and extracts its text"
+    ),
+    Tool(
+        name="FAISS_Vector_Search",
+        func=search_faiss_index,
+        description="Searches in the FAISS index for a query"
+    )
+]
+
+# Initialize OpenAI embedding model
+embedder = OpenAIEmbeddings(api_key=os.getenv("OPENAI_API_KEY"))
+
+# Initialize FAISS index with some sample data (this should be replaced with real data)
+texts = ["Sample text 1", "Sample text 2", "Sample text 3"]
+faiss_index = create_faiss_index(texts, embedder)
+
+# Retrieve and adjust the prompt from hub
+prompt_template = hub.pull("hwchase17/openai-functions-agent")
+# Assuming prompt_template is a ChatPromptTemplate or similar
+# Update the prompt as needed (manual adjustment might be needed based on actual structure)
+# For simplicity, this assumes you will adjust it manually based on the template format
+
+# OpenAI model setup
+openai = ChatOpenAI(
+    model="gpt-4",
+    api_key=os.getenv("OPENAI_API_KEY"),
+    temperature=0.1
+)
+
+# Create the agent with the adjusted prompt
+agent = create_openai_tools_agent(llm=openai, tools=tools, prompt=prompt_template)
+
+# Define Agent Executor
+agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+
+# Run the agent with your query
+def run_agent(query: str) -> Dict:
+    return agent_executor.invoke({"input": query})
+
+if __name__ == "__main__":
+    search_query = "외국인 특별전형 시행계획"
+    result = run_agent(search_query)
+    print(result)
