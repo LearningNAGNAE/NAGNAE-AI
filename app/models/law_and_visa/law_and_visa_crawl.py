@@ -1,13 +1,15 @@
+import json
 from selenium.webdriver.common.by import By
 from app.models.law_and_visa.law_and_visa_util import wait_for_element, wait_for_element_safely
 import time
-
 
 def crawl_law_a(driver, url):
     driver.get(url)
     time.sleep(5)
 
     print("페이지 로딩 완료")
+    
+    all_laws = []  # 모든 법률 정보를 저장할 리스트
 
     while True:
         link_elements = wait_for_element(driver, By.XPATH, "//a[@name='listCont']")
@@ -20,11 +22,9 @@ def crawl_law_a(driver, url):
                 title = link_element.text.strip()
                 print(f"제목: {title}")
 
-                # 링크 클릭
                 driver.execute_script("arguments[0].click();", link_element)
                 time.sleep(3)
 
-                # 새 창으로 전환
                 driver.switch_to.window(driver.window_handles[-1])
 
                 print(f"현재 URL: {driver.current_url}")
@@ -41,15 +41,13 @@ def crawl_law_a(driver, url):
                         continue
 
                 if content:
-                    print(f"내용: {content}")
+                    print(f"내용: {content[:200]}...")  # 처음 200자만 출력
+                    all_laws.append({"title": title, "content": content})  # 법률 정보 저장
                 else:
                     print("내용을 찾을 수 없습니다.")
                 print("-------------------")
 
-                # 현재 창 닫기
                 driver.close()
-
-                # 원래 창으로 돌아가기
                 driver.switch_to.window(driver.window_handles[0])
                 time.sleep(2)
 
@@ -64,11 +62,21 @@ def crawl_law_a(driver, url):
             print("더 이상 다음 페이지가 없습니다.")
             break
 
+    # 크롤링한 데이터를 JSON 파일로 저장
+    with open('crawled_laws_a.json', 'w', encoding='utf-8') as f:
+        json.dump(all_laws, f, ensure_ascii=False, indent=4)
+
+    print(f"총 {len(all_laws)}개의 법률 정보를 크롤링하여 'crawled_laws_a.json' 파일에 저장했습니다.")
+
+    return all_laws
+
 def crawl_law_b(driver, url):
     driver.get(url)
-    time.sleep(10)  # 로딩 시간을 늘립니다
+    time.sleep(10)
 
     print("페이지 로딩 완료")
+    
+    all_laws = []  # 모든 법률 정보를 저장할 리스트
 
     while True:
         link_elements = wait_for_element_safely(driver, By.XPATH, "//a[@name='listCont']")
@@ -89,11 +97,9 @@ def crawl_law_b(driver, url):
                 title = link_element.text.strip()
                 print(f"제목: {title}")
 
-                # 링크 클릭
                 driver.execute_script("arguments[0].click();", link_element)
-                time.sleep(5)  # 대기 시간을 늘립니다
+                time.sleep(5)
 
-                # 새 창으로 전환
                 if len(driver.window_handles) > 1:
                     driver.switch_to.window(driver.window_handles[-1])
                 else:
@@ -111,11 +117,11 @@ def crawl_law_b(driver, url):
 
                 if content:
                     print(f"내용: {content[:200]}...")  # 처음 200자만 출력
+                    all_laws.append({"title": title, "content": content})  # 법률 정보 저장
                 else:
                     print("내용을 찾을 수 없습니다.")
                 print("-------------------")
 
-                # 현재 창 닫기
                 if len(driver.window_handles) > 1:
                     driver.close()
                     driver.switch_to.window(driver.window_handles[0])
@@ -128,7 +134,15 @@ def crawl_law_b(driver, url):
         next_button = wait_for_element_safely(driver, By.XPATH, "//a/img[@alt='다음 페이지']")
         if next_button:
             driver.execute_script("arguments[0].click();", next_button)
-            time.sleep(5)  # 대기 시간을 늘립니다
+            time.sleep(5)
         else:
             print("더 이상 다음 페이지가 없습니다.")
             break
+
+    # 크롤링한 데이터를 JSON 파일로 저장
+    with open('crawled_laws_b.json', 'w', encoding='utf-8') as f:
+        json.dump(all_laws, f, ensure_ascii=False, indent=4)
+
+    print(f"총 {len(all_laws)}개의 법률 정보를 크롤링하여 'crawled_laws_b.json' 파일에 저장했습니다.")
+
+    return all_laws
