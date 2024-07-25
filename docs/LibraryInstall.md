@@ -20,7 +20,7 @@ uvicorn main:app
 pip install mysql-connector-python sqlalchemy
 
 
-
+pip install tensorflow
 
 
 
