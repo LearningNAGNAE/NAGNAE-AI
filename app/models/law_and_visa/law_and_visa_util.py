@@ -12,7 +12,11 @@ def setup_driver():
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-    service = Service(ChromeDriverManager().install())
+    
+    # ChromeDriver 경로를 직접 지정
+    chromedriver_path = r"C:\\chromedriver\\chromedriver.exe"  # 실제 경로로 변경하세요
+    service = Service(chromedriver_path)
+
     return webdriver.Chrome(service=service, options=chrome_options)
 
 def wait_for_element(driver, by, value, timeout=30):
