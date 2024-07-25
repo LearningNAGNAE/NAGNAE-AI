@@ -24,10 +24,9 @@ def extract_text_from_pdf(pdf_path):
             page = reader.pages[page_num]
             text += page.extract_text()
     return text
-
 def google_search_crawler(search_query):
     # ChromeDriver 경로 설정
-    chrome_driver_path = r"C:\chromedriver-win64\chromedriver.exe"  # 실제 경로로 변경하세요
+    chrome_driver_path = r"C:\chromedriver\chromedriver.exe"  # 실제 경로로 변경하세요
 
     # 다운로드 경로 설정
     download_folder = r"C:\Users\hi02\dev\NAGNAE\NAGNAE-AI\pdf"
@@ -39,9 +38,9 @@ def google_search_crawler(search_query):
     prefs = {"download.default_directory": download_folder}
     chrome_options.add_experimental_option("prefs", prefs)
     chrome_options.add_argument("--no-sandbox")
+    # chrome_options.add_argument("--headless")  # 헤드리스 모드 추가
+    # chrome_options.add_argument("--disable-gpu")  # Windows에서 헤드리스 모드 사용 시 필요할 수 있음
     chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--headless")  # 헤드리스 모드 추가
-    chrome_options.add_argument("--disable-gpu")  # Windows에서 헤드리스 모드 사용 시 필요할 수 있음
     chrome_options.add_argument("--window-size=1920x1080")  # 창 크기 설정
 
     # Chrome WebDriver 설정
@@ -93,13 +92,13 @@ def google_search_crawler(search_query):
 
         # 다운로드된 파일의 경로 확인
         files_before = set(os.listdir(download_folder))
-        # print(f"Files before download: {files_before}")  # 디버깅 출력
+        print(f"Files before download: {files_before}")  # 디버깅 출력
         time.sleep(10)  # 다운로드 대기
         files_after = set(os.listdir(download_folder))
-        # print(f"Files after download: {files_after}")  # 디버깅 출력
+        print(f"Files after download: {files_after}")  # 디버깅 출력
 
         new_files = files_after - files_before
-        # print(f"New files: {new_files}")  # 디버깅 출력
+        print(f"New files: {new_files}")  # 디버깅 출력
 
         if not new_files:
             raise FileNotFoundError("PDF 파일을 찾을 수 없습니다. 다운로드 폴더: {}".format(download_folder))
@@ -124,5 +123,5 @@ def google_search_crawler(search_query):
         driver.quit()
 
 # 크롤러 실행
-search_query = "외국인 특별전형 시행계획 주요사항"
+search_query = "외국인 특별전형 시행계획"
 results = google_search_crawler(search_query)
