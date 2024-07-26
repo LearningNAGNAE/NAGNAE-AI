@@ -1,3 +1,6 @@
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 from langchain.agents import AgentExecutor, create_openai_tools_agent
 from langchain import hub
 from langchain.tools.retriever import create_retriever_tool
@@ -18,6 +21,18 @@ from langchain_community.document_loaders import PyPDFLoader
 import time
 
 load_dotenv()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 시작 시 실행할 코드
+    setup_langchain()
+    yield
+    # 종료 시 실행할 코드 (필요한 경우)
+
+app = FastAPI(lifespan=lifespan)
+
+class Query(BaseModel):
+    input: str
 
 def study_search_crawler(search_query: str) -> str:
     chrome_driver_path = r"C:\chromedriver\chromedriver.exe"  # Update this path as needed
@@ -93,41 +108,49 @@ def study_search_crawler(search_query: str) -> str:
     finally:
         driver.quit()
 
-if __name__ == "__main__":
+def setup_langchain():
+    global agent_executor
     search_query = "외국인 특별전형 시행계획 주요사항"
     pdf_path = study_search_crawler(search_query)
     print(f"Downloaded PDF file: {pdf_path}")
 
-# Langchain setup
-prompt = hub.pull("hwchase17/openai-functions-agent")
+    # Langchain setup
+    prompt = hub.pull("hwchase17/openai-functions-agent")
 
-openai = ChatOpenAI(
-    model="gpt-3.5-turbo", api_key=os.getenv("OPENAI_API_KEY"), temperature=0.1)
+    openai = ChatOpenAI(
+        model="gpt-3.5-turbo", api_key=os.getenv("OPENAI_API_KEY"), temperature=0.1)
 
-# Load the PDF file
-loader = PyPDFLoader(pdf_path)
-docs = loader.load()
+    # Load the PDF file
+    loader = PyPDFLoader(pdf_path)
+    docs = loader.load()
 
-# Split documents into chunks and create vector database
-documents = RecursiveCharacterTextSplitter(
-    chunk_size=1000, chunk_overlap=200).split_documents(docs)
-vectordb = FAISS.from_documents(documents, OpenAIEmbeddings())
-retriever = vectordb.as_retriever()
+    # Split documents into chunks and create vector database
+    documents = RecursiveCharacterTextSplitter(
+        chunk_size=1000, chunk_overlap=200).split_documents(docs)
+    vectordb = FAISS.from_documents(documents, OpenAIEmbeddings())
+    retriever = vectordb.as_retriever()
 
-print(retriever)
+    print(retriever)
 
-retriever_tool = create_retriever_tool(
-    retriever, "pdf_search", "PDF 파일에서 추출한 정보를 검색할 때 이 툴을 사용하세요.")
-print(retriever_tool.name)
+    retriever_tool = create_retriever_tool(
+        retriever, "pdf_search", "PDF 파일에서 추출한 정보를 검색할 때 이 툴을 사용하세요.")
+    print(retriever_tool.name)
 
-# Define tools for the agent
-tools = [retriever_tool]
+    # Define tools for the agent
+    tools = [retriever_tool]
 
-# Define the agent and create an executor
-agent = create_openai_tools_agent(llm=openai, tools=tools, prompt=prompt)
-agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+    # Define the agent and create an executor
+    agent = create_openai_tools_agent(llm=openai, tools=tools, prompt=prompt)
+    agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 
-# Execute the agent and get results
-agent_result = agent_executor.invoke({"input": "Please tell me in English which universities in Seoul have special admissions for foreigners."})
+@app.post("/query")
+def query_agent(query: Query):
+    try:
+        agent_result = agent_executor.invoke({"input": query.input})
+        return {"result": agent_result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-print(agent_result)
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
