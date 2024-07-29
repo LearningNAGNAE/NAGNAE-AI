@@ -6,6 +6,7 @@ from app.models.t2t import t2t
 from pydantic import BaseModel
 from app.models.study_crawl import setup_langchain
 from contextlib import asynccontextmanager
+from app.models.medical import Medical
 
 router = APIRouter()
 
@@ -52,6 +53,15 @@ async def t2t_endpoint(file: UploadFile = File(...)):
         # t2t.generate_code 호출
         result = await t2t.generate_code(text_data)
 
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/medical")
+async def medical(query: str):
+    try:
+        # 질문에 대한 답변 생성
+        result = await Medical.chatbot(query)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
