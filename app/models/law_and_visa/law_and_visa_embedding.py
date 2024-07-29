@@ -1,141 +1,300 @@
-# app/models/law_and_visa/law_and_visa_embedding.py
-from openai import OpenAI
-import json
 import os
-from dotenv import load_dotenv
-from pymilvus import Collection, utility, DataType, connections, CollectionSchema, FieldSchema
+import json
+import re
+import time
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
+from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain.schema import Document
+from langchain.text_splitter import CharacterTextSplitter
 
-# 환경 변수 로드
-load_dotenv()
+# 웹 요소를 기다리는 유틸리티 함수
+def wait_for_element(driver, by, value, timeout=10):
+    return WebDriverWait(driver, timeout).until(EC.presence_of_element_located((by, value)))
 
-# OpenAI API 키 설정
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-# OpenAI API를 사용하여 임베딩 생성
-def get_embedding(text):
-    response = client.embeddings.create(
-        input=text,
-        model="text-embedding-ada-002"
-    )
-    return response.data[0].embedding
-
-# 임베딩 생성
-def create_embeddings(laws):
-    embeddings = []
-    for i, law in enumerate(laws):
-        embedding = get_embedding(law['content'])
-        embeddings.append({'id': i, 'vector': embedding})  # 'i'를 ID로 사용
-    return embeddings
-
-def validate_embeddings(embeddings, dim):
-    for emb in embeddings:
-        if not isinstance(emb["vector"], list) or len(emb["vector"]) != dim:
-            raise ValueError(f"임베딩 데이터가 리스트 형식이 아니거나 {dim} 차원이 아닙니다.")
-        if not all(isinstance(x, float) for x in emb["vector"]):
-            raise ValueError("임베딩 데이터에 부동소수점(float) 타입이 아닌 값이 포함되어 있습니다.")
-
-# 컬렉션 생성
-def create_collection(collection_name, dim):
-    # 1. Set up a Milvus client
-    connections.connect(alias="default", host="localhost", port="19530")
-
-    # 2. Check if the collection exists and drop it if it does
-    if utility.has_collection(collection_name):
-        print(f"컬렉션 '{collection_name}'이(가) 이미 존재하므로 삭제합니다.")
-        utility.drop_collection(collection_name)
-
-    # 3. Create schema
-    id_field = FieldSchema(name="id", dtype=DataType.INT64, is_primary=True)
-    vector_field = FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=dim)
-    schema = CollectionSchema(fields=[id_field, vector_field], auto_id=False)
-
-    # 4. Create collection
-    collection = Collection(name=collection_name, schema=schema)
-    print(f"컬렉션 '{collection_name}'이(가) 생성되었습니다.")
-
-def create_index(collection_name):
-    collection = Collection(name=collection_name)
-    # 인덱스 생성 (예: IVF_FLAT)
-    index_params = {
-        "index_type": "IVF_FLAT",
-        "params": {"nlist": 1024},
-        "metric_type": "L2"
+# 판례 내용을 카테고리별로 파싱하는 함수
+def parse_content_category(content):
+    sections = {
+        "판시사항": re.search(r'【판시사항】(.*?)(?=【|$)', content, re.DOTALL),
+        "판결요지": re.search(r'【판결요지】(.*?)(?=【|$)', content, re.DOTALL),
+        "참조조문": re.search(r'【참조조문】(.*?)(?=【|$)', content, re.DOTALL),
+        "참조판례": re.search(r'【참조판례】(.*?)(?=【|$)', content, re.DOTALL),
+        "전문": re.search(r'【전\s*문】(.*?)(?=【|$)', content, re.DOTALL),
+        "주문": re.search(r'【주\s*문】(.*?)(?=【|$)', content, re.DOTALL),
+        "이유": re.search(r'【이\s*유】(.*?)(?=【|$)', content, re.DOTALL)
     }
-    collection.create_index(field_name="vector", index_params=index_params)
-    print(f"인덱스가 컬렉션 '{collection_name}'에 생성되었습니다.")
+    
+    parsed_content = {}
+    for key, match in sections.items():
+        if match:
+            section_content = match.group(1).strip()
+            section_content = re.sub(r'\s+', ' ', section_content).strip()
+            parsed_content[key] = section_content
+    
+    return parsed_content
 
-def save_embeddings(collection, embeddings):
-    ids = [emb["id"] for emb in embeddings]
-    vectors = [emb["vector"] for emb in embeddings]
-    # Insert data into the collection
-    res = collection.insert([ids, vectors])
-    print("임베딩 저장 완료:", res)
+# 법령 내용을 구조화하여 파싱하는 함수
+def parse_law_content(content):
+    structure = {}
+    current_chapter = None
+    current_article = None
+    current_content = []
+    has_structure = False
 
-def drop_collection_if_exists(collection_name):
-    if utility.has_collection(collection_name):
-        print(f"컬렉션 '{collection_name}'이(가) 이미 존재하므로 삭제합니다.")
-        utility.drop_collection(collection_name)
+    lines = content.split('\n')
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
 
-def load_collection(collection_name):
-    collection = Collection(name=collection_name)
-    collection.load()
-    print(f"컬렉션 '{collection_name}'이(가) 메모리에 로드되었습니다.")
+        chapter_match = re.match(r'^제(\d+)장\s+(.+)', line)
+        article_match = re.match(r'^제(\d+)조(\(([^)]+)\))?', line)
+        
+        if chapter_match:
+            has_structure = True
+            if current_article:
+                add_content_to_structure(structure, current_chapter, current_article, current_content)
+            current_chapter = f"제{chapter_match.group(1)}장"
+            structure[current_chapter] = {"title": chapter_match.group(2), "articles": {}}
+            current_article = None
+            current_content = []
+        elif article_match:
+            has_structure = True
+            if current_article:
+                add_content_to_structure(structure, current_chapter, current_article, current_content)
+            current_article = f"제{article_match.group(1)}조"
+            if article_match.group(3):
+                current_article += f"({article_match.group(3)})"
+            current_content = [line]
+        elif line.startswith('부칙'):
+            has_structure = True
+            if current_article:
+                add_content_to_structure(structure, current_chapter, current_article, current_content)
+            current_chapter = None
+            current_article = '부칙'
+            current_content = [line]
+        else:
+            current_content.append(line)
 
-def check_collection_schema(collection_name):
-    collection = Collection(name=collection_name)
-    schema = collection.schema
-    print("컬렉션 스키마:")
-    for field in schema.fields:
-        print(f"Field name: {field.name}, Type: {field.dtype}, Dim: {field.dim}")
+    if has_structure:
+        if current_article:
+            add_content_to_structure(structure, current_chapter, current_article, current_content)
+    else:
+        structure = {'content': clean_content(current_content)}
 
-def search_similar_documents(collection, query_embedding):
-    search_params = {
-        "metric_type": "L2",
-        "params": {"nprobe": 10}
-    }
-    results = collection.search(
-        data=[query_embedding],
-        anns_field="vector",
-        param=search_params,
-        limit=5
+    return structure
+
+# 파싱된 내용을 구조에 추가하는 헬퍼 함수
+def add_content_to_structure(structure, chapter, article, content):
+    cleaned_content = clean_content(content)
+    if chapter:
+        structure[chapter]["articles"][article] = cleaned_content
+    else:
+        structure[article] = cleaned_content
+
+# 내용을 정리하는 헬퍼 함수
+def clean_content(content):
+    paragraphs = [para.strip() for para in ' '.join(content).split('\n') if para.strip()]
+    return '\n'.join(paragraphs)
+
+# FAISS 인덱스를 업데이트하는 함수
+def update_faiss_index(laws, embeddings, index_name):
+    documents = []
+    for law in laws:
+        content = f"제목: {law['title']}\n\n"
+        if isinstance(law['content'], dict):
+            for section, section_content in law['content'].items():
+                content += f"{section}:\n{section_content}\n\n"
+        else:
+            content += f"내용:\n{law['content']}\n\n"
+        documents.append(Document(page_content=content, metadata={"title": law['title']}))
+    
+    text_splitter = CharacterTextSplitter(
+        separator='\n',
+        chunk_size=1000,  # chunk_size를 줄임
+        chunk_overlap=100,  # chunk_overlap을 줄임
+        length_function=len,
     )
-    return results[0]
+    texts = text_splitter.split_documents(documents)
+    
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    save_path = os.path.join(current_dir, f"faiss_index_{index_name}")
+    
+    if os.path.exists(save_path):
+        print(f"기존 FAISS 인덱스를 업데이트합니다: {save_path}")
+        vector_store = FAISS.load_local(save_path, embeddings, allow_dangerous_deserialization=True)
+        vector_store.add_documents(texts)
+    else:
+        print(f"새로운 FAISS 인덱스를 생성합니다: {save_path}")
+        vector_store = FAISS.from_documents(texts, embeddings)
+    
+    vector_store.save_local(save_path)
+    print(f"FAISS 인덱스를 저장했습니다: {save_path}")
+    
+    return len(texts)
 
-def main():
-    collection_name = "law_embeddings"
-    dim = 1536  # text-embedding-ada-002 모델의 임베딩 차원
-    
-    # 컬렉션이 존재하지 않는 경우 생성
-    drop_collection_if_exists(collection_name)
-    create_collection(collection_name, dim)
-    create_index(collection_name)
-    
-    # JSON 파일에서 법률 정보 로드
-    with open('crawled_laws_a.json', 'r', encoding='utf-8') as f:
-        laws_a = json.load(f)
-    with open('crawled_laws_b.json', 'r', encoding='utf-8') as f:
-        laws_b = json.load(f)
-    
-    all_laws = laws_a + laws_b
-    
-    # 임베딩 생성 및 저장
-    embeddings = create_embeddings(all_laws)
-    validate_embeddings(embeddings, dim)
-    
-    collection = Collection(name=collection_name)
-    save_embeddings(collection, embeddings)
-    
-    # 컬렉션 로드
-    load_collection(collection_name)
-    
-    # 검색 기능 테스트
-    query_text = "외국인"
-    query_embedding = get_embedding(query_text)
-    results = search_similar_documents(collection, query_embedding)
-    
-    print(f'\n"{query_text}"와 유사한 상위 5개 문서:')
-    for i, result in enumerate(results, 1):
-        print(f"   유사도 점수: {result.score:.4f}")
 
-if __name__ == "__main__":
-    main()
+# 판례 정보를 스크래핑하는 함수
+def scrap_law_a(driver, url, embeddings, index_name):
+    driver.get(url)
+    time.sleep(5)
+    print("페이지 로딩 완료")
+    
+    all_laws = []
+    content_count = 0
+
+    while True:
+        page_laws = []
+        link_elements = wait_for_element(driver, By.XPATH, "//a[@name='listCont']")
+        link_elements = driver.find_elements(By.XPATH, "//a[@name='listCont']")
+
+        for index, link_element in enumerate(link_elements, 1):
+            try:
+                content_count += 1
+                print(f"처리 중인 항목: {index}/{len(link_elements)}")
+                
+                title = link_element.text.strip()
+                print(f"제목: {title}")
+
+                driver.execute_script("arguments[0].click();", link_element)
+                time.sleep(3)
+
+                driver.switch_to.window(driver.window_handles[-1])
+                print(f"현재 URL: {driver.current_url}")
+
+                content_selectors = [".page_area"]
+                content = ""
+                
+                for selector in content_selectors:
+                    try:
+                        content_element = wait_for_element(driver, By.CSS_SELECTOR, selector, timeout=5)
+                        content = content_element.text
+                        content = parse_content_category(content)
+                        if content:
+                            break
+                    except:
+                        continue
+
+                if content:
+                    print(f"count: {content_count}") 
+                    print(f"제목: {title}") 
+                    print(f"파싱된 내용: {str(content)[:200]}...")  # 처음 200자만 출력
+                    page_laws.append({"title": title, "content": content})
+                else:
+                    print("내용을 찾을 수 없습니다.")
+                print("-------------------")
+
+                driver.close()
+                driver.switch_to.window(driver.window_handles[0])
+                time.sleep(1)
+
+            except Exception as e:
+                print(f"항목 처리 중 오류 발생: {str(e)}")
+
+        # 현재 페이지의 법률 정보를 FAISS에 저장
+        update_faiss_index(page_laws, embeddings, f"{index_name}_page")
+        all_laws.extend(page_laws)
+
+        try:
+            next_button = wait_for_element(driver, By.XPATH, "//a/img[@alt='다음 페이지']", timeout=10)
+            if next_button:
+                driver.execute_script("arguments[0].click();", next_button)
+                time.sleep(1)
+            else:
+                print("더 이상 다음 페이지가 없습니다.")
+                break
+        except TimeoutException:
+            print("다음 페이지 버튼을 찾을 수 없습니다. 크롤링을 종료합니다.")
+            break
+
+    # # 크롤링한 데이터를 JSON 파일로 저장
+    # with open('parsed_laws_a.json', 'w', encoding='utf-8') as f:
+    #     json.dump(all_laws, f, ensure_ascii=False, indent=4)
+
+    # print(f"총 {len(all_laws)}개의 파싱된 법률 정보를 'parsed_laws_a.json' 파일에 저장했습니다.")
+
+    return all_laws
+
+# 법령, 조약, 규칙/예규/선례 정보를 스크래핑하는 함수
+def scrap_law_b(driver, url, embeddings, index_name):
+    driver.get(url)
+    time.sleep(10)
+
+    print("페이지 로딩 완료")
+    
+    all_laws = []
+    content_count = 0
+
+    while True:
+        page_laws = []
+        link_elements = wait_for_element(driver, By.XPATH, "//a[@name='listCont']")
+        if link_elements is None:
+            link_elements = wait_for_element(driver, By.CSS_SELECTOR, ".search_result a")
+        
+        if link_elements is None:
+            print("링크 요소를 찾을 수 없습니다. 크롤링을 종료합니다.")
+            break
+
+        link_elements = driver.find_elements(By.XPATH, "//a[@name='listCont']") or driver.find_elements(By.CSS_SELECTOR, ".search_result a")
+
+        for index, link_element in enumerate(link_elements, 1):
+            try:
+                content_count += 1
+                print(f"처리 중인 항목: {index}/{len(link_elements)}")
+                
+                title = link_element.text.strip()
+                print(f"제목: {title}")
+
+                driver.execute_script("arguments[0].click();", link_element)
+                time.sleep(1)
+
+                if len(driver.window_handles) > 1:
+                    driver.switch_to.window(driver.window_handles[-1])
+                else:
+                    print("새 창이 열리지 않았습니다.")
+
+                print(f"현재 URL: {driver.current_url}")
+
+                content_element = wait_for_element(driver, By.CLASS_NAME, "page_area")
+                if content_element:
+                    content = content_element.text
+                    parsed_content = parse_law_content(content)
+                    print(f"count: {content_count}") 
+                    print(f"제목: {title}") 
+                    print(f"파싱된 내용: {str(parsed_content)[:200]}...")  # 처음 200자만 출력
+                    page_laws.append({"title": title, "content": parsed_content})
+                else:
+                    print("내용을 찾을 수 없습니다.")
+                print("-------------------")
+
+                if len(driver.window_handles) > 1:
+                    driver.close()
+                    driver.switch_to.window(driver.window_handles[0])
+                
+                time.sleep(2)
+
+            except Exception as e:
+                print(f"항목 처리 중 오류 발생: {str(e)}")
+
+        # 현재 페이지의 법률 정보를 FAISS에 저장
+        update_faiss_index(page_laws, embeddings, f"{index_name}_page")
+        all_laws.extend(page_laws)
+
+        next_button = wait_for_element(driver, By.XPATH, "//a/img[@alt='다음 페이지']")
+        if next_button:
+            driver.execute_script("arguments[0].click();", next_button)
+            time.sleep(1)
+        else:
+            print("더 이상 다음 페이지가 없습니다.")
+            break
+
+    # # 크롤링한 데이터를 JSON 파일로 저장
+    # with open(f'parsed_laws_{index_name}.json', 'w', encoding='utf-8') as f:
+    #     json.dump(all_laws, f, ensure_ascii=False, indent=4)
+
+    # print(f"총 {len(all_laws)}개의 파싱된 법률 정보를 'parsed_laws_{index_name}.json' 파일에 저장했습니다.")
+
+    return all_laws
