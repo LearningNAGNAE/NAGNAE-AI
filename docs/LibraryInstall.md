@@ -20,9 +20,9 @@ uvicorn main:app
 pip install mysql-connector-python sqlalchemy
 
 
+pip install tensorflow
 
-
-
+pip install tf-keras
 
 
 

@@ -109,7 +109,6 @@ def study_search_crawler(search_query: str) -> str:
         driver.quit()
 
 def setup_langchain():
-    global agent_executor
     search_query = "외국인 특별전형 시행계획 주요사항"
     pdf_path = study_search_crawler(search_query)
     print(f"Downloaded PDF file: {pdf_path}")
@@ -130,11 +129,8 @@ def setup_langchain():
     vectordb = FAISS.from_documents(documents, OpenAIEmbeddings())
     retriever = vectordb.as_retriever()
 
-    print(retriever)
-
     retriever_tool = create_retriever_tool(
         retriever, "pdf_search", "PDF 파일에서 추출한 정보를 검색할 때 이 툴을 사용하세요.")
-    print(retriever_tool.name)
 
     # Define tools for the agent
     tools = [retriever_tool]
@@ -143,14 +139,4 @@ def setup_langchain():
     agent = create_openai_tools_agent(llm=openai, tools=tools, prompt=prompt)
     agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 
-@app.post("/query")
-def query_agent(query: Query):
-    try:
-        agent_result = agent_executor.invoke({"input": query.input})
-        return {"result": agent_result}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    return agent_executor
