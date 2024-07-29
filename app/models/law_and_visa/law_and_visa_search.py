@@ -1,10 +1,21 @@
+import os
 import json
-from selenium.webdriver.common.by import By
-from app.models.law_and_visa.law_and_visa_util import wait_for_element, wait_for_element_safely
-import time
 import re
+import time
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
+from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain.schema import Document
+from langchain.text_splitter import CharacterTextSplitter
 
-# 카테고리별로 나누기
+# 웹 요소를 기다리는 유틸리티 함수
+def wait_for_element(driver, by, value, timeout=10):
+    return WebDriverWait(driver, timeout).until(EC.presence_of_element_located((by, value)))
+
+# 판례 내용을 카테고리별로 파싱하는 함수
 def parse_content_category(content):
     sections = {
         "판시사항": re.search(r'【판시사항】(.*?)(?=【|$)', content, re.DOTALL),
@@ -19,16 +30,13 @@ def parse_content_category(content):
     parsed_content = {}
     for key, match in sections.items():
         if match:
-            # 내용을 추출하고 정리합니다
             section_content = match.group(1).strip()
-
-            # 연속된 줄바꿈을 하나의 공백으로 대체하고, 앞뒤 공백을 제거합니다
             section_content = re.sub(r'\s+', ' ', section_content).strip()
             parsed_content[key] = section_content
     
     return parsed_content
 
-#조항별로 나누기
+# 법령 내용을 구조화하여 파싱하는 함수
 def parse_law_content(content):
     structure = {}
     current_chapter = None
@@ -75,12 +83,11 @@ def parse_law_content(content):
         if current_article:
             add_content_to_structure(structure, current_chapter, current_article, current_content)
     else:
-        # 구조가 없는 경우 전체 내용을 하나의 content로 처리
         structure = {'content': clean_content(current_content)}
 
     return structure
 
-# 내용을 정리하여 구조에 추가
+# 파싱된 내용을 구조에 추가하는 헬퍼 함수
 def add_content_to_structure(structure, chapter, article, content):
     cleaned_content = clean_content(content)
     if chapter:
@@ -88,20 +95,59 @@ def add_content_to_structure(structure, chapter, article, content):
     else:
         structure[article] = cleaned_content
 
-# 내용 정리: 연속된 줄바꿈을 하나로 줄이고 각 문단을 정리
+# 내용을 정리하는 헬퍼 함수
 def clean_content(content):
     paragraphs = [para.strip() for para in ' '.join(content).split('\n') if para.strip()]
     return '\n'.join(paragraphs)
 
-def scrap_law_a(driver, url):
+# FAISS 인덱스를 업데이트하는 함수
+def update_faiss_index(laws, embeddings, index_name):
+    documents = []
+    for law in laws:
+        content = f"제목: {law['title']}\n\n"
+        if isinstance(law['content'], dict):
+            for section, section_content in law['content'].items():
+                content += f"{section}:\n{section_content}\n\n"
+        else:
+            content += f"내용:\n{law['content']}\n\n"
+        documents.append(Document(page_content=content, metadata={"title": law['title']}))
+    
+    text_splitter = CharacterTextSplitter(
+        separator='\n',
+        chunk_size=1000,  # chunk_size를 줄임
+        chunk_overlap=100,  # chunk_overlap을 줄임
+        length_function=len,
+    )
+    texts = text_splitter.split_documents(documents)
+    
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    save_path = os.path.join(current_dir, f"faiss_index_{index_name}")
+    
+    if os.path.exists(save_path):
+        print(f"기존 FAISS 인덱스를 업데이트합니다: {save_path}")
+        vector_store = FAISS.load_local(save_path, embeddings, allow_dangerous_deserialization=True)
+        vector_store.add_documents(texts)
+    else:
+        print(f"새로운 FAISS 인덱스를 생성합니다: {save_path}")
+        vector_store = FAISS.from_documents(texts, embeddings)
+    
+    vector_store.save_local(save_path)
+    print(f"FAISS 인덱스를 저장했습니다: {save_path}")
+    
+    return len(texts)
+
+
+# 판례 정보를 스크래핑하는 함수
+def scrap_law_a(driver, url, embeddings, index_name):
     driver.get(url)
     time.sleep(5)
-
     print("페이지 로딩 완료")
     
-    all_laws = []  # 모든 법률 정보를 저장할 리스트
-    content_count = 0 # 내용 수
+    all_laws = []
+    content_count = 0
+
     while True:
+        page_laws = []
         link_elements = wait_for_element(driver, By.XPATH, "//a[@name='listCont']")
         link_elements = driver.find_elements(By.XPATH, "//a[@name='listCont']")
 
@@ -117,7 +163,6 @@ def scrap_law_a(driver, url):
                 time.sleep(3)
 
                 driver.switch_to.window(driver.window_handles[-1])
-
                 print(f"현재 URL: {driver.current_url}")
 
                 content_selectors = [".page_area"]
@@ -136,36 +181,45 @@ def scrap_law_a(driver, url):
                 if content:
                     print(f"count: {content_count}") 
                     print(f"제목: {title}") 
-                    print(f"파싱된 내용: {str(content)}")  # 처음 200자만 출력
-                    all_laws.append({"title": title, "content": content})  # 파싱된 법률 정보 저장
+                    print(f"파싱된 내용: {str(content)[:200]}...")  # 처음 200자만 출력
+                    page_laws.append({"title": title, "content": content})
                 else:
                     print("내용을 찾을 수 없습니다.")
                 print("-------------------")
 
                 driver.close()
                 driver.switch_to.window(driver.window_handles[0])
-                time.sleep(2)
+                time.sleep(1)
 
             except Exception as e:
                 print(f"항목 처리 중 오류 발생: {str(e)}")
 
+        # 현재 페이지의 법률 정보를 FAISS에 저장
+        update_faiss_index(page_laws, embeddings, f"{index_name}_page")
+        all_laws.extend(page_laws)
+
         try:
-            next_button = wait_for_element(driver, By.XPATH, "//a/img[@alt='다음 페이지']")
-            driver.execute_script("arguments[0].click();", next_button)
-            time.sleep(3)
-        except:
-            print("더 이상 다음 페이지가 없습니다.")
+            next_button = wait_for_element(driver, By.XPATH, "//a/img[@alt='다음 페이지']", timeout=10)
+            if next_button:
+                driver.execute_script("arguments[0].click();", next_button)
+                time.sleep(1)
+            else:
+                print("더 이상 다음 페이지가 없습니다.")
+                break
+        except TimeoutException:
+            print("다음 페이지 버튼을 찾을 수 없습니다. 크롤링을 종료합니다.")
             break
 
-    # 크롤링한 데이터를 JSON 파일로 저장
-    with open('parsed_laws_a.json', 'w', encoding='utf-8') as f:
-        json.dump(all_laws, f, ensure_ascii=False, indent=4)
+    # # 크롤링한 데이터를 JSON 파일로 저장
+    # with open('parsed_laws_a.json', 'w', encoding='utf-8') as f:
+    #     json.dump(all_laws, f, ensure_ascii=False, indent=4)
 
-    print(f"총 {len(all_laws)}개의 파싱된 법률 정보를 'parsed_laws_a.json' 파일에 저장했습니다.")
+    # print(f"총 {len(all_laws)}개의 파싱된 법률 정보를 'parsed_laws_a.json' 파일에 저장했습니다.")
 
     return all_laws
 
-def cscrap_law_b(driver, url):
+# 법령, 조약, 규칙/예규/선례 정보를 스크래핑하는 함수
+def scrap_law_b(driver, url, embeddings, index_name):
     driver.get(url)
     time.sleep(10)
 
@@ -175,9 +229,9 @@ def cscrap_law_b(driver, url):
     content_count = 0
 
     while True:
+        page_laws = []
         link_elements = wait_for_element(driver, By.XPATH, "//a[@name='listCont']")
         if link_elements is None:
-            print("링크 요소를 찾을 수 없습니다. 다른 선택자를 시도합니다.")
             link_elements = wait_for_element(driver, By.CSS_SELECTOR, ".search_result a")
         
         if link_elements is None:
@@ -195,7 +249,7 @@ def cscrap_law_b(driver, url):
                 print(f"제목: {title}")
 
                 driver.execute_script("arguments[0].click();", link_element)
-                time.sleep(5)
+                time.sleep(1)
 
                 if len(driver.window_handles) > 1:
                     driver.switch_to.window(driver.window_handles[-1])
@@ -210,8 +264,8 @@ def cscrap_law_b(driver, url):
                     parsed_content = parse_law_content(content)
                     print(f"count: {content_count}") 
                     print(f"제목: {title}") 
-                    print(f"파싱된 내용: {str(parsed_content)}...")  # 처음 200자만 출력
-                    all_laws.append({"title": title, "content": parsed_content})
+                    print(f"파싱된 내용: {str(parsed_content)[:200]}...")  # 처음 200자만 출력
+                    page_laws.append({"title": title, "content": parsed_content})
                 else:
                     print("내용을 찾을 수 없습니다.")
                 print("-------------------")
@@ -225,18 +279,22 @@ def cscrap_law_b(driver, url):
             except Exception as e:
                 print(f"항목 처리 중 오류 발생: {str(e)}")
 
+        # 현재 페이지의 법률 정보를 FAISS에 저장
+        update_faiss_index(page_laws, embeddings, f"{index_name}_page")
+        all_laws.extend(page_laws)
+
         next_button = wait_for_element(driver, By.XPATH, "//a/img[@alt='다음 페이지']")
         if next_button:
             driver.execute_script("arguments[0].click();", next_button)
-            time.sleep(5)
+            time.sleep(1)
         else:
             print("더 이상 다음 페이지가 없습니다.")
             break
 
-    # 크롤링한 데이터를 JSON 파일로 저장
-    with open('parsed_laws.json', 'w', encoding='utf-8') as f:
-        json.dump(all_laws, f, ensure_ascii=False, indent=4)
+    # # 크롤링한 데이터를 JSON 파일로 저장
+    # with open(f'parsed_laws_{index_name}.json', 'w', encoding='utf-8') as f:
+    #     json.dump(all_laws, f, ensure_ascii=False, indent=4)
 
-    print(f"총 {len(all_laws)}개의 파싱된 법률 정보를 'parsed_laws.json' 파일에 저장했습니다.")
+    # print(f"총 {len(all_laws)}개의 파싱된 법률 정보를 'parsed_laws_{index_name}.json' 파일에 저장했습니다.")
 
     return all_laws
