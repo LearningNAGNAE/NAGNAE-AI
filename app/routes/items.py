@@ -7,13 +7,35 @@ from pydantic import BaseModel
 from app.models.study_crawl import setup_langchain
 from contextlib import asynccontextmanager
 from app.models.medical import Medical
+from app.models.job_crawl import get_agent_response
 
 router = APIRouter()
 
 class Query(BaseModel):
     input: str
 
+class QueryRequest(BaseModel):
+    query: str
+
 agent_executor = None
+
+@router.post("/job")
+async def ask(query_request: QueryRequest):
+    user_query = query_request.query
+
+    if not user_query:
+        raise HTTPException(status_code=400, detail="Query is required")
+
+    response = get_agent_response(user_query)
+
+    response_with_links = response.copy()
+    response_with_links["answer"] = response["answer"]
+    for doc in response["source_documents"]:
+        title = doc.page_content
+        link = doc.metadata.get("link", "https://www.jobploy.kr/ko/recruit")
+        response_with_links["answer"] += f"\n- {title}: {link}"
+
+    return response_with_links
 
 @asynccontextmanager
 async def lifespan(app):
@@ -23,7 +45,7 @@ async def lifespan(app):
     yield
     # 종료 시 실행할 코드 (필요한 경우)
 
-@router.post("/job_and_study")
+@router.post("/study")
 def query_agent(query: Query):
     try:
         agent_result = agent_executor.invoke({"input": query.input})
