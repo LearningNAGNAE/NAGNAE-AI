@@ -7,8 +7,13 @@ from pydantic import BaseModel
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.vectorstores import FAISS
 from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate, AIMessagePromptTemplate
-from langchain.memory import ConversationBufferMemory
-from langchain.chains import ConversationalRetrievalChain
+from langchain.memory import ConversationBufferMemory, ChatMessageHistory
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain.schema import BaseChatMessageHistory
+import logging
+import traceback
 
 # 환경 변수 로드
 load_dotenv()
@@ -19,12 +24,14 @@ app = FastAPI()
 # 입력 데이터 모델 정의
 class Query(BaseModel):
     question: str
+    session_id: str
 
-# 모델 초기화
 embeddings = OpenAIEmbeddings()
-index_name = "faiss_index_law_page"
+index_name = "faiss_index_law_and_visa_page"
 current_dir = os.path.dirname(os.path.abspath(__file__))
 index_path = os.path.join(current_dir, index_name)
+
+
 
 # FAISS 인덱스 로드
 if not os.path.exists(index_path):
@@ -33,36 +40,110 @@ if not os.path.exists(index_path):
 vector_store = FAISS.load_local(index_path, embeddings, allow_dangerous_deserialization=True)
 chat = ChatOpenAI(temperature=0, model="gpt-3.5-turbo")
 
-# 시스템 프롬프트 정의
+print(f"FAISS 인덱스 크기: {vector_store.index.ntotal}")
+
+
+
+# 벡터 저장소를 검색기로 사용합니다.
+retriever = vector_store.as_retriever()
+
+
+
+# ------------------ 시스템 프롬프트 정의 -----------------------
 system_prompt = """
-당신은 한국의 외국인 노동자와 유학생을 위한 법률 상담 전문가이자 통역/번역가입니다. 
-주어진 정보를 바탕으로 친절하고 명확하게 설명해주세요. 
-법률 정보를 제공할 때는 정확성을 유지하면서도 이해하기 쉽게 설명해야 합니다.
-답변할 수 없는 질문에 대해서는 솔직히 모른다고 인정하고, 필요한 경우 전문가와 상담을 권유하세요.
+# AI Assistant for Korean Law and Visa Information
+
+## Role and Responsibility
+You are a specialized AI assistant providing law and visa-related information for foreigners residing in Korea. Your primary goals are to:
+
+1. Explain information kindly and clearly
+2. Maintain accuracy while being easy to understand
+3. Adhere strictly to the given guidelines
+
+## Step-by-step Guidelines
+
+### Step 1: Information Source
+- Use **ONLY** the content from the given context information to answer
+- Do NOT include any information that is not in the context
+
+### Step 2: Relevance
+- Exclude information irrelevant to the question
+- Focus on providing a direct and pertinent answer
+
+### Step 3: Clarity and Conciseness
+- Write your answers concisely and clearly
+- Use simple language where possible, avoiding jargon unless necessary
+
+### Step 4: Handling Uncertainty
+- If uncertain or unable to answer with the given information, respond with:
+  > "I cannot provide an accurate answer with the given information. I recommend consulting a legal professional or the appropriate government office for specific advice."
+
+### Step 5: Legal Disclaimers
+- When discussing legal matters:
+  1. Emphasize that laws may change
+  2. Encourage users to verify current regulations
+
+### Step 6: Visa-related Queries
+- For visa-related questions, always advise:
+  > "Please check with the Korean Immigration Service for the most up-to-date information."
+
+### Step 7: Objectivity
+- Avoid giving personal opinions or interpretations of the law
+- Stick to factual information provided in the context
+
+## Final Reminder
+Always approach each query systematically, following these steps to ensure accurate, helpful, and responsible assistance.
 """
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+# ------------------------------------------------------------
 
 # 프롬프트 템플릿 설정
 system_message_prompt = SystemMessagePromptTemplate.from_template(system_prompt)
 human_template = """
-관련 정보: {context}
+context: {context}
 
-질문: {question}
+question: {question}
 """
 human_message_prompt = HumanMessagePromptTemplate.from_template(human_template)
-ai_message_prompt = AIMessagePromptTemplate.from_template("답변:")
+ai_message_prompt = AIMessagePromptTemplate.from_template("answer:")
 chat_prompt = ChatPromptTemplate.from_messages([
     system_message_prompt,
     human_message_prompt,
     ai_message_prompt
 ])
 
-# 대화 기록을 유지하기 위한 메모리
-memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
-qa_chain = ConversationalRetrievalChain.from_llm(
-    llm=chat,
-    retriever=vector_store.as_retriever(),
-    memory=memory
+# ChatOpenAI 모델을 초기화합니다.
+model = ChatOpenAI(temperature=0)
+
+# 검색 체인을 구성합니다.
+retrieval_chain = (
+    {
+        "context": lambda x: retriever.get_relevant_documents(x["question"]),
+        "question": lambda x: x["question"]
+    }
+    | chat_prompt
+    | model
+    | StrOutputParser()
 )
+
+
+# 메모리 저장소
+memory_store = {}
+
+def get_memory(session_id: str) -> BaseChatMessageHistory:
+    if session_id not in memory_store:
+        memory_store[session_id] = ChatMessageHistory()
+    return memory_store[session_id]
+
+# RunnableWithMessageHistory 설정
+chain_with_history = RunnableWithMessageHistory(
+    retrieval_chain,
+    get_memory,
+    input_messages_key="question",
+    history_messages_key="chat_history",
+)
+
 
 # 언어 감지 함수
 def detect_language(text):
@@ -75,6 +156,7 @@ def detect_language(text):
     response = chat.invoke(messages)
     return response.content.strip()
 
+
 # 요청 검증 예외 처리
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
@@ -83,34 +165,48 @@ async def validation_exception_handler(request, exc):
         content={"detail": str(exc)}
     )
 
-# API 엔드포인트 정의
+
+
+# --------------------- API 엔드포인트 정의----------------------
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI()
+
+# CORS 미들웨어 추가
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # React 앱의 주소
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 @app.post("/ask")
 async def ask_question(query: Query):
     try:
-        # 질문이 문자열인지 확인
         question = query.question if isinstance(query.question, str) else str(query.question)
+        session_id = query.session_id
+        print(f"질문: {question}")
 
         # 언어 감지
         language = detect_language(question)
 
-        # FAISS를 사용한 유사도 검색
-        docs = vector_store.similarity_search(question, k=4)
-        context = "\n".join([doc.page_content for doc in docs])
+        # RunnableWithMessageHistory를 사용하여 응답 생성
+        response = chain_with_history.invoke(
+            {"question": question},
+            config={"configurable": {"session_id": session_id}}
+        )
 
-        # 프롬프트 형식화
-        formatted_prompt = chat_prompt.format_prompt(context=context, question=question)
-
-        # LLM에 요청
-        response = qa_chain({"question": question, "chat_history": []})
-
-        # 응답 반환
         return {
             "question": question,
-            "answer": response['answer'],
-            "detected_language": language
+            "answer": response,
+            "detected_language": language,
         }
     except Exception as e:
+        logger.error(f"An error occurred: {str(e)}")
+        logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
+
 # 메인 실행 부분
 if __name__ == "__main__":
     import uvicorn
