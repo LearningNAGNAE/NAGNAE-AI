@@ -8,6 +8,7 @@ from app.models.study_crawl import setup_langchain
 from contextlib import asynccontextmanager
 from app.models.medical import Medical
 from app.models.job_crawl import get_agent_response
+import re
 
 router = APIRouter()
 
@@ -49,7 +50,15 @@ async def lifespan(app):
 def query_agent(query: Query):
     try:
         agent_result = agent_executor.invoke({"input": query.input})
-        return {"result": agent_result}
+        
+        # 결과에서 'output' 키의 값을 추출
+        raw_output = agent_result.get('output', '')
+        
+        # 정규표현식을 사용하여 불필요한 부분 제거
+        cleaned_output = re.sub(r'^.*?"output":\s*"|"$', '', raw_output)
+        cleaned_output = cleaned_output.replace('\\n', '\n').strip()
+        
+        return {"result": cleaned_output}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
