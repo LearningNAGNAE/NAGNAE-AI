@@ -4,150 +4,138 @@ from pydantic import BaseModel
 from langchain.agents import AgentExecutor, create_openai_tools_agent
 from langchain import hub
 from langchain.tools.retriever import create_retriever_tool
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_openai import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.vectorstores import FAISS
-from langchain_openai import ChatOpenAI
 from selenium import webdriver
+from langchain_core.documents import Document
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 import os
 from dotenv import load_dotenv
-from langchain_community.document_loaders import PyPDFLoader
-import time
 
+# 환경 변수 로드
 load_dotenv()
+
+# OpenAI API 키 설정
+openai_api_key = os.getenv("OPENAI_API_KEY")
+
+# 글로벌 변수로 agent_executor 선언
+agent_executor = None
+
+def jobploy_crawler(pages=5):
+    chrome_driver_path = r"C:\chromedriver\chromedriver.exe"  # Update to the actual path
+
+    chrome_options = Options()
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--window-size=1920x1080")  # Set window size
+
+    service = Service(chrome_driver_path)
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+
+    results = []
+    try:
+        for page in range(1, pages+1):
+            driver.get(f"https://www.jobploy.kr/ko/recruit?page={page}")
+
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CLASS_NAME, "content"))
+            )
+
+            job_listings = driver.find_elements(By.CSS_SELECTOR, ".item.col-6")
+
+            for job in job_listings:
+                title_element = job.find_element(By.CSS_SELECTOR, "h6.mb-1")
+                link_element = job.find_element(By.CSS_SELECTOR, "a").get_attribute("href")
+                pay_element = job.find_element(By.CSS_SELECTOR, "p.pay")
+                badge_elements = job.find_elements(By.CSS_SELECTOR, ".badge.text-dark.bg-secondary-150.rounded-pill")
+
+                if len(badge_elements) >= 3:
+                    location_element = badge_elements[0]
+                    closing_date_element = badge_elements[2]
+                    location = location_element.text
+                    closing_date = closing_date_element.text
+                else:
+                    closing_date = "마감 정보 없음"
+                    location = "위치 정보 없음"
+
+                title = title_element.text
+                pay = pay_element.text
+                results.append({"title": title, "link": link_element, "closing_date": closing_date, "location": location, "pay": pay})
+
+                print(results)
+    finally:
+        driver.quit()
+
+    return results
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 시작 시 실행할 코드
-    setup_langchain()
+    # 시작 시 실행될 코드
+    global agent_executor
+    
+    # 크롤링 데이터 가져오기
+    crawled_data = jobploy_crawler(pages=5)
+
+    # 크롤링한 데이터를 Document 객체로 변환
+    documents = [
+        Document(
+            page_content=f"Title: {job['title']}\nLink: {job['link']}\nClosing Date: {job['closing_date']}\nLocation: {job['location']}\nPay: {job['pay']}",
+            metadata={"source": job['link']}
+        ) for job in crawled_data
+    ]
+
+    # 벡터 데이터베이스 생성
+    embeddings = OpenAIEmbeddings()
+    vectorstore = FAISS.from_documents(documents, embeddings)
+
+    # 검색기 생성
+    retriever = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 5})
+
+    # 검색기 도구 생성
+    retriever_tool = create_retriever_tool(
+        retriever,
+        "job_search",
+        "Use this tool to search for job information from Jobploy website."
+    )
+
+    # LLM 모델 설정
+    llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.1)
+
+    # Agent 프롬프트 설정
+    prompt = hub.pull("hwchase17/openai-functions-agent")
+    prompt = prompt.partial(
+        system_message="You are an AI assistant specializing in job search. Your task is to provide accurate and relevant information about job listings from the Jobploy website. When answering questions, use the information from the job listings directly, and avoid making assumptions or providing information not present in the data."
+    )
+
+    # Agent 생성
+    agent = create_openai_tools_agent(llm=llm, tools=[retriever_tool], prompt=prompt)
+
+    # Agent Executor 생성
+    agent_executor = AgentExecutor(agent=agent, tools=[retriever_tool], verbose=True)
+
     yield
-    # 종료 시 실행할 코드 (필요한 경우)
+
+    # 종료 시 실행될 코드
+    # 필요한 경우 여기에 정리 코드를 추가할 수 있습니다.
 
 app = FastAPI(lifespan=lifespan)
 
 class Query(BaseModel):
     input: str
 
-def study_search_crawler(search_query: str) -> str:
-    chrome_driver_path = r"C:\chromedriver\chromedriver.exe"  # Update this path as needed
-    download_folder = r"C:\Users\hi02\dev\NAGNAE\NAGNAE-AI\pdf"
-    if not os.path.exists(download_folder):
-        os.makedirs(download_folder)
-
-    chrome_options = Options()
-    prefs = {"download.default_directory": download_folder}
-    chrome_options.add_experimental_option("prefs", prefs)
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--window-size=1920x1080")
-
-    service = Service(chrome_driver_path)
-    driver = webdriver.Chrome(service=service, options=chrome_options)
-
-    try:
-        driver.get("https://www.adiga.kr/man/inf/mainView.do?menuId=PCMANINF1000")
-        search_box = driver.find_element(By.CLASS_NAME, "XSSSafeInput")
-        search_box.send_keys(search_query)
-        search_box.send_keys(Keys.RETURN)
-        time.sleep(2)
-
-        WebDriverWait(driver, 30).until(
-            EC.presence_of_element_located((By.ID, "boardCon"))
-        )
-
-        search_results = driver.find_elements(By.CSS_SELECTOR, "ul.uctList01 li")
-
-        results = []
-        for result in search_results[:3]:
-            title_element = result.find_element(By.CSS_SELECTOR, "p")
-            link_element = result.find_element(By.CSS_SELECTOR, "a")
-            title = title_element.text
-            link = link_element.get_attribute("href")
-            results.append({"title": title, "link": link})
-
-        driver.get(results[0]["link"])
-        WebDriverWait(driver, 30).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "popCont"))
-        )
-
-        download_link = driver.find_element(By.XPATH, "//a[contains(@onclick, 'fnFileDownOne')]")
-        onclick_text = download_link.get_attribute("onclick")
-
-        # 기존 PDF 파일 삭제
-        for file_name in os.listdir(download_folder):
-            if file_name.endswith(".pdf"):
-                file_path = os.path.join(download_folder, file_name)
-                os.remove(file_path)
-                print(f"Deleted existing file: {file_path}")
-
-        # 파일 다운로드
-        driver.execute_script(onclick_text)
-
-        # 다운로드 완료 대기
-        time.sleep(10)
-
-        # 다운로드된 파일 찾기
-        files_after = set(os.listdir(download_folder))
-        downloaded_files = [f for f in files_after if f.endswith(".pdf")]
-
-        if not downloaded_files:
-            raise FileNotFoundError(f"PDF 파일을 찾을 수 없습니다. 다운로드 폴더: {download_folder}")
-
-        pdf_path = os.path.join(download_folder, downloaded_files[0])
-
-        if not os.path.exists(pdf_path):
-            raise FileNotFoundError(f"PDF 파일을 찾을 수 없습니다: {pdf_path}")
-
-        return pdf_path
-    finally:
-        driver.quit()
-
-def setup_langchain():
+@app.post("/job_search")
+async def job_search(query: Query):
     global agent_executor
-    search_query = "외국인 특별전형 시행계획 주요사항"
-    pdf_path = study_search_crawler(search_query)
-    print(f"Downloaded PDF file: {pdf_path}")
-
-    # Langchain setup
-    prompt = hub.pull("hwchase17/openai-functions-agent")
-
-    openai = ChatOpenAI(
-        model="gpt-3.5-turbo", api_key=os.getenv("OPENAI_API_KEY"), temperature=0.1)
-
-    # Load the PDF file
-    loader = PyPDFLoader(pdf_path)
-    docs = loader.load()
-
-    # Split documents into chunks and create vector database
-    documents = RecursiveCharacterTextSplitter(
-        chunk_size=1000, chunk_overlap=200).split_documents(docs)
-    vectordb = FAISS.from_documents(documents, OpenAIEmbeddings())
-    retriever = vectordb.as_retriever()
-
-    print(retriever)
-
-    retriever_tool = create_retriever_tool(
-        retriever, "pdf_search", "PDF 파일에서 추출한 정보를 검색할 때 이 툴을 사용하세요.")
-    print(retriever_tool.name)
-
-    # Define tools for the agent
-    tools = [retriever_tool]
-
-    # Define the agent and create an executor
-    agent = create_openai_tools_agent(llm=openai, tools=tools, prompt=prompt)
-    agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
-
-@app.post("/query")
-def query_agent(query: Query):
+    if agent_executor is None:
+        raise HTTPException(status_code=500, detail="Agent executor not initialized")
+    
     try:
-        agent_result = agent_executor.invoke({"input": query.input})
-        return {"result": agent_result}
+        result = agent_executor.invoke({"input": query.input})
+        return {"result": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
