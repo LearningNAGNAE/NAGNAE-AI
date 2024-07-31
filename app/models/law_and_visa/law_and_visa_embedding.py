@@ -118,26 +118,138 @@ def scrap_law_a(driver, url, embeddings, index_name):
     return all_laws
 
 
+
+import time
+import re
+from selenium import webdriver
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
+from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
+from selenium.webdriver.common.keys import Keys
+from langchain_openai import OpenAIEmbeddings
+import faiss
+import numpy as np
+from typing import List, Dict, Any
+
+def setup_driver():
+    # Selenium WebDriver 설정
+    options = webdriver.ChromeOptions()
+    options.add_argument('--headless')
+    return webdriver.Chrome(options=options)
+
+def create_embedding(text: str, embeddings: OpenAIEmbeddings) -> List[float]:
+    return embeddings.embed_query(text)
+
+def parse_law_content(content: str) -> Dict[str, str]:
+    # 법률 내용을 파싱하는 로직 (예시)
+    # 실제 구현은 웹사이트의 구조에 따라 달라질 수 있습니다
+    articles = {}
+    current_article = ""
+    for line in content.split('\n'):
+        if line.startswith('제') and '조' in line:
+            current_article = line
+            articles[current_article] = ""
+        elif current_article:
+            articles[current_article] += line + "\n"
+    return articles
+
+def update_faiss_index(laws: List[Dict[str, Any]], embeddings: Any, index_name: str) -> int:
+    if not laws:
+        print(f"업데이트할 법률 정보가 없습니다: {index_name}")
+        return 0
+
+    vectors = [law['embedding'] for law in laws if 'embedding' in law]
+    
+    if not vectors:
+        print(f"유효한 임베딩이 없습니다: {index_name}")
+        return 0
+
+    vectors_np = np.array(vectors).astype('float32')
+    dimension = vectors_np.shape[1]
+
+    try:
+        index = faiss.read_index(f"{index_name}.index")
+        print(f"기존 인덱스를 로드했습니다: {index_name}")
+    except:
+        index = faiss.IndexFlatL2(dimension)
+        print(f"새 인덱스를 생성했습니다: {index_name}")
+
+    index.add(vectors_np)
+    faiss.write_index(index, f"{index_name}.index")
+    
+    print(f"인덱스가 업데이트되었습니다: {index_name}, 총 {index.ntotal}개의 벡터")
+    
+    return index.ntotal
+
+# -- b --
 def scrap_law_b(driver, url, embeddings, index_name):
     driver.get(url)
-    time.sleep(10)
+    time.sleep(5)  # 초기 페이지 로딩 시간
 
-    print("페이지 로딩 완료")
+    print("초기 페이지 로딩 완료")
     
+    # 53페이지로 이동
+    page_reached = False
+    attempts = 0
+    max_attempts = 3
+
+    while not page_reached and attempts < max_attempts:
+        attempts += 1
+        print(f"53페이지로 이동 시도 {attempts}/{max_attempts}")
+        
+        try:
+            # 페이지 입력 필드 찾기
+            page_input = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "input.go_page"))
+            )
+            page_input.clear()
+            page_input.send_keys("53")
+
+            # '페이지 이동' 버튼 클릭
+            move_button = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, "a.btn_move"))
+            )
+            driver.execute_script("arguments[0].click();", move_button)
+            time.sleep(5)
+
+            # 페이지 이동 확인
+            page_info = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "p.list_location"))
+            )
+            current_page = page_info.text.split('/')[0].strip()
+            if current_page == "53":
+                page_reached = True
+                print("53페이지 도달 성공")
+            else:
+                print(f"현재 페이지: {current_page}. 53페이지 도달 실패")
+        
+        except Exception as e:
+            print(f"53페이지로 이동 중 오류 발생: {str(e)}")
+
+    if not page_reached:
+        print("53페이지로 이동 실패. 현재 페이지에서 크롤링을 시작합니다.")
+
     all_laws = []
     content_count = 0
+    current_page = 53 if page_reached else int(current_page)
 
     while True:
+        print(f"현재 처리 중인 페이지: {current_page}")
         page_laws = []
-        link_elements = wait_for_element(driver, By.XPATH, "//a[@name='listCont']")
-        if link_elements is None:
-            link_elements = wait_for_element(driver, By.CSS_SELECTOR, ".search_result a")
-        
-        if link_elements is None:
-            print("링크 요소를 찾을 수 없습니다. 크롤링을 종료합니다.")
-            break
-
-        link_elements = driver.find_elements(By.XPATH, "//a[@name='listCont']") or driver.find_elements(By.CSS_SELECTOR, ".search_result a")
+        try:
+            link_elements = WebDriverWait(driver, 20).until(
+                EC.presence_of_all_elements_located((By.XPATH, "//a[@name='listCont']"))
+            )
+        except TimeoutException:
+            print("링크 요소를 찾을 수 없습니다. 다음 방법을 시도합니다.")
+            try:
+                link_elements = WebDriverWait(driver, 20).until(
+                    EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".search_result a"))
+                )
+            except TimeoutException:
+                print("링크 요소를 찾을 수 없습니다. 크롤링을 종료합니다.")
+                break
 
         for index, link_element in enumerate(link_elements, 1):
             try:
@@ -148,13 +260,11 @@ def scrap_law_b(driver, url, embeddings, index_name):
                 print(f"제목: {title}")
 
                 driver.execute_script("arguments[0].click();", link_element)
-                time.sleep(1)
+                time.sleep(3)  # 클릭 후 대기 시간
 
-                if len(driver.window_handles) > 1:
-                    driver.switch_to.window(driver.window_handles[-1])
-                else:
-                    print("새 창이 열리지 않았습니다.")
-
+                # 새 창으로 전환
+                driver.switch_to.window(driver.window_handles[-1])
+                
                 current_url = driver.current_url
                 print(f"현재 URL: {current_url}")
 
@@ -166,8 +276,10 @@ def scrap_law_b(driver, url, embeddings, index_name):
                 else:
                     print(f"contId를 찾을 수 없습니다. URL: {current_url}")
 
-                content_element = wait_for_element(driver, By.CLASS_NAME, "page_area")
-                if content_element:
+                try:
+                    content_element = WebDriverWait(driver, 20).until(
+                        EC.presence_of_element_located((By.CLASS_NAME, "page_area"))
+                    )
                     content = content_element.text
                     parsed_content = parse_law_content(content)
                     print(f"count: {content_count}") 
@@ -175,7 +287,6 @@ def scrap_law_b(driver, url, embeddings, index_name):
                     print(f"파싱된 내용: {str(parsed_content)[:200]}...")  # 처음 200자만 출력
                     
                     for article, article_content in parsed_content.items():
-                        # 각 조항에 대해 별도의 임베딩 생성
                         text_to_embed = f"제목: {title}\n조항: {article}\n\n내용: {article_content}"
                         embedding = create_embedding(text_to_embed, embeddings)
                         
@@ -188,16 +299,17 @@ def scrap_law_b(driver, url, embeddings, index_name):
                         })
                     
                     print(f"총 {len(parsed_content)}개의 조항이 처리되었습니다.")
-                else:
+                except TimeoutException:
                     print("내용을 찾을 수 없습니다.")
                 print("-------------------")
 
-                if len(driver.window_handles) > 1:
-                    driver.close()
-                    driver.switch_to.window(driver.window_handles[0])
-                
+                driver.close()
+                driver.switch_to.window(driver.window_handles[0])
                 time.sleep(2)
 
+            except StaleElementReferenceException:
+                print(f"항목 {index}에 대한 참조가 오래되었습니다. 다음 항목으로 넘어갑니다.")
+                continue
             except Exception as e:
                 print(f"항목 처리 중 오류 발생: {str(e)}")
 
@@ -205,17 +317,26 @@ def scrap_law_b(driver, url, embeddings, index_name):
         update_faiss_index(page_laws, embeddings, f"{index_name}_page")
         all_laws.extend(page_laws)
 
-        next_button = wait_for_element(driver, By.XPATH, "//a/img[@alt='다음 페이지']")
-        if next_button:
+        # 다음 페이지로 이동
+        try:
+            next_button = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, "//a/img[@alt='다음 페이지']"))
+            )
             driver.execute_script("arguments[0].click();", next_button)
-            time.sleep(1)
-        else:
+            time.sleep(5)  # 페이지 전환 대기 시간 증가
+            current_page += 1
+        except TimeoutException:
             print("더 이상 다음 페이지가 없습니다.")
             break
+        except Exception as e:
+            print(f"다음 페이지로 이동 중 오류 발생: {str(e)}")
+            break
 
+    print(f"총 {len(all_laws)}개의 법률 정보가 처리되었습니다.")
     return all_laws
 
 
+# --- j ---
 def scrap_law_j(driver, url, embeddings, index_name):
     print(f"URL 접속: {url}")
     driver.get(url)

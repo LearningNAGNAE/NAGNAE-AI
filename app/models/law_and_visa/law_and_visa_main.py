@@ -15,13 +15,13 @@ from langchain.schema import BaseChatMessageHistory
 import logging
 import traceback
 
-# 환경 변수 로드
+# Load environment variables
 load_dotenv()
 
-# FastAPI 애플리케이션 생성
+# Create FastAPI application
 app = FastAPI()
 
-# 입력 데이터 모델 정의
+# Define input data model
 class Query(BaseModel):
     question: str
     session_id: str
@@ -31,74 +31,52 @@ index_name = "faiss_index_law_and_visa_page"
 current_dir = os.path.dirname(os.path.abspath(__file__))
 index_path = os.path.join(current_dir, index_name)
 
-
-
-# FAISS 인덱스 로드
+# Load FAISS index
 if not os.path.exists(index_path):
-    raise HTTPException(status_code=500, detail=f"FAISS 인덱스를 찾을 수 없습니다: {index_path}")
+    raise HTTPException(status_code=500, detail=f"FAISS index not found: {index_path}")
 
 vector_store = FAISS.load_local(index_path, embeddings, allow_dangerous_deserialization=True)
 chat = ChatOpenAI(temperature=0, model="gpt-3.5-turbo")
 
-print(f"FAISS 인덱스 크기: {vector_store.index.ntotal}")
+print(f"FAISS index size: {vector_store.index.ntotal}")
 
-
-
-# 벡터 저장소를 검색기로 사용합니다.
+# Use vector store as retriever
 retriever = vector_store.as_retriever()
 
-
-
-# ------------------ 시스템 프롬프트 정의 -----------------------
+# Define system prompt
 system_prompt = """
-# AI Assistant for Korean Law and Visa Information
+# AI Assistant for Korean Law, Visa, Labor Rights, and General Information
 
 ## Role and Responsibility
-You are a specialized AI assistant providing law and visa-related information for foreigners residing in Korea. Your primary goals are to:
+You are a specialized AI assistant providing information on Korean law, visa, labor rights, and general topics for both foreigners and citizens in Korea. Your goals are to:
 
-1. Explain information kindly and clearly
-2. Maintain accuracy while being easy to understand
-3. Adhere strictly to the given guidelines
+1. Explain information kindly and clearly in the language of the query.
+2. Provide accurate and easy-to-understand information.
+3. Offer both general and specific information when relevant.
+4. Provide guidance on labor rights and workplace issues.
 
-## Step-by-step Guidelines
+## Guidelines
 
-### Step 1: Information Source
-- Use **ONLY** the content from the given context information to answer
-- Do NOT include any information that is not in the context
+1. Language: Respond in the same language as the question (e.g., Korean for Korean questions, Chinese for Chinese questions).
+2. Information Scope: Provide information on laws, visas, labor rights, and general topics related to living and working in Korea.
+3. Visa Information: Clearly distinguish between general visa rules and specific visa type regulations.
+4. Labor Rights: Offer information on worker's rights, including wage payment, working hours, and dispute resolution processes.
+5. Uncertainty: If uncertain, respond with: 
+   - Korean: "제공된 정보로는 정확한 답변을 드릴 수 없습니다. 구체적인 조언을 위해 관련 정부 기관이나 노동법 전문가에게 문의하시는 것이 좋겠습니다."
+   - Chinese: "根据提供的信息，我无法给出准确的答复。建议您向相关政府机构或劳动法专家咨询以获取具体建议。"
+   - English: "I cannot provide an accurate answer with the given information. I recommend consulting the relevant government office or a labor law expert for specific advice."
+6. Legal Disclaimers: Emphasize that laws may change and encourage verifying current regulations.
+7. Objectivity: Stick to factual information without personal opinions.
+8. Cultural Sensitivity: Be aware of cultural differences and provide context when necessary.
+9. Resources: When applicable, provide information about relevant government agencies, legal aid organizations, or official documentation for further assistance.
 
-### Step 2: Relevance
-- Exclude information irrelevant to the question
-- Focus on providing a direct and pertinent answer
-
-### Step 3: Clarity and Conciseness
-- Write your answers concisely and clearly
-- Use simple language where possible, avoiding jargon unless necessary
-
-### Step 4: Handling Uncertainty
-- If uncertain or unable to answer with the given information, respond with:
-  > "I cannot provide an accurate answer with the given information. I recommend consulting a legal professional or the appropriate government office for specific advice."
-
-### Step 5: Legal Disclaimers
-- When discussing legal matters:
-  1. Emphasize that laws may change
-  2. Encourage users to verify current regulations
-
-### Step 6: Visa-related Queries
-- For visa-related questions, always advise:
-  > "Please check with the Korean Immigration Service for the most up-to-date information."
-
-### Step 7: Objectivity
-- Avoid giving personal opinions or interpretations of the law
-- Stick to factual information provided in the context
-
-## Final Reminder
-Always approach each query systematically, following these steps to ensure accurate, helpful, and responsible assistance.
+Always approach each query systematically to ensure accurate, helpful, and responsible assistance. For labor-related issues, provide general guidance on worker's rights and suggest official channels for seeking help or filing complaints.
 """
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-# ------------------------------------------------------------
 
-# 프롬프트 템플릿 설정
+# Set up prompt template
 system_message_prompt = SystemMessagePromptTemplate.from_template(system_prompt)
 human_template = """
 context: {context}
@@ -113,10 +91,10 @@ chat_prompt = ChatPromptTemplate.from_messages([
     ai_message_prompt
 ])
 
-# ChatOpenAI 모델을 초기화합니다.
+# Initialize ChatOpenAI model
 model = ChatOpenAI(temperature=0)
 
-# 검색 체인을 구성합니다.
+# Configure retrieval chain
 retrieval_chain = (
     {
         "context": lambda x: retriever.get_relevant_documents(x["question"]),
@@ -127,8 +105,7 @@ retrieval_chain = (
     | StrOutputParser()
 )
 
-
-# 메모리 저장소
+# Memory storage
 memory_store = {}
 
 def get_memory(session_id: str) -> BaseChatMessageHistory:
@@ -136,7 +113,7 @@ def get_memory(session_id: str) -> BaseChatMessageHistory:
         memory_store[session_id] = ChatMessageHistory()
     return memory_store[session_id]
 
-# RunnableWithMessageHistory 설정
+# Set up RunnableWithMessageHistory
 chain_with_history = RunnableWithMessageHistory(
     retrieval_chain,
     get_memory,
@@ -144,8 +121,7 @@ chain_with_history = RunnableWithMessageHistory(
     history_messages_key="chat_history",
 )
 
-
-# 언어 감지 함수
+# Language detection function
 def detect_language(text):
     system_prompt = "You are a language detection expert. Detect the language of the given text."
     human_prompt = f"Text: {text}"
@@ -156,8 +132,7 @@ def detect_language(text):
     response = chat.invoke(messages)
     return response.content.strip()
 
-
-# 요청 검증 예외 처리
+# Request validation exception handler
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
     return JSONResponse(
@@ -167,12 +142,23 @@ async def validation_exception_handler(request, exc):
 
 
 
-# --------------------- API 엔드포인트 정의----------------------
+import re 
+def format_text_for_web(text):
+    try:
+        # 단락 나누기: 빈 줄을 기준으로 단락을 나눕니다.
+        paragraphs = re.split(r'\n\s*\n', text)
+        
+        # 각 단락을 <p> 태그로 감싸고, 줄바꿈을 <br> 태그로 변환합니다.
+        formatted_paragraphs = ['<p>' + p.replace('\n', '<br>') + '</p>' for p in paragraphs]
+        
+        # 모든 단락을 하나의 문자열로 결합합니다.
+        return ''.join(formatted_paragraphs)
+    except Exception as e:
+        logging.error(f"Error in format_text_for_web: {str(e)}")
+        return f"<p>{text}</p>"  # 오류 발생 시 기본 형식으로 반환
+
+# CORS 미들웨어 추가(임시)
 from fastapi.middleware.cors import CORSMiddleware
-
-app = FastAPI()
-
-# CORS 미들웨어 추가
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],  # React 앱의 주소
@@ -181,15 +167,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.post("/ask")
-async def ask_question(query: Query):
+
+
+@app.post("/law")
+async def chat_endpoint(query: Query):
     try:
         question = query.question if isinstance(query.question, str) else str(query.question)
         session_id = query.session_id
-        print(f"질문: {question}")
+        print(f"Question: {question}")
 
         # 언어 감지
         language = detect_language(question)
+
+        if retriever is None:
+            return {
+                "question": question,
+                "answer": format_text_for_web("죄송합니다. 현재 시스템에 문제가 있어 답변을 드릴 수 없습니다. 나중에 다시 시도해 주세요."),
+                "detected_language": language,
+            }
 
         # RunnableWithMessageHistory를 사용하여 응답 생성
         response = chain_with_history.invoke(
@@ -197,17 +192,25 @@ async def ask_question(query: Query):
             config={"configurable": {"session_id": session_id}}
         )
 
+        # 응답 텍스트를 웹 표시에 적합하게 포맷팅
+        formatted_response = format_text_for_web(response)
+
         return {
             "question": question,
-            "answer": response,
+            "answer": formatted_response,
             "detected_language": language,
         }
     except Exception as e:
         logger.error(f"An error occurred: {str(e)}")
         logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=str(e))
+        error_message = "죄송합니다. 요청을 처리하는 동안 오류가 발생했습니다. 나중에 다시 시도해 주세요."
+        return {
+            "question": question,
+            "answer": format_text_for_web(error_message),
+            "detected_language": detect_language(question),
+        }
 
-# 메인 실행 부분
+# Main execution
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
