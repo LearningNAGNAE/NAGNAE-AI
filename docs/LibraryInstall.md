@@ -25,12 +25,17 @@ pip install tensorflow
 
 pip install tf-keras
 
+pip install ffmpeg-python
 
+pip install librosa
 
+pip install torch
 
+pip install numpy
 
+pip install python-multipart
 
-
+pip install torchaudio
 
 
 
