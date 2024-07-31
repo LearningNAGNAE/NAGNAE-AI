@@ -62,9 +62,18 @@ def jobploy_crawler(pages=5):
             for job in job_listings:
                 title_element = job.find_element(By.CSS_SELECTOR, "h6.mb-1")
                 link_element = job.find_element(By.CSS_SELECTOR, "a").get_attribute("href")
+                location_element = job.find_element(By.CSS_SELECTOR, ".item_link")
+                salary_element = job.find_element(By.CSS_SELECTOR, ".pay")
                 
                 # 모든 배지 요소를 가져옴
                 badge_elements = job.find_elements(By.CSS_SELECTOR, ".badge.text-dark.bg-secondary-150.rounded-pill")
+                # 첫 번째 배지 요소(지역 정보) 선택
+                if len(badge_elements) >= 1:
+                    location_element = badge_elements[0]
+                    location = location_element.text
+                else:
+                    location = "지역 정보 없음"
+                
                 # 세 번째 배지 요소(마감 정보) 선택
                 if len(badge_elements) >= 3:
                     closing_date_element = badge_elements[2]
@@ -73,7 +82,15 @@ def jobploy_crawler(pages=5):
                     closing_date = "마감 정보 없음"
 
                 title = title_element.text
-                results.append({"title": title, "link": link_element, "closing_date": closing_date})
+                salary = salary_element.text
+
+                results.append({
+                    "title": title,
+                    "link": link_element,
+                    "location": location,
+                    "salary": salary,
+                    "closing_date": closing_date
+                })
 
     finally:
         driver.quit()
@@ -86,10 +103,28 @@ embeddings = OpenAIEmbeddings()
 
 def prepare_documents():
     results = jobploy_crawler()
-    documents = [{"text": result['title'], "metadata": {"link": result['link']}} for result in results]
+    documents = []
+
+    for idx, result in enumerate(results):
+        # 고유 식별자 생성 (예: 공고 링크 또는 인덱스 사용)
+        unique_id = result['link'] if 'link' in result and result['link'] else str(idx)
+        
+        # 중복 가능성을 줄이기 위해 공고의 주요 정보를 포함한 텍스트 생성
+        full_text = f"ID: {unique_id}\nTitle: {result['title']}\n Location: {result['location']}\n Salary: {result['salary']}\n Closing Date: {result['closing_date']}\n Link: {result['link']}"
+        metadata = {
+            "link": result['link'],
+            "location": result['location'],
+            "salary": result['salary'],
+            "closing_date": result['closing_date'],
+            "unique_id": unique_id
+        }
+        documents.append({"text": full_text, "metadata": metadata})
+
+    # 모든 텍스트를 FAISS 인덱스에 저장
     faiss_index = FAISS.from_texts([doc["text"] for doc in documents], embeddings, metadatas=[doc["metadata"] for doc in documents])
     return faiss_index
 
+# Prepare the FAISS index
 faiss_index = prepare_documents()
 
 # Create retriever tool
@@ -102,6 +137,10 @@ agent = ConversationalRetrievalChain.from_llm(
     return_source_documents=True
 )
 
+@app.get("/")
+async def read_root():
+    return {"message": "Welcome to the JobPloy API"}
+
 @app.post("/ask")
 async def ask(query_request: QueryRequest):
     user_query = query_request.query
@@ -109,18 +148,22 @@ async def ask(query_request: QueryRequest):
     if not user_query:
         raise HTTPException(status_code=400, detail="Query is required")
 
-    inputs = {"question": user_query, "context": "", "chat_history": []}  # Include chat_history
+    inputs = {"question": user_query, "context": "", "chat_history": []}
     response = agent.invoke(inputs)
 
-    # 응답에 링크 추가
+    
     response_with_links = response.copy()
     response_with_links["answer"] = response["answer"]
     for doc in response["source_documents"]:
         title = doc.page_content
-        link = doc.metadata.get("link", "https://www.jobploy.kr/ko/recruit")  # 링크가 없는 경우를 대비해 기본값 설정
-        response_with_links["answer"] += f"\n- {title}: {link}"
+        link = doc.metadata.get("link", "https://www.jobploy.kr/ko/recruit")
+        location = doc.metadata.get("location", "지역 정보 없음")
+        salary = doc.metadata.get("salary", "급여 정보 없음")
+        closing_date = doc.metadata.get("closing_date", "마감 정보 없음")
+        response_with_links["answer"] += f"\n- {title} (위치: {location}, 급여: {salary}, 마감일: {closing_date}): {link}"
 
     return response_with_links
+
 
 if __name__ == "__main__":
     import uvicorn

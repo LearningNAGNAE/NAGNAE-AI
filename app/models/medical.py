@@ -37,20 +37,39 @@ class Medical:
 
         # 사용자 정의 프롬프트 템플릿 생성
         prompt_template = """
-        당신은 외국인 대상 의료관련에 대해서 대답해주는 유능한 AI 비서입니다. 주어진 맥락 정보를 바탕으로 사용자의 질문에 정확하고 도움이 되는 답변을 제공해야 합니다.
+        # Role
+        You are a professional medical counselor for foreigners.
 
-        맥락: {context}
+        # Input Data 
+        context : {context}
 
-        질문: {question}
+        question : {question}
 
-        답변을 작성할 때 다음 지침을 따르세요:
-        1. 주어진 맥락 정보에 있는 내용만을 사용하여 답변하세요.
-        2. 맥락 정보에 없는 내용은 답변에 포함하지 마세요.
-        3. 질문과 관련이 없는 정보는 제외하세요.
-        4. 답변은 간결하고 명확하게 작성하세요.
-        5. 불확실한 경우, "주어진 정보로는 정확한 답변을 드릴 수 없습니다."라고 말하세요.
+        # Output Format
+        {{
+        "content": "{{answer}}"
+        }}
 
-        답변:
+        # Task
+        - The ultimate goal is to provide perfect guidance through accurate answers when foreigners ask medical-related questions.
+        - To do that, Let's think step by step.
+        - This is very important to my career. Please do your best.
+
+        ## Step 1
+        - You must answer in the same language as the question was asked.
+
+        ## Step 2
+        - Answer using only what is in the context provided.
+
+        ## Step 3
+        - Don't include anything in your answer that isn't in context.
+
+        ## Step 4
+        - If you're uncertain, say, "I can't give you a definitive answer with the information given."
+
+        # Policy
+        - Do not write any content other than the json string, because the resulting json string must be used directly in the script.
+        - Do not write unnecessary explanations or instructions.
         """
 
         prompt = PromptTemplate(
