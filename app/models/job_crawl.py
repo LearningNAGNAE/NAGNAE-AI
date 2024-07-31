@@ -1,18 +1,16 @@
-from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from langchain.agents import AgentExecutor, create_openai_tools_agent
-from langchain import hub
-from langchain.tools.retriever import create_retriever_tool
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
-from langchain_community.vectorstores import FAISS
+import asyncio
 from selenium import webdriver
-from langchain_core.documents import Document
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
+from langchain.agents import AgentExecutor, create_openai_tools_agent
+from langchain import hub
+from langchain.tools.retriever import create_retriever_tool
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_community.vectorstores import FAISS
+from langchain_core.documents import Document
 import os
 from dotenv import load_dotenv
 
@@ -22,16 +20,19 @@ load_dotenv()
 # OpenAI API 키 설정
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
-# 글로벌 변수로 agent_executor 선언
-agent_executor = None
+async def jobploy_crawler(pages=5):
+    loop = asyncio.get_event_loop()
+    results = await loop.run_in_executor(None, _sync_jobploy_crawler, pages)
+    return results
 
-def jobploy_crawler(pages=5):
+def _sync_jobploy_crawler(pages=5):
     chrome_driver_path = r"C:\chromedriver\chromedriver.exe"  # Update to the actual path
 
     chrome_options = Options()
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--window-size=1920x1080")  # Set window size
+    chrome_options.add_argument("--headless")  # 이 줄을 추가합니다
 
     service = Service(chrome_driver_path)
     driver = webdriver.Chrome(service=service, options=chrome_options)
@@ -66,19 +67,14 @@ def jobploy_crawler(pages=5):
                 pay = pay_element.text
                 results.append({"title": title, "link": link_element, "closing_date": closing_date, "location": location, "pay": pay})
 
-                print(results)
     finally:
         driver.quit()
 
     return results
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # 시작 시 실행될 코드
-    global agent_executor
-    
+async def create_agent_executor_job():
     # 크롤링 데이터 가져오기
-    crawled_data = jobploy_crawler(pages=5)
+    crawled_data = await jobploy_crawler(pages=5)
 
     # 크롤링한 데이터를 Document 객체로 변환
     documents = [
@@ -115,30 +111,4 @@ async def lifespan(app: FastAPI):
     agent = create_openai_tools_agent(llm=llm, tools=[retriever_tool], prompt=prompt)
 
     # Agent Executor 생성
-    agent_executor = AgentExecutor(agent=agent, tools=[retriever_tool], verbose=True)
-
-    yield
-
-    # 종료 시 실행될 코드
-    # 필요한 경우 여기에 정리 코드를 추가할 수 있습니다.
-
-app = FastAPI(lifespan=lifespan)
-
-class Query(BaseModel):
-    input: str
-
-@app.post("/job_search")
-async def job_search(query: Query):
-    global agent_executor
-    if agent_executor is None:
-        raise HTTPException(status_code=500, detail="Agent executor not initialized")
-    
-    try:
-        result = agent_executor.invoke({"input": query.input})
-        return {"result": result}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    return AgentExecutor(agent=agent, tools=[retriever_tool], verbose=True)
