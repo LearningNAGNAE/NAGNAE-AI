@@ -43,9 +43,18 @@ def jobploy_crawler(pages=5):
             for job in job_listings:
                 title_element = job.find_element(By.CSS_SELECTOR, "h6.mb-1")
                 link_element = job.find_element(By.CSS_SELECTOR, "a").get_attribute("href")
-                
+                location_element = job.find_element(By.CSS_SELECTOR, ".item_link")
+                salary_element = job.find_element(By.CSS_SELECTOR, ".pay")
+
                 # 모든 배지 요소를 가져옴
                 badge_elements = job.find_elements(By.CSS_SELECTOR, ".badge.text-dark.bg-secondary-150.rounded-pill")
+                # 첫 번째 배지 요소(지역 정보) 선택
+                if len(badge_elements) >= 1:
+                    location_element = badge_elements[0]
+                    location = location_element.text
+                else:
+                    location = "지역 정보 없음"
+
                 # 세 번째 배지 요소(마감 정보) 선택
                 if len(badge_elements) >= 3:
                     closing_date_element = badge_elements[2]
@@ -55,7 +64,15 @@ def jobploy_crawler(pages=5):
 
 
                 title = title_element.text
-                results.append({"title": title, "link": link_element, "closing_date": closing_date})
+                salary = salary_element.text
+
+                results.append({
+                    "title": title,
+                    "link": link_element,
+                    "location": location,
+                    "salary": salary,
+                    "closing_date": closing_date
+                })
 
     finally:
         driver.quit()
@@ -118,7 +135,7 @@ def generate_question_based_on_documents(documents):
 
 
 # Example query to the agent
-query = ""  # 빈 질문으로 설정하여 에이전트가 자체적으로 질문 생성
+query = "경기도에서 일하고 싶어"  # 빈 질문으로 설정하여 에이전트가 자체적으로 질문 생성
 
 # 빈 질문인 경우 질문을 생성합니다.
 if not query:
