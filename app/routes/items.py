@@ -57,11 +57,10 @@ async def t2t_endpoint(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/medical")
-async def medical(query: str):
+@router.post("/medical")
+async def medical(query: Query):
     try:
-        # 질문에 대한 답변 생성
-        result = await Medical.chatbot(query)
-        return result
+        result = await Medical.chatbot(query.input)
+        return {"answer": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

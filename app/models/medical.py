@@ -45,11 +45,6 @@ class Medical:
 
         question : {question}
 
-        # Output Format
-        {{
-        "content": "{{answer}}"
-        }}
-
         # Task
         - The ultimate goal is to provide perfect guidance through accurate answers when foreigners ask medical-related questions.
         - To do that, Let's think step by step.
@@ -68,8 +63,8 @@ class Medical:
         - If you're uncertain, say, "I can't give you a definitive answer with the information given."
 
         # Policy
-        - Do not write any content other than the json string, because the resulting json string must be used directly in the script.
         - Do not write unnecessary explanations or instructions.
+        - Do not use symbols other than the answer text
         """
 
         prompt = PromptTemplate(
