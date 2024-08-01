@@ -7,17 +7,17 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from langchain.schema import HumanMessage
 from langchain_community.vectorstores import FAISS
-from langchain.chains import ConversationalRetrievalChain
-from dotenv import load_dotenv
+from langchain.agents import create_openai_tools_agent, AgentExecutor
+from langchain.tools.retriever import create_retriever_tool
 from langchain import hub
 import os
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+
 
 # Load environment variables
 load_dotenv()
-
 
 app = FastAPI()
 
@@ -98,7 +98,7 @@ def jobploy_crawler(pages=5):
     return results
 
 # Initialize OpenAI and FAISS
-chat_openai = ChatOpenAI(model="gpt-4o", api_key=os.getenv("OPENAI_API_KEY"), temperature=0.1)
+chat_openai = ChatOpenAI(model="gpt-3.5-turbo", api_key=os.getenv("OPENAI_API_KEY"), temperature=0.1)
 embeddings = OpenAIEmbeddings()
 
 def prepare_documents():
@@ -128,14 +128,26 @@ def prepare_documents():
 faiss_index = prepare_documents()
 
 # Create retriever tool
-retriever = faiss_index.as_retriever()
+retriever = faiss_index.as_retriever(search_type="similarity")
 
-# Initialize ConversationalRetrievalChain
-agent = ConversationalRetrievalChain.from_llm(
-    llm=chat_openai,
-    retriever=retriever,
-    return_source_documents=True
+# Load the prompt from the hub
+prompt = hub.pull("hwchase17/openai-functions-agent")
+prompt = prompt.partial(
+    system_message="You are an AI assistant specializing in job search. Your task is to provide accurate and relevant information about job listings from the Jobploy website. When answering questions, use the information from the job listings directly, and avoid making assumptions or providing information not present in the data."
 )
+
+# Create the retriever tool
+retriever_tool = create_retriever_tool(
+    retriever, 
+    "job_search", 
+    "Use this tool to search for job information from Jobploy website."
+)
+
+# Create agent with the prompt and tool
+agent = create_openai_tools_agent(llm=chat_openai, tools=[retriever_tool], prompt=prompt)
+
+# Create agent executor
+agent_executor = AgentExecutor(agent=agent, tools=[retriever_tool], verbose=True)
 
 @app.get("/")
 async def read_root():
@@ -148,22 +160,35 @@ async def ask(query_request: QueryRequest):
     if not user_query:
         raise HTTPException(status_code=400, detail="Query is required")
 
-    inputs = {"question": user_query, "context": "", "chat_history": []}
-    response = agent.invoke(inputs)
-
+    global agent_executor
+    if agent_executor is None:
+        raise HTTPException(status_code=500, detail="Agent executor not initialized")
     
-    response_with_links = response.copy()
-    response_with_links["answer"] = response["answer"]
-    for doc in response["source_documents"]:
-        title = doc.page_content
-        link = doc.metadata.get("link", "https://www.jobploy.kr/ko/recruit")
-        location = doc.metadata.get("location", "지역 정보 없음")
-        salary = doc.metadata.get("salary", "급여 정보 없음")
-        closing_date = doc.metadata.get("closing_date", "마감 정보 없음")
-        response_with_links["answer"] += f"\n- {title} (위치: {location}, 급여: {salary}, 마감일: {closing_date}): {link}"
+    try:
+        # `agent_executor`를 사용하여 요청 처리
+        result = agent_executor.invoke({"input": user_query})
+        
+        # 반환된 결과를 적절히 처리
+        response_with_links = result.copy()
+        response_with_links["answer"] = "Here are the jobs that match your query:<br>"
+        
+        # 문서가 없을 경우를 대비해 빈 리스트를 기본값으로 설정
+        source_documents = result.get("source_documents", [])
+        
+        # 응답 문자열을 문서 정보로 작성
+        for doc in source_documents:
+            title = doc.page_content
+            link = doc.metadata.get("link", "https://www.jobploy.kr/ko/recruit")
+            location = doc.metadata.get("location", "지역 정보 없음")
+            salary = doc.metadata.get("salary", "급여 정보 없음")
+            closing_date = doc.metadata.get("closing_date", "마감 정보 없음")
+            response_with_links["answer"] += f"<br>- {title} (위치: {location}, 급여: {salary}, 마감일: {closing_date}): {link}"
 
-    return response_with_links
+        return response_with_links
 
+    except Exception as e:
+        # 예외 발생 시 로그
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
