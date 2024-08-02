@@ -1,0 +1,1352 @@
+[
+  {
+    "title": "강서시장내 배송직 직원 구함",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041866",
+    "closing_date": "마감 D-29",
+    "location": "서울특별시 강서구",
+    "pay": "월급 : 3,500,000 원",
+    "task": "택배/퀵서비스",
+    "language": "ko"
+  },
+  {
+    "title": "경은호 선원구함",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041865",
+    "closing_date": "마감 D-29",
+    "location": "전라북도 부안군",
+    "pay": "시급 : 9,860 원",
+    "task": "어업",
+    "language": "ko"
+  },
+  {
+    "title": "연근해 선원 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041864",
+    "closing_date": "마감 D-0",
+    "location": "인천광역시 남구",
+    "pay": "월급 : 2,500,000 원",
+    "task": "어업",
+    "language": "ko"
+  },
+  {
+    "title": "육포 생산 정규직 직원 채용",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041863",
+    "closing_date": "마감 D-28",
+    "location": "인천광역시 남동구",
+    "pay": "월급 : 2,600,000 원",
+    "task": "식료품 제조",
+    "language": "ko"
+  },
+  {
+    "title": "CNC선반 조작원 및 보조원 신입 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041862",
+    "closing_date": "마감 D-27",
+    "location": "부산광역시 강서구",
+    "pay": "시급 : 9,860 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "프레스업체 프레스작업 가능하신분 찾습니다.",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041861",
+    "closing_date": "마감 D-28",
+    "location": "충청남도 당진시",
+    "pay": "월급 : 3,000,000 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "판금생산직",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041860",
+    "closing_date": "마감 D-29",
+    "location": "경기도 화성시",
+    "pay": "연봉 : 30,000,000 원",
+    "task": "기계,자동차,조선소 생산직",
+    "language": "ko"
+  },
+  {
+    "title": "양돈장 현장 인력 채용 공고",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041859",
+    "closing_date": "마감 D-29",
+    "location": "경상북도 포항시",
+    "pay": "시급 : 9,860 원",
+    "task": "축산",
+    "language": "ko"
+  },
+  {
+    "title": "식품생산직사원 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041858",
+    "closing_date": "마감 D-17",
+    "location": "충청북도 옥천군",
+    "pay": "월급 : 2,070,000 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "(유)여원농장-돼지 사육관리보조원 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041857",
+    "closing_date": "마감 D-12",
+    "location": "전라북도 정읍시",
+    "pay": "시급 : 9,860 원",
+    "task": "농업",
+    "language": "ko"
+  },
+  {
+    "title": "생산직 사원 채용합니다.",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041856",
+    "closing_date": "마감 D-14",
+    "location": "경기도 시흥시",
+    "pay": "연봉 : 40,000,000 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "선원채용",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041855",
+    "closing_date": "마감 D-29",
+    "location": "강원특별자치도 동해시",
+    "pay": "시급 : 9,860 원",
+    "task": "어업",
+    "language": "ko"
+  },
+  {
+    "title": "프레스 금형 레디알 작업자",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041854",
+    "closing_date": "마감 D-27",
+    "location": "대구광역시 달서구",
+    "pay": "시급 : 9,860 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "선원 채용",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041853",
+    "closing_date": "마감 D-29",
+    "location": "강원특별자치도 동해시",
+    "pay": "시급 : 9,860 원",
+    "task": "어업",
+    "language": "ko"
+  },
+  {
+    "title": "용접기사 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041852",
+    "closing_date": "마감 D-29",
+    "location": "경기도 김포시",
+    "pay": "월급 : 2,500,000 원",
+    "task": "용접",
+    "language": "ko"
+  },
+  {
+    "title": "선원 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041851",
+    "closing_date": "마감 D-29",
+    "location": "강원특별자치도 동해시",
+    "pay": "시급 : 9,860 원",
+    "task": "어업",
+    "language": "ko"
+  },
+  {
+    "title": "목공 기술자 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041850",
+    "closing_date": "마감 D-28",
+    "location": "경기도 김포시",
+    "pay": "월급 : 3,600,000 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "선원 채용",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041849",
+    "closing_date": "마감 D-29",
+    "location": "강원특별자치도 동해시",
+    "pay": "시급 : 9,860 원",
+    "task": "어업",
+    "language": "ko"
+  },
+  {
+    "title": "배관제작사 및 배관 용접사 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041848",
+    "closing_date": "마감 D-29",
+    "location": "경상남도 거제시",
+    "pay": "시급 : 9,860 원",
+    "task": "용접",
+    "language": "ko"
+  },
+  {
+    "title": "선원 채용",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041847",
+    "closing_date": "마감 D-29",
+    "location": "강원특별자치도 동해시",
+    "pay": "시급 : 9,860 원",
+    "task": "어업",
+    "language": "ko"
+  },
+  {
+    "title": "선원 채용",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041846",
+    "closing_date": "마감 D-29",
+    "location": "강원특별자치도 동해시",
+    "pay": "시급 : 9,860 원",
+    "task": "어업",
+    "language": "ko"
+  },
+  {
+    "title": "선원 채용",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041845",
+    "closing_date": "마감 D-29",
+    "location": "강원특별자치도 동해시",
+    "pay": "시급 : 9,860 원",
+    "task": "어업",
+    "language": "ko"
+  },
+  {
+    "title": "(주)횡성케이씨-횡성 한우 전용 도축장 생산직 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041844",
+    "closing_date": "마감 D-29",
+    "location": "강원특별자치도 횡성군",
+    "pay": "월급 : 2,500,000 원",
+    "task": "식료품 제조",
+    "language": "ko"
+  },
+  {
+    "title": "(주)윈스틸 예산공장 생산직 사원모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041843",
+    "closing_date": "마감 D-28",
+    "location": "충청남도 예산군",
+    "pay": "시급 : 9,860 원",
+    "task": "기타",
+    "language": "ko"
+  },
+  {
+    "title": "선원 채용",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041842",
+    "closing_date": "마감 D-29",
+    "location": "강원특별자치도 동해시",
+    "pay": "시급 : 9,860 원",
+    "task": "어업",
+    "language": "ko"
+  },
+  {
+    "title": "생산직 구인",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041841",
+    "closing_date": "마감 D-29",
+    "location": "강원특별자치도 태백시",
+    "pay": "월급 : 2,060,740 원",
+    "task": "식료품 제조",
+    "language": "ko"
+  },
+  {
+    "title": "석재 가공직원 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041840",
+    "closing_date": "마감 D-29",
+    "location": "전라북도 익산시",
+    "pay": "월급 : 3,100,000 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "생산직 사원 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041839",
+    "closing_date": "마감 D-29",
+    "location": "강원특별자치도 횡성군",
+    "pay": "월급 : 2,500,000 원",
+    "task": "식료품 제조",
+    "language": "ko"
+  },
+  {
+    "title": "선원 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041838",
+    "closing_date": "마감 D-29",
+    "location": "강원특별자치도 동해시",
+    "pay": "시급 : 9,860 원",
+    "task": "어업",
+    "language": "ko"
+  },
+  {
+    "title": "선원 채용",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000041837",
+    "closing_date": "마감 D-29",
+    "location": "강원특별자치도 동해시",
+    "pay": "시급 : 9,860 원",
+    "task": "어업",
+    "language": "ko"
+  },
+  {
+    "title": "Looking for delivery staff in Gangseo Market",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041866",
+    "closing_date": "Deadline D-29",
+    "location": "Seoul Gangseo-gu",
+    "pay": "Salary : 3,500,000 KRW",
+    "task": "Courier service",
+    "language": "en"
+  },
+  {
+    "title": "Gyeong-eunho crew sought",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041865",
+    "closing_date": "Deadline D-29",
+    "location": "Jeollabuk-do Buan-gun",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Fisheries",
+    "language": "en"
+  },
+  {
+    "title": "Coastal sea crew recruitment",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041864",
+    "closing_date": "Deadline D-0",
+    "location": "Incheon Nam-gu",
+    "pay": "Salary : 2,500,000 KRW",
+    "task": "Fisheries",
+    "language": "en"
+  },
+  {
+    "title": "Recruitment of full-time employees for beef jerky production",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041863",
+    "closing_date": "Deadline D-28",
+    "location": "Incheon Namdong-gu",
+    "pay": "Salary : 2,600,000 KRW",
+    "task": "Food manufacturing",
+    "language": "en"
+  },
+  {
+    "title": "Recruitment of new CNC lathe operators and assistants",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041862",
+    "closing_date": "Deadline D-27",
+    "location": "Busan Gangseo-gu",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "A press company is looking for someone who can do press work.",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041861",
+    "closing_date": "Deadline D-28",
+    "location": "Chungnam Dangjin-gun",
+    "pay": "Salary : 3,000,000 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "sheet metal production",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041860",
+    "closing_date": "Deadline D-29",
+    "location": "Gyeonggi Hwaseong-si",
+    "pay": "Annual salary : 30,000,000 KRW",
+    "task": "Mechanical",
+    "language": "en"
+  },
+  {
+    "title": "Pig farm field personnel recruitment notice",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041859",
+    "closing_date": "Deadline D-29",
+    "location": "Gyeongbuk Pohang-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Livestock",
+    "language": "en"
+  },
+  {
+    "title": "Recruitment of food production staff",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041858",
+    "closing_date": "Deadline D-17",
+    "location": "Chungbuk Okcheon-gun",
+    "pay": "Salary : 2,070,000 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "Yeowon Farm Co., Ltd. - Recruitment of pig breeding management assistants",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041857",
+    "closing_date": "Deadline D-12",
+    "location": "Jeollabuk-do Jeongeup-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Food crops",
+    "language": "en"
+  },
+  {
+    "title": "We are hiring production workers.",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041856",
+    "closing_date": "Deadline D-14",
+    "location": "Gyeonggi Siheung-si",
+    "pay": "Annual salary : 40,000,000 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "Crew recruitment",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041855",
+    "closing_date": "Deadline D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Fisheries",
+    "language": "en"
+  },
+  {
+    "title": "press mold radial worker",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041854",
+    "closing_date": "Deadline D-27",
+    "location": "Daegu Dalseo-gu",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "crew recruitment",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041853",
+    "closing_date": "Deadline D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Fisheries",
+    "language": "en"
+  },
+  {
+    "title": "Welder recruitment",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041852",
+    "closing_date": "Deadline D-29",
+    "location": "Gyeonggi Gimpo-si",
+    "pay": "Salary : 2,500,000 KRW",
+    "task": "Welding",
+    "language": "en"
+  },
+  {
+    "title": "crew recruitment",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041851",
+    "closing_date": "Deadline D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Fisheries",
+    "language": "en"
+  },
+  {
+    "title": "Recruiting woodworking technicians",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041850",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeonggi Gimpo-si",
+    "pay": "Salary : 3,600,000 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "crew recruitment",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041849",
+    "closing_date": "Deadline D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Fisheries",
+    "language": "en"
+  },
+  {
+    "title": "Recruitment of pipe manufacturers and pipe welders",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041848",
+    "closing_date": "Deadline D-29",
+    "location": "Gyeongnam Geoje-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Welding",
+    "language": "en"
+  },
+  {
+    "title": "crew recruitment",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041847",
+    "closing_date": "Deadline D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Fisheries",
+    "language": "en"
+  },
+  {
+    "title": "crew recruitment",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041846",
+    "closing_date": "Deadline D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Fisheries",
+    "language": "en"
+  },
+  {
+    "title": "crew recruitment",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041845",
+    "closing_date": "Deadline D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Fisheries",
+    "language": "en"
+  },
+  {
+    "title": "Hoengseong KC Co., Ltd. - Recruiting production workers for Hoengseong Korean beef slaughterhouse",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041844",
+    "closing_date": "Deadline D-29",
+    "location": "Gangwon Hoengseong-gun",
+    "pay": "Salary : 2,500,000 KRW",
+    "task": "Food manufacturing",
+    "language": "en"
+  },
+  {
+    "title": "Winsteel Co., Ltd. Yesan Factory Recruitment of Production Employees",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041843",
+    "closing_date": "Deadline D-28",
+    "location": "Chungnam Yesan-gun",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Etc",
+    "language": "en"
+  },
+  {
+    "title": "crew recruitment",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041842",
+    "closing_date": "Deadline D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Fisheries",
+    "language": "en"
+  },
+  {
+    "title": "Production job vacancies",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041841",
+    "closing_date": "Deadline D-29",
+    "location": "Gangwon Taebaek-si",
+    "pay": "Salary : 2,060,740 KRW",
+    "task": "Food manufacturing",
+    "language": "en"
+  },
+  {
+    "title": "Recruitment of stone processing staff",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041840",
+    "closing_date": "Deadline D-29",
+    "location": "Jeollabuk-do Iksan-si",
+    "pay": "Salary : 3,100,000 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "Recruiting production workers",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041839",
+    "closing_date": "Deadline D-29",
+    "location": "Gangwon Hoengseong-gun",
+    "pay": "Salary : 2,500,000 KRW",
+    "task": "Food manufacturing",
+    "language": "en"
+  },
+  {
+    "title": "crew recruitment",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041838",
+    "closing_date": "Deadline D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Fisheries",
+    "language": "en"
+  },
+  {
+    "title": "crew recruitment",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000041837",
+    "closing_date": "Deadline D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Fisheries",
+    "language": "en"
+  },
+  {
+    "title": "Tìm nhân viên giao hàng chợ Gangseo",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041866",
+    "closing_date": "Hạn chót D-29",
+    "location": "서울특별시 강서구",
+    "pay": "Lương : 3,500,000 KRW",
+    "task": "Dịch vụ chuyển phát",
+    "language": "vi"
+  },
+  {
+    "title": "Phi hành đoàn Kyung-eunho đã tìm kiếm",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041865",
+    "closing_date": "Hạn chót D-29",
+    "location": "전라북도 부안군",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "Ngư nghiệp",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển dụng thuyền viên vùng ven biển",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041864",
+    "closing_date": "Hạn chót D-0",
+    "location": "인천광역시 남구",
+    "pay": "Lương : 2,500,000 KRW",
+    "task": "Ngư nghiệp",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển nhân viên làm toàn thời gian sản xuất thịt bò khô",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041863",
+    "closing_date": "Hạn chót D-28",
+    "location": "인천광역시 남동구",
+    "pay": "Lương : 2,600,000 KRW",
+    "task": "Sản xuất thực phẩm",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển dụng nhân viên vận hành và trợ lý máy tiện CNC mới",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041862",
+    "closing_date": "Hạn chót D-27",
+    "location": "부산광역시 강서구",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Một công ty báo chí đang tìm kiếm người có thể làm công việc báo chí.",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041861",
+    "closing_date": "Hạn chót D-28",
+    "location": "충청남도 당진시",
+    "pay": "Lương : 3,000,000 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "sản xuất kim loại tấm",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041860",
+    "closing_date": "Hạn chót D-29",
+    "location": "경기도 화성시",
+    "pay": "hàng năm : 30,000,000 KRW",
+    "task": "Cơ khí",
+    "language": "vi"
+  },
+  {
+    "title": "Thông báo tuyển dụng nhân sự trang trại lợn",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041859",
+    "closing_date": "Hạn chót D-29",
+    "location": "경상북도 포항시",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "Chăn nuôi",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển nhân viên sản xuất thực phẩm",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041858",
+    "closing_date": "Hạn chót D-17",
+    "location": "충청북도 옥천군",
+    "pay": "Lương : 2,070,000 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Công ty TNHH Yeowon Farm - Tuyển trợ lý quản lý chăn nuôi lợn",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041857",
+    "closing_date": "Hạn chót D-12",
+    "location": "전라북도 정읍시",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "Cây trồng lương thực",
+    "language": "vi"
+  },
+  {
+    "title": "Chúng tôi đang tuyển công nhân sản xuất.",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041856",
+    "closing_date": "Hạn chót D-14",
+    "location": "경기도 시흥시",
+    "pay": "hàng năm : 40,000,000 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển dụng thuyền viên",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041855",
+    "closing_date": "Hạn chót D-29",
+    "location": "강원도 동해시",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "Ngư nghiệp",
+    "language": "vi"
+  },
+  {
+    "title": "công nhân xuyên tâm khuôn ép",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041854",
+    "closing_date": "Hạn chót D-27",
+    "location": "대구광역시 달서구",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "tuyển dụng phi hành đoàn",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041853",
+    "closing_date": "Hạn chót D-29",
+    "location": "강원도 동해시",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "Ngư nghiệp",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển dụng thợ hàn",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041852",
+    "closing_date": "Hạn chót D-29",
+    "location": "경기도 김포시",
+    "pay": "Lương : 2,500,000 KRW",
+    "task": "Hàn",
+    "language": "vi"
+  },
+  {
+    "title": "tuyển dụng phi hành đoàn",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041851",
+    "closing_date": "Hạn chót D-29",
+    "location": "강원도 동해시",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "Ngư nghiệp",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển kỹ thuật viên chế biến gỗ",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041850",
+    "closing_date": "Hạn chót D-28",
+    "location": "경기도 김포시",
+    "pay": "Lương : 3,600,000 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "tuyển dụng phi hành đoàn",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041849",
+    "closing_date": "Hạn chót D-29",
+    "location": "강원도 동해시",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "Ngư nghiệp",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển thợ sản xuất ống và thợ hàn ống",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041848",
+    "closing_date": "Hạn chót D-29",
+    "location": "경상남도 거제시",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "Hàn",
+    "language": "vi"
+  },
+  {
+    "title": "tuyển dụng phi hành đoàn",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041847",
+    "closing_date": "Hạn chót D-29",
+    "location": "강원도 동해시",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "Ngư nghiệp",
+    "language": "vi"
+  },
+  {
+    "title": "tuyển dụng phi hành đoàn",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041846",
+    "closing_date": "Hạn chót D-29",
+    "location": "강원도 동해시",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "Ngư nghiệp",
+    "language": "vi"
+  },
+  {
+    "title": "tuyển dụng phi hành đoàn",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041845",
+    "closing_date": "Hạn chót D-29",
+    "location": "강원도 동해시",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "Ngư nghiệp",
+    "language": "vi"
+  },
+  {
+    "title": "Công ty TNHH Hoengseong KC - Tuyển công nhân sản xuất cho lò mổ bò Hàn Quốc Hoengseong",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041844",
+    "closing_date": "Hạn chót D-29",
+    "location": "강원도 횡성군",
+    "pay": "Lương : 2,500,000 KRW",
+    "task": "Sản xuất thực phẩm",
+    "language": "vi"
+  },
+  {
+    "title": "Công ty TNHH Winsteel Nhà máy Yesan Tuyển dụng nhân viên sản xuất",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041843",
+    "closing_date": "Hạn chót D-28",
+    "location": "충청남도 예산군",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "vân vân",
+    "language": "vi"
+  },
+  {
+    "title": "tuyển dụng phi hành đoàn",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041842",
+    "closing_date": "Hạn chót D-29",
+    "location": "강원도 동해시",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "Ngư nghiệp",
+    "language": "vi"
+  },
+  {
+    "title": "Việc làm sản xuất đang tuyển dụng",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041841",
+    "closing_date": "Hạn chót D-29",
+    "location": "강원도 태백시",
+    "pay": "Lương : 2,060,740 KRW",
+    "task": "Sản xuất thực phẩm",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển nhân viên chế biến đá",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041840",
+    "closing_date": "Hạn chót D-29",
+    "location": "전라북도 익산시",
+    "pay": "Lương : 3,100,000 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển công nhân sản xuất",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041839",
+    "closing_date": "Hạn chót D-29",
+    "location": "강원도 횡성군",
+    "pay": "Lương : 2,500,000 KRW",
+    "task": "Sản xuất thực phẩm",
+    "language": "vi"
+  },
+  {
+    "title": "tuyển dụng phi hành đoàn",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041838",
+    "closing_date": "Hạn chót D-29",
+    "location": "강원도 동해시",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "Ngư nghiệp",
+    "language": "vi"
+  },
+  {
+    "title": "tuyển dụng phi hành đoàn",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000041837",
+    "closing_date": "Hạn chót D-29",
+    "location": "강원도 동해시",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "Ngư nghiệp",
+    "language": "vi"
+  },
+  {
+    "title": "Gangseo Market-д хүргэлтийн ажилтан хайж байна",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041866",
+    "closing_date": "Хаах D-29",
+    "location": "Seoul Gangseo-gu",
+    "pay": "Сарын Цалин : 3,500,000 Ханвха",
+    "task": "Шуудан зөөгч/хурдан үйлчилгээ",
+    "language": "mn"
+  },
+  {
+    "title": "Gyeong-eunho багийнхан хайж байсан",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041865",
+    "closing_date": "Хаах D-29",
+    "location": "Jeollabuk-do Buan-gun",
+    "pay": "Цагийн Цалин : 9,860 Ханвха",
+    "task": "Загасны аж ахуй",
+    "language": "mn"
+  },
+  {
+    "title": "Далайн эргийн багийн ажилд авна",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041864",
+    "closing_date": "Хаах D-0",
+    "location": "Incheon Nam-gu",
+    "pay": "Сарын Цалин : 2,500,000 Ханвха",
+    "task": "Загасны аж ахуй",
+    "language": "mn"
+  },
+  {
+    "title": "Үхрийн мах бэлтгэх үндсэн ажилтан ажилд авна",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041863",
+    "closing_date": "Хаах D-28",
+    "location": "Incheon Namdong-gu",
+    "pay": "Сарын Цалин : 2,600,000 Ханвха",
+    "task": "хоол үйлдвэрлэл",
+    "language": "mn"
+  },
+  {
+    "title": "CNC токарь, туслах ажилтан шинээр ажилд авна",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041862",
+    "closing_date": "Хаах D-27",
+    "location": "Busan Gangseo-gu",
+    "pay": "Цагийн Цалин : 9,860 Ханвха",
+    "task": "Машин, тоног төхөөрөмжийн үйл ажиллагаа",
+    "language": "mn"
+  },
+  {
+    "title": "Хэвлэлийн компанид хэвлэлийн ажил хийх хүн хайж байна.",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041861",
+    "closing_date": "Хаах D-28",
+    "location": "Chungnam Dangjin-gun",
+    "pay": "Сарын Цалин : 3,000,000 Ханвха",
+    "task": "Машин, тоног төхөөрөмжийн үйл ажиллагаа",
+    "language": "mn"
+  },
+  {
+    "title": "хуудас металл үйлдвэрлэл",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041860",
+    "closing_date": "Хаах D-29",
+    "location": "Gyeonggi Hwaseong-si",
+    "pay": "Жилийн Цалин : 30,000,000 Ханвха",
+    "task": "Механик",
+    "language": "mn"
+  },
+  {
+    "title": "Гахайн фермийн талбайн ажилтан ажилд авах зар",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041859",
+    "closing_date": "Хаах D-29",
+    "location": "Gyeongbuk Pohang-si",
+    "pay": "Цагийн Цалин : 9,860 Ханвха",
+    "task": "мал аж ахуй",
+    "language": "mn"
+  },
+  {
+    "title": "Хүнсний үйлдвэрлэлийн ажилтан ажилд авна",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041858",
+    "closing_date": "Хаах D-17",
+    "location": "Chungbuk Okcheon-gun",
+    "pay": "Сарын Цалин : 2,070,000 Ханвха",
+    "task": "Машин, тоног төхөөрөмжийн үйл ажиллагаа",
+    "language": "mn"
+  },
+  {
+    "title": "Yeowon Farm Co., Ltd. - Гахайн үржүүлгийн менежментийн туслах ажилтан ажилд авна",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041857",
+    "closing_date": "Хаах D-12",
+    "location": "Jeollabuk-do Jeongeup-si",
+    "pay": "Цагийн Цалин : 9,860 Ханвха",
+    "task": "Хөдөө аж ахуй",
+    "language": "mn"
+  },
+  {
+    "title": "Үйлдвэрлэлийн ажилчдыг ажилд авна.",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041856",
+    "closing_date": "Хаах D-14",
+    "location": "Gyeonggi Siheung-si",
+    "pay": "Жилийн Цалин : 40,000,000 Ханвха",
+    "task": "Машин, тоног төхөөрөмжийн үйл ажиллагаа",
+    "language": "mn"
+  },
+  {
+    "title": "Багийн элсэлт",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041855",
+    "closing_date": "Хаах D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Цагийн Цалин : 9,860 Ханвха",
+    "task": "Загасны аж ахуй",
+    "language": "mn"
+  },
+  {
+    "title": "хэвлэлийн хэвний радиаль ажилтан",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041854",
+    "closing_date": "Хаах D-27",
+    "location": "Daegu Dalseo-gu",
+    "pay": "Цагийн Цалин : 9,860 Ханвха",
+    "task": "Машин, тоног төхөөрөмжийн үйл ажиллагаа",
+    "language": "mn"
+  },
+  {
+    "title": "багийн элсэлт",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041853",
+    "closing_date": "Хаах D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Цагийн Цалин : 9,860 Ханвха",
+    "task": "Загасны аж ахуй",
+    "language": "mn"
+  },
+  {
+    "title": "Гагнуурчин ажилд авна",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041852",
+    "closing_date": "Хаах D-29",
+    "location": "Gyeonggi Gimpo-si",
+    "pay": "Сарын Цалин : 2,500,000 Ханвха",
+    "task": "гагнуур",
+    "language": "mn"
+  },
+  {
+    "title": "багийн элсэлт",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041851",
+    "closing_date": "Хаах D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Цагийн Цалин : 9,860 Ханвха",
+    "task": "Загасны аж ахуй",
+    "language": "mn"
+  },
+  {
+    "title": "Мод боловсруулах техникч ажилд авна",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041850",
+    "closing_date": "Хаах D-28",
+    "location": "Gyeonggi Gimpo-si",
+    "pay": "Сарын Цалин : 3,600,000 Ханвха",
+    "task": "Машин, тоног төхөөрөмжийн үйл ажиллагаа",
+    "language": "mn"
+  },
+  {
+    "title": "багийн элсэлт",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041849",
+    "closing_date": "Хаах D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Цагийн Цалин : 9,860 Ханвха",
+    "task": "Загасны аж ахуй",
+    "language": "mn"
+  },
+  {
+    "title": "Хоолой үйлдвэрлэгч, гагнуурчин ажилд авна",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041848",
+    "closing_date": "Хаах D-29",
+    "location": "Gyeongnam Geoje-si",
+    "pay": "Цагийн Цалин : 9,860 Ханвха",
+    "task": "гагнуур",
+    "language": "mn"
+  },
+  {
+    "title": "багийн элсэлт",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041847",
+    "closing_date": "Хаах D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Цагийн Цалин : 9,860 Ханвха",
+    "task": "Загасны аж ахуй",
+    "language": "mn"
+  },
+  {
+    "title": "багийн элсэлт",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041846",
+    "closing_date": "Хаах D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Цагийн Цалин : 9,860 Ханвха",
+    "task": "Загасны аж ахуй",
+    "language": "mn"
+  },
+  {
+    "title": "багийн элсэлт",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041845",
+    "closing_date": "Хаах D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Цагийн Цалин : 9,860 Ханвха",
+    "task": "Загасны аж ахуй",
+    "language": "mn"
+  },
+  {
+    "title": "Hoengseong KC Co., Ltd. - Хоенсонг Солонгосын үхрийн мах нядалгааны газарт үйлдвэрлэлийн ажилчдыг ажилд авна.",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041844",
+    "closing_date": "Хаах D-29",
+    "location": "Gangwon Hoengseong-gun",
+    "pay": "Сарын Цалин : 2,500,000 Ханвха",
+    "task": "хоол үйлдвэрлэл",
+    "language": "mn"
+  },
+  {
+    "title": "Winsteel ХХК Есан үйлдвэр үйлдвэрлэлийн ажилчдыг ажилд авна",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041843",
+    "closing_date": "Хаах D-28",
+    "location": "Chungnam Yesan-gun",
+    "pay": "Цагийн Цалин : 9,860 Ханвха",
+    "task": "гэх мэт",
+    "language": "mn"
+  },
+  {
+    "title": "багийн элсэлт",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041842",
+    "closing_date": "Хаах D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Цагийн Цалин : 9,860 Ханвха",
+    "task": "Загасны аж ахуй",
+    "language": "mn"
+  },
+  {
+    "title": "Үйлдвэрлэлийн ажлын байр",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041841",
+    "closing_date": "Хаах D-29",
+    "location": "Gangwon Taebaek-si",
+    "pay": "Сарын Цалин : 2,060,740 Ханвха",
+    "task": "хоол үйлдвэрлэл",
+    "language": "mn"
+  },
+  {
+    "title": "Чулуу боловсруулах ажилтан ажилд авна",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041840",
+    "closing_date": "Хаах D-29",
+    "location": "Jeollabuk-do Iksan-si",
+    "pay": "Сарын Цалин : 3,100,000 Ханвха",
+    "task": "Машин, тоног төхөөрөмжийн үйл ажиллагаа",
+    "language": "mn"
+  },
+  {
+    "title": "Үйлдвэрлэлийн ажилчдыг ажилд авах",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041839",
+    "closing_date": "Хаах D-29",
+    "location": "Gangwon Hoengseong-gun",
+    "pay": "Сарын Цалин : 2,500,000 Ханвха",
+    "task": "хоол үйлдвэрлэл",
+    "language": "mn"
+  },
+  {
+    "title": "багийн элсэлт",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041838",
+    "closing_date": "Хаах D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Цагийн Цалин : 9,860 Ханвха",
+    "task": "Загасны аж ахуй",
+    "language": "mn"
+  },
+  {
+    "title": "багийн элсэлт",
+    "link": "https://www.jobploy.kr/mn/recruit/RS0000041837",
+    "closing_date": "Хаах D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Цагийн Цалин : 9,860 Ханвха",
+    "task": "Загасны аж ахуй",
+    "language": "mn"
+  },
+  {
+    "title": "Gangseo bozorida yetkazib berish xodimlari qidirilmoqda",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041866",
+    "closing_date": "Yopish D-29",
+    "location": "Seoul Gangseo-gu",
+    "pay": "Oylik Ish Haqi : 3,500,000 KRW",
+    "task": "Yetkazib berish/tezkor xizmat",
+    "language": "uz"
+  },
+  {
+    "title": "Gyeong-eunho ekipaji qidirdi",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041865",
+    "closing_date": "Yopish D-29",
+    "location": "Jeollabuk-do Buan-gun",
+    "pay": "Soatlik Ish Haqi : 9,860 KRW",
+    "task": "baliq ovlash",
+    "language": "uz"
+  },
+  {
+    "title": "Sohil dengizi ekipajlarini yollash",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041864",
+    "closing_date": "Yopish D-0",
+    "location": "Incheon Nam-gu",
+    "pay": "Oylik Ish Haqi : 2,500,000 KRW",
+    "task": "baliq ovlash",
+    "language": "uz"
+  },
+  {
+    "title": "Mol go&#39;shti ishlab chiqarish uchun to&#39;liq vaqtli xodimlarni yollash",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041863",
+    "closing_date": "Yopish D-28",
+    "location": "Incheon Namdong-gu",
+    "pay": "Oylik Ish Haqi : 2,600,000 KRW",
+    "task": "oziq-ovqat ishlab chiqarish",
+    "language": "uz"
+  },
+  {
+    "title": "Yangi CNC stanoklari va yordamchilarini ishga olish",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041862",
+    "closing_date": "Yopish D-27",
+    "location": "Busan Gangseo-gu",
+    "pay": "Soatlik Ish Haqi : 9,860 KRW",
+    "task": "Qurilmalar/Uskunalar",
+    "language": "uz"
+  },
+  {
+    "title": "Matbuot kompaniyasi matbuot ishlarini bajara oladigan odamni qidirmoqda.",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041861",
+    "closing_date": "Yopish D-28",
+    "location": "Chungnam Dangjin-gun",
+    "pay": "Oylik Ish Haqi : 3,000,000 KRW",
+    "task": "Qurilmalar/Uskunalar",
+    "language": "uz"
+  },
+  {
+    "title": "plitalar ishlab chiqarish",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041860",
+    "closing_date": "Yopish D-29",
+    "location": "Gyeonggi Hwaseong-si",
+    "pay": "Yillik Ish Haqi : 30,000,000 KRW",
+    "task": "Mexanik",
+    "language": "uz"
+  },
+  {
+    "title": "Cho&#39;chqa fermasi dala xodimlarini ishga qabul qilish to&#39;g&#39;risida e&#39;lon",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041859",
+    "closing_date": "Yopish D-29",
+    "location": "Gyeongbuk Pohang-si",
+    "pay": "Soatlik Ish Haqi : 9,860 KRW",
+    "task": "chorvachilik",
+    "language": "uz"
+  },
+  {
+    "title": "Oziq-ovqat ishlab chiqarish uchun xodimlarni yollash",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041858",
+    "closing_date": "Yopish D-17",
+    "location": "Chungbuk Okcheon-gun",
+    "pay": "Oylik Ish Haqi : 2,070,000 KRW",
+    "task": "Qurilmalar/Uskunalar",
+    "language": "uz"
+  },
+  {
+    "title": "Yeowon Farm Co., Ltd. - cho&#39;chqachilikni boshqarish bo&#39;yicha yordamchilarni ishga olish",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041857",
+    "closing_date": "Yopish D-12",
+    "location": "Jeollabuk-do Jeongeup-si",
+    "pay": "Soatlik Ish Haqi : 9,860 KRW",
+    "task": "Qishloq xo'jaligi",
+    "language": "uz"
+  },
+  {
+    "title": "Biz ishlab chiqarish ishchilarini ishga olamiz.",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041856",
+    "closing_date": "Yopish D-14",
+    "location": "Gyeonggi Siheung-si",
+    "pay": "Yillik Ish Haqi : 40,000,000 KRW",
+    "task": "Qurilmalar/Uskunalar",
+    "language": "uz"
+  },
+  {
+    "title": "Ekipajni yollash",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041855",
+    "closing_date": "Yopish D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Soatlik Ish Haqi : 9,860 KRW",
+    "task": "baliq ovlash",
+    "language": "uz"
+  },
+  {
+    "title": "matbuot qolip radial ishchi",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041854",
+    "closing_date": "Yopish D-27",
+    "location": "Daegu Dalseo-gu",
+    "pay": "Soatlik Ish Haqi : 9,860 KRW",
+    "task": "Qurilmalar/Uskunalar",
+    "language": "uz"
+  },
+  {
+    "title": "ekipajni yollash",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041853",
+    "closing_date": "Yopish D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Soatlik Ish Haqi : 9,860 KRW",
+    "task": "baliq ovlash",
+    "language": "uz"
+  },
+  {
+    "title": "Payvandchi ishga qabul qilish",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041852",
+    "closing_date": "Yopish D-29",
+    "location": "Gyeonggi Gimpo-si",
+    "pay": "Oylik Ish Haqi : 2,500,000 KRW",
+    "task": "payvandlash",
+    "language": "uz"
+  },
+  {
+    "title": "ekipajni yollash",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041851",
+    "closing_date": "Yopish D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Soatlik Ish Haqi : 9,860 KRW",
+    "task": "baliq ovlash",
+    "language": "uz"
+  },
+  {
+    "title": "Yog&#39;ochga ishlov berish bo&#39;yicha texnik xodimlarni ishga olish",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041850",
+    "closing_date": "Yopish D-28",
+    "location": "Gyeonggi Gimpo-si",
+    "pay": "Oylik Ish Haqi : 3,600,000 KRW",
+    "task": "Qurilmalar/Uskunalar",
+    "language": "uz"
+  },
+  {
+    "title": "ekipajni yollash",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041849",
+    "closing_date": "Yopish D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Soatlik Ish Haqi : 9,860 KRW",
+    "task": "baliq ovlash",
+    "language": "uz"
+  },
+  {
+    "title": "Quvur ishlab chiqaruvchilar va quvurlarni payvandlovchilarni ishga olish",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041848",
+    "closing_date": "Yopish D-29",
+    "location": "Gyeongnam Geoje-si",
+    "pay": "Soatlik Ish Haqi : 9,860 KRW",
+    "task": "payvandlash",
+    "language": "uz"
+  },
+  {
+    "title": "ekipajni yollash",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041847",
+    "closing_date": "Yopish D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Soatlik Ish Haqi : 9,860 KRW",
+    "task": "baliq ovlash",
+    "language": "uz"
+  },
+  {
+    "title": "ekipajni yollash",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041846",
+    "closing_date": "Yopish D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Soatlik Ish Haqi : 9,860 KRW",
+    "task": "baliq ovlash",
+    "language": "uz"
+  },
+  {
+    "title": "ekipajni yollash",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041845",
+    "closing_date": "Yopish D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Soatlik Ish Haqi : 9,860 KRW",
+    "task": "baliq ovlash",
+    "language": "uz"
+  },
+  {
+    "title": "Hoengseong KC Co., Ltd. - Hoengseong Koreya mol go&#39;shti so&#39;yish sexiga ishlab chiqarish ishchilarini yollash",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041844",
+    "closing_date": "Yopish D-29",
+    "location": "Gangwon Hoengseong-gun",
+    "pay": "Oylik Ish Haqi : 2,500,000 KRW",
+    "task": "oziq-ovqat ishlab chiqarish",
+    "language": "uz"
+  },
+  {
+    "title": "Winsteel Co., Ltd Yesan zavodi ishlab chiqarish xodimlarini ishga qabul qilish",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041843",
+    "closing_date": "Yopish D-28",
+    "location": "Chungnam Yesan-gun",
+    "pay": "Soatlik Ish Haqi : 9,860 KRW",
+    "task": "Boshqa",
+    "language": "uz"
+  },
+  {
+    "title": "ekipajni yollash",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041842",
+    "closing_date": "Yopish D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Soatlik Ish Haqi : 9,860 KRW",
+    "task": "baliq ovlash",
+    "language": "uz"
+  },
+  {
+    "title": "Ishlab chiqarish bo&#39;sh ish o&#39;rinlari",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041841",
+    "closing_date": "Yopish D-29",
+    "location": "Gangwon Taebaek-si",
+    "pay": "Oylik Ish Haqi : 2,060,740 KRW",
+    "task": "oziq-ovqat ishlab chiqarish",
+    "language": "uz"
+  },
+  {
+    "title": "Toshni qayta ishlash bo&#39;yicha xodimlarni yollash",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041840",
+    "closing_date": "Yopish D-29",
+    "location": "Jeollabuk-do Iksan-si",
+    "pay": "Oylik Ish Haqi : 3,100,000 KRW",
+    "task": "Qurilmalar/Uskunalar",
+    "language": "uz"
+  },
+  {
+    "title": "Ishlab chiqarish xodimlarini yollash",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041839",
+    "closing_date": "Yopish D-29",
+    "location": "Gangwon Hoengseong-gun",
+    "pay": "Oylik Ish Haqi : 2,500,000 KRW",
+    "task": "oziq-ovqat ishlab chiqarish",
+    "language": "uz"
+  },
+  {
+    "title": "ekipajni yollash",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041838",
+    "closing_date": "Yopish D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Soatlik Ish Haqi : 9,860 KRW",
+    "task": "baliq ovlash",
+    "language": "uz"
+  },
+  {
+    "title": "ekipajni yollash",
+    "link": "https://www.jobploy.kr/uz/recruit/RS0000041837",
+    "closing_date": "Yopish D-29",
+    "location": "Gangwon Donghae-si",
+    "pay": "Soatlik Ish Haqi : 9,860 KRW",
+    "task": "baliq ovlash",
+    "language": "uz"
+  }
+]

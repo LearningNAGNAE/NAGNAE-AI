@@ -1,3 +1,6 @@
+from fastapi import FastAPI, Request, Form
+from fastapi.responses import JSONResponse
+from fastapi.templating import Jinja2Templates
 from langchain.agents import tool
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -18,9 +21,12 @@ import json
 import os
 import spacy
 from dotenv import load_dotenv
-os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 load_dotenv()
+
+app = FastAPI()
+templates = Jinja2Templates(directory="templates")
 
 nlp = spacy.load("ko_core_news_sm")
 
@@ -39,7 +45,6 @@ def extract_entities(query):
         if ent.label_ in entities:
             entities[ent.label_].append(ent.text)
     
-    # 추가적인 location 키워드 검사
     location_keywords = {
         "서울": "서울특별시", "경기": "경기도", "인천": "인천광역시", "부산": "부산광역시", 
         "대구": "대구광역시", "광주": "광주광역시", "대전": "대전광역시", "울산": "울산광역시", 
@@ -48,7 +53,6 @@ def extract_entities(query):
         "제주": "제주특별자치도"
     }
     
-    # 주요 도시 및 지역 목록 (행정구역 명칭 포함)
     major_areas = {
         "수원": "시", "성남": "시", "안양": "시", "안산": "시", "용인": "시", "부천": "시", 
         "광명": "시", "평택": "시", "과천": "시", "오산": "시", "시흥": "시", "군포": "시", 
@@ -91,76 +95,88 @@ def extract_entities(query):
 
 def jobploy_crawler(pages=1):
     if isinstance(pages, dict):
-        pages = 1  # 기본값 사용
+        pages = 1
     elif not isinstance(pages, int):
         try:
             pages = int(pages)
         except ValueError:
-            pages = 1  # 변환 실패 시 기본값 사용
+            pages = 1
 
-    chrome_driver_path = r"C:\chromedriver\chromedriver.exe"  # 실제 chromedriver 경로로 업데이트하세요
+    chrome_driver_path = r"C:\chromedriver\chromedriver.exe"
 
     chrome_options = Options()
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--window-size=1920x1080")
-    chrome_options.add_argument("--headless")  # 이 줄을 추가합니다
+    # chrome_options.add_argument("--headless")
 
     service = Service(chrome_driver_path)
     driver = webdriver.Chrome(service=service, options=chrome_options)
 
     results = []
+
+    languages = ['ko', 'en', 'vi', 'mn', 'uz']
+    
     try:
-        for page in range(1, pages + 1):
-            driver.get(f"https://www.jobploy.kr/ko/recruit?page={page}")
+        for lang in languages:
+            for page in range(1, pages + 1):
+                url = f"https://www.jobploy.kr/{lang}/recruit?page={page}"
+                driver.get(url)
 
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.CLASS_NAME, "content"))
-            )
+                WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.CLASS_NAME, "content"))
+                )
 
-            job_listings = driver.find_elements(By.CSS_SELECTOR, ".item.col-6")
+                job_listings = driver.find_elements(By.CSS_SELECTOR, ".item.col-6")
 
-            for job in job_listings:
-                title_element = job.find_element(By.CSS_SELECTOR, "h6.mb-1")
-                link_element = job.find_element(By.CSS_SELECTOR, "a").get_attribute("href")
-                pay_element = job.find_element(By.CSS_SELECTOR, "p.pay")
-                badge_elements = job.find_elements(By.CSS_SELECTOR, ".badge.text-dark.bg-secondary-150.rounded-pill")
+                for job in job_listings:
+                    title_element = job.find_element(By.CSS_SELECTOR, "h6.mb-1")
+                    link_element = job.find_element(By.CSS_SELECTOR, "a").get_attribute("href")
+                    pay_element = job.find_element(By.CSS_SELECTOR, "p.pay")
+                    badge_elements = job.find_elements(By.CSS_SELECTOR, ".badge.text-dark.bg-secondary-150.rounded-pill")
 
-                if len(badge_elements) >= 3:
-                    location_element = badge_elements[0]
-                    task_element = badge_elements[1]
-                    closing_date_element = badge_elements[2]
-                    location = location_element.text
-                    task = task_element.text
-                    closing_date = closing_date_element.text
-                else:
-                    closing_date = "마감 정보 없음"
-                    location = "위치 정보 없음"
-                    task = "직무 정보 없음"
+                    if len(badge_elements) >= 3:
+                        location_element = badge_elements[0]
+                        task_element = badge_elements[1]
+                        closing_date_element = badge_elements[2]
+                        location = location_element.text
+                        task = task_element.text
+                        closing_date = closing_date_element.text
+                    else:
+                        closing_date = "마감 정보 없음"
+                        location = "위치 정보 없음"
+                        task = "직무 정보 없음"
 
-                title = title_element.text
-                pay = pay_element.text
-                results.append({"title": title, "link": link_element, "closing_date": closing_date, "location": location, "pay": pay, "task": task})
+                    title = title_element.text
+                    pay = pay_element.text
+                    results.append({
+                        "title": title,
+                        "link": link_element,
+                        "closing_date": closing_date,
+                        "location": location,
+                        "pay": pay,
+                        "task": task,
+                        "language": lang  # 추가된 언어 필드
+                    })
 
     finally:
         driver.quit()
         
-    return results  # results_str 대신 results 반환
+    return results
 
 @tool
 def search_jobs(query: str) -> str:
     """Search for job listings based on the given query."""
-    entities = extract_entities(query) #사용자의 입력에서 주요 키워드(예: 지역, 직업, 급여)를 추출
-    docs = vectorstore.similarity_search(query, k=100)
+    entities = extract_entities(query)
+    docs = vectorstore.similarity_search(query, k=10)
     results = []
-    relevant_results = [] #사용자의 요구와 밀접하게 관련된 구직 정보를 저장
+    relevant_results = []
     location_results = []
     
     for doc in docs:
-        job_info = json.loads(doc.page_content) # JSON 형식의 구직 정보를 파싱
-        relevance_score = 0 #관련성을 평가하기 전이므로 0으로 시작
+        job_info = json.loads(doc.page_content)
+        relevance_score = 0
         
-        # 위치 체크 (더 유연한 매칭)
         if entities["LOCATION"]:
             for loc in entities["LOCATION"]:
                 if loc.lower() in job_info['location'].lower() or any(part.lower() in job_info['location'].lower() for part in loc.split()):
@@ -169,7 +185,6 @@ def search_jobs(query: str) -> str:
             else:
                 continue
         
-        # 급여 체크
         if entities["MONEY"]:
             try:
                 required_salary = int(entities["MONEY"][0].replace(',', '').replace('원', ''))
@@ -179,7 +194,6 @@ def search_jobs(query: str) -> str:
             except ValueError:
                 pass
         
-        # 직종 체크 (제목과 직무 정보 모두 확인)
         if entities["OCCUPATION"]:
             occupation_match = any(occ.lower() in job_info['title'].lower() or 
                                    occ.lower() in job_info['task'].lower() 
@@ -192,7 +206,6 @@ def search_jobs(query: str) -> str:
         else:
             results.append(job_info)
     
-    # 지역 필터링 결과만 반환
     if entities["LOCATION"]:
         filtered_results = location_results
     else:
@@ -210,27 +223,32 @@ def search_jobs(query: str) -> str:
         },
         "job_listings": filtered_results,
         "additional_info": f"These are the job listings that match your query. {len(location_results)} jobs are specifically in the requested location."
-    }, ensure_ascii=False, indent=2) #검색 결과를 요약하여 일종의 "리포트"를 작성 후 JSON 형식으로 정리하는 과정
-    #ensure_ascii=False: 한글이나 다른 비ASCII 문자가 제대로 표시되도록 설정합니다.
-    #indent=2: JSON 문자열을 보기 좋게 들여쓰기 합니다.
-# 크롤링 데이터 가져오기
+    }, ensure_ascii=False, indent=2)
+
+# 크롤링 데이터 가져오기 및 파일로 저장
 crawled_data = jobploy_crawler(pages=1)
 
-# 텍스트 분할
+# 크롤링 데이터를 파일로 저장하는 함수
+def save_data_to_file(data, filename):
+    with open(filename, "w", encoding="utf-8") as file:
+        json.dump(data, file, ensure_ascii=False, indent=2)
+
+# 크롤링 데이터를 텍스트 파일로 저장
+save_data_to_file(crawled_data, "crawled_data.txt")
+
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
 texts = text_splitter.split_documents([
     Document(page_content=json.dumps(item, ensure_ascii=False)) 
     for item in crawled_data
 ])
 
-# 임베딩 및 벡터 DB 저장
 embeddings = OpenAIEmbeddings()
 vectorstore = FAISS.from_texts([text.page_content for text in texts], embeddings)
 
 tools = [search_jobs]
 
 MEMORY_KEY = "chat_history"
-prompt = ChatPromptTemplate.from_messages( #대화의 각 단계를 정의하는 메시지 목록을 받아 템플릿을 생성
+prompt = ChatPromptTemplate.from_messages(
     [
         (
             "system",
@@ -243,11 +261,12 @@ prompt = ChatPromptTemplate.from_messages( #대화의 각 단계를 정의하는
             - OCCUPATION: Detects job titles or professions
 
             When responding to queries:
-            1. Analyze user queries to extract relevant entities.
+            1. Analyze user queries by language type to extract relevant entities.
             2. Search the job database using the extracted information.
             3. Filter and prioritize job listings based on the user's requirements.
             4. Provide a comprehensive summary of the search results.
             5. Offer detailed information about each relevant job listing.
+            6. If the keyword or numerical value does not match the user's query, do not provide any other data.
 
             Include the following information for each job listing:
             - Title
@@ -282,11 +301,12 @@ prompt = ChatPromptTemplate.from_messages( #대화의 각 단계를 정의하는
         MessagesPlaceholder(variable_name="agent_scratchpad"),
     ]
 )
+
 llm_with_tools = llm.bind_tools(tools)
 
 agent = (
     {
-        "input": lambda x: x["input"], #람다 함수(lambda)는 익명 함수를 정의하며, x["input"]은 입력 데이터에서 input 키의 값을 반환.친구가 말한 걸 정확하게 다른 친구에게 전해주는 것과 비슷
+        "input": lambda x: x["input"],
         "agent_scratchpad": lambda x: format_to_openai_tool_messages(
             x["intermediate_steps"]
         ),
@@ -295,23 +315,24 @@ agent = (
     | prompt
     | llm_with_tools
     | OpenAIToolsAgentOutputParser()
-) #에이전트의 구성(입력, 프롬프트, LLM, 출력 파서)
+)
 
 agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 
-# 채팅 기록 초기화
-chat_history = []
+@app.post("/search_jobs")
+async def search_jobs_endpoint(request: Request, query: str = Form(...)):
+    chat_history = []
 
-# 첫 번째 쿼리 invoke 함수는 에이전트(agent_executor)에게 주어진 입력을 전달하고, 그에 따른 출력을 받는 역할
-input1 = "기계 일을 할 수 있는 곳을 알려줘"
-result = agent_executor.invoke({"input": input1, "chat_history": chat_history})
-chat_history.extend(
-    [
-        HumanMessage(content=input1),
-        AIMessage(content=result["output"]),
-    ]
-)
+    result = agent_executor.invoke({"input": query, "chat_history": chat_history})
+    chat_history.extend(
+        [
+            {"role": "user", "content": query},
+            {"role": "assistant", "content": result["output"]},
+        ]
+    )
 
+    return JSONResponse(content={"response": result["output"], "chat_history": chat_history})
 
-# 결과 출력
-print(result["output"])
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
