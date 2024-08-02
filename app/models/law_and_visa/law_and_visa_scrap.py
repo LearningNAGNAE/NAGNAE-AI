@@ -10,7 +10,7 @@ import concurrent.futures
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
 
 from app.models.law_and_visa.law_and_visa_util import setup_driver
-from app.models.law_and_visa.law_and_visa_embedding import scrap_law_a, scrap_law_b, scrap_law_j
+from app.models.law_and_visa.law_and_visa_embedding import scrap_law_a, scrap_law_b, scrap_law_j, crawl_law_a
 
 load_dotenv()
 
@@ -31,6 +31,9 @@ def main():
     #j. 국가법령정보센터: 외국인고용법
     scrap_law_j_url = "https://www.law.go.kr/%EB%B2%95%EB%A0%B9/%EC%99%B8%EA%B5%AD%EC%9D%B8%EA%B7%BC%EB%A1%9C%EC%9E%90%EC%9D%98%EA%B3%A0%EC%9A%A9%EB%93%B1%EC%97%90%EA%B4%80%ED%95%9C%EB%B2%95%EB%A5%A0"
     
+    #e. 정부24 외국인 서비스
+    crawl_law_e_url = "https://www.gov.kr/portal/foreigner/ko"
+
     driver = setup_driver()
 
     try:
@@ -42,22 +45,25 @@ def main():
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             # future_a = executor.submit(scrap_law_a, driver, scrap_law_a_url, embeddings, index_name) #완료
             # future_b = executor.submit(scrap_law_b, driver, scrap_law_b_url, embeddings, index_name) #완료
-            future_c = executor.submit(scrap_law_b, driver, scrap_law_c_url, embeddings, index_name) 
+            # future_c = executor.submit(scrap_law_b, driver, scrap_law_c_url, embeddings, index_name) 
             # future_d = executor.submit(scrap_law_b, driver, scrap_law_d_url, embeddings, index_name) 
             # future_j = executor.submit(scrap_law_j, driver, scrap_law_j_url, embeddings, index_name) #완료
+            future_e = executor.submit(crawl_law_a, crawl_law_e_url, driver, embeddings, index_name)
 
             # laws_a = future_a.result()
             # laws_b = future_b.result()
-            laws_c = future_c.result()
+            # laws_c = future_c.result()
             # laws_d = future_d.result()
             # laws_j = future_j.result()
-            # print("")
+            crawled_data, total_vectors = future_e.result()
+
         # 결과 출력
         # print(f"스크래핑 및 임베딩 완료: 판례 {len(laws_a)}개")
         # print(f"스크래핑 및 임베딩 완료: 법령 {len(laws_b)}개")
-        print(f"스크래핑 및 임베딩 완료: 조약 {len(laws_c)}개")
+        # print(f"스크래핑 및 임베딩 완료: 조약 {len(laws_c)}개")
         # print(f"스크래핑 및 임베딩 완료: 규칙/예규/선례 {len(laws_d)}개")
         # print(f"스크래핑 및 임베딩 완료: 외국인노동법 {len(laws_j)}개")
+        print(f"크롤링 및 임베딩 완료: 정부24 외국인 서비스 {len(crawled_data)}개, 총 {total_vectors}개의 벡터")
 
     except Exception as e:
         print(f"오류 발생: {e}")
