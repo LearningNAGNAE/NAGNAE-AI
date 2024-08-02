@@ -21,7 +21,6 @@ def main():
 
     #b.종합법률정보: 법령
     # scrap_law_b_url = "https://glaw.scourt.go.kr/wsjo/lawod/sjo130.do?prevUrl=interSrch&tabId=0&q=%EC%99%B8%EA%B5%AD%EC%9D%B8&p4=02#//"
-    scrap_law_b_url = "https://glaw.scourt.go.kr/wsjo/lawod/sjo130.do?prevUrl=interSrch&tabId=0&q=%EC%99%B8%EA%B5%AD%EC%9D%B8&p4=02#1722409948531"
 
     #c.종합법률정보: 조약
     scrap_law_c_url = "https://glaw.scourt.go.kr/wsjo/trty/sjo610.do?prevUrl=interSrch&tabId=0&q=%EC%99%B8%EA%B5%AD%EC%9D%B8#//"
@@ -36,27 +35,27 @@ def main():
 
     try:
         embeddings = OpenAIEmbeddings(model="text-embedding-ada-002")
-        # index_name = "law_and_visa"
-        index_name = "test"
+        index_name = "law_and_visa"
+        # index_name = "test"
 
         # ThreadPoolExecutor 블록: 웹 스크래핑 및 임베딩 생성
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             # future_a = executor.submit(scrap_law_a, driver, scrap_law_a_url, embeddings, index_name) #완료
-            future_b = executor.submit(scrap_law_b, driver, scrap_law_b_url, embeddings, index_name)
-            # future_c = executor.submit(scrap_law_b, driver, scrap_law_c_url, embeddings, index_name) 
+            # future_b = executor.submit(scrap_law_b, driver, scrap_law_b_url, embeddings, index_name) #완료
+            future_c = executor.submit(scrap_law_b, driver, scrap_law_c_url, embeddings, index_name) 
             # future_d = executor.submit(scrap_law_b, driver, scrap_law_d_url, embeddings, index_name) 
             # future_j = executor.submit(scrap_law_j, driver, scrap_law_j_url, embeddings, index_name) #완료
 
             # laws_a = future_a.result()
-            laws_b = future_b.result()
-            # laws_c = future_c.result()
+            # laws_b = future_b.result()
+            laws_c = future_c.result()
             # laws_d = future_d.result()
             # laws_j = future_j.result()
             # print("")
         # 결과 출력
         # print(f"스크래핑 및 임베딩 완료: 판례 {len(laws_a)}개")
-        print(f"스크래핑 및 임베딩 완료: 법령 {len(laws_b)}개")
-        # print(f"스크래핑 및 임베딩 완료: 조약 {len(laws_c)}개")
+        # print(f"스크래핑 및 임베딩 완료: 법령 {len(laws_b)}개")
+        print(f"스크래핑 및 임베딩 완료: 조약 {len(laws_c)}개")
         # print(f"스크래핑 및 임베딩 완료: 규칙/예규/선례 {len(laws_d)}개")
         # print(f"스크래핑 및 임베딩 완료: 외국인노동법 {len(laws_j)}개")
 

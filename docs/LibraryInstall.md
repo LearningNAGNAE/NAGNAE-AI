@@ -24,7 +24,9 @@ pip install tensorflow
 
 pip install tf-keras
 
+pip install spacy
 
+python -m spacy download ko_core_news_sm
 
 
 
