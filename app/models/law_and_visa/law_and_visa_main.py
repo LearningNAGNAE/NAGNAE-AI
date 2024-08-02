@@ -6,27 +6,26 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.vectorstores import FAISS
+from langchain_community.retrievers import BM25Retriever
+from langchain_community.chat_message_histories import ChatMessageHistory
+from langchain.retrievers import EnsembleRetriever
 from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate, AIMessagePromptTemplate
-from langchain.memory import ConversationBufferMemory, ChatMessageHistory
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain.schema import BaseChatMessageHistory
 import logging
 import traceback
-import re 
-from langchain.prompts import AIMessagePromptTemplate
 
-#환경 변수 로드 및 FastAPI 애플리케이션 생성
+# 환경 변수 로드 및 FastAPI 애플리케이션 생성
 load_dotenv()
 app = FastAPI()
 
-#입력 데이터 모델 정의
+# 입력 데이터 모델 정의
 class Query(BaseModel):
     question: str
     session_id: str
 
-#FAISS 인덱스 로드 및 설정
+# FAISS 인덱스 로드 및 설정
 embeddings = OpenAIEmbeddings()
 index_name = "faiss_index_law_and_visa_page"
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -39,10 +38,22 @@ if not os.path.exists(index_path):
 vector_store = FAISS.load_local(index_path, embeddings, allow_dangerous_deserialization=True)
 chat = ChatOpenAI(temperature=0, model="gpt-3.5-turbo")
 
+# BM25 인덱스 로드 및 설정
+bm25_texts = [
+    "Korean labor laws protect workers' rights to fair wages and working conditions.",
+    "The visa application process in Korea involves several steps and documentation.",
+    # 추가 텍스트 데이터 ...
+]  # BM25 인덱스에 사용할 문서 리스트를 여기에 설정
+bm25_retriever = BM25Retriever.from_texts(bm25_texts, k=4)
+
+# 하이브리드 검색기 설정
+faiss_retriever = vector_store.as_retriever(search_kwargs={"k": 2})
+ensemble_retriever = EnsembleRetriever(retrievers=[bm25_retriever, faiss_retriever], weights=[0.5, 0.5])
+
 print(f"FAISS index size: {vector_store.index.ntotal}")
 
-#벡터 저장소를 검색기로 사용
-retriever = vector_store.as_retriever()
+# 벡터 저장소를 검색기로 사용
+retriever = ensemble_retriever
 
 # 시스템 프롬프트 
 system_prompt = """
@@ -55,6 +66,7 @@ You are a specialized AI assistant providing information on Korean law, visa reg
 2. Offer both general and specific information relevant to foreign workers and students.
 3. Guide users on labor rights, visa regulations, and academic-related legal matters.
 4. Ensure cultural sensitivity and awareness in all interactions.
+5. Provide relevant contact information or website addresses for official authorities when applicable.
 
 ## Guidelines
 
@@ -78,10 +90,16 @@ You are a specialized AI assistant providing information on Korean law, visa reg
 
 6. Legal Disclaimers: Emphasize that laws may change and encourage verifying current regulations with official sources.
 
-Always approach each query systematically to ensure accurate, helpful, and responsible assistance. Prioritize the well-being and legal protection of foreign workers and students in your responses.
+7. Contact Information: When relevant, provide official contact information or website addresses for appropriate government agencies or organizations. For example:
+   - Ministry of Justice (출입국·외국인정책본부): www.immigration.go.kr
+   - Ministry of Employment and Labor: www.moel.go.kr
+   - Korea Immigration Service: www.hikorea.go.kr
+   - National Health Insurance Service: www.nhis.or.kr
+
+Always approach each query systematically to ensure accurate, helpful, and responsible assistance. Prioritize the well-being and legal protection of foreign workers and students in your responses, and guide them to official sources when necessary.
 """
 
-#로깅 설정
+# 로깅 설정
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -105,7 +123,7 @@ chat_prompt = ChatPromptTemplate.from_messages([
     ai_message_prompt
 ])
 
-#ChatOpenAI 모델 초기화
+# ChatOpenAI 모델 초기화
 model = ChatOpenAI(temperature=0)
 
 # 검색 체인 구성
@@ -119,7 +137,6 @@ retrieval_chain = (
     | model
     | StrOutputParser()
 )
-
 
 # 메모리 저장소 설정
 memory_store = {}
@@ -158,8 +175,7 @@ async def validation_exception_handler(request, exc):
         content={"detail": str(exc)}
     )
 
-
-#CORS 미들웨어 추가 (임시)
+# CORS 미들웨어 추가 (임시)
 from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
@@ -191,29 +207,29 @@ async def chat_endpoint(query: Query):
 
         # RunnableWithMessageHistory를 사용하여 응답 생성
         response = chain_with_history.invoke(
-            {"question": question, "language": language},
-            config={"configurable": {"session_id": session_id}}
+            {
+                "question": {"question": question, "language": language},
+            },
+            {"configurable": {"session_id": session_id}}
         )
-        logger.debug(f"Generated response: {response}")
-
-        # 응답 텍스트를 웹 표시에 적합하게 포맷팅
-        # formatted_response = format_text_for_web(response)
+        answer = response.get("answer", "")
+        logger.debug(f"Generated answer: {answer}")
 
         return {
             "question": question,
-            "answer": response,
+            "answer": answer,
             "detected_language": language,
         }
     except Exception as e:
-        logger.error(f"An error occurred: {str(e)}")
+        logger.error(f"Error processing request: {e}")
         logger.error(traceback.format_exc())
-        error_message = "An error occurred. Please try again later."
-        return {
-            "question": question,
-            "answer": error_message,
-            "detected_language": language,
-        }
-# 메인 실행 부분
+        return JSONResponse(
+            status_code=500,
+            content={"message": "Internal Server Error"}
+        )
+
+# 애플리케이션 실행
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8000)
+   
