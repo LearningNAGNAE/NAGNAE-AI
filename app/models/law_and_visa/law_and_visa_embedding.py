@@ -249,7 +249,6 @@ def scrap_law_b(driver, url, embeddings, index_name):
     return all_laws
 
 
-
 # --- j ---
 def scrap_law_j(driver, url, embeddings, index_name):
     print(f"URL 접속: {url}")
@@ -370,6 +369,187 @@ def scrap_law_j(driver, url, embeddings, index_name):
     except Exception as e:
         print(f"scrap_law_j 함수 실행 중 예외 발생: {e}")
         return all_laws
+    
+
+# -- 크롤링 --
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+def crawl_law_a(url: str, driver: Any, embeddings: OpenAIEmbeddings, index_name: str) -> tuple[List[Dict[str, str]], int]:
+    logger.info(f"URL 접속: {url}")
+    driver.get(url)
+    time.sleep(5)
+    logger.info("페이지 로딩 완료")
+
+    crawled_data = []
+    processed_links = set()
+
+    try:
+        # 메인 페이지 내용 크롤링
+        main_title = extract_title(driver)
+        main_content = extract_content(driver)
+        if main_content:
+            crawled_data.append({
+                'url': url,
+                'title': main_title,
+                'content': main_content
+            })
+            logger.info(f"메인 페이지 제목: {main_title}")
+            logger.info(f"메인 페이지 내용: {main_content[:200]}...")
+
+        # 모든 관련 링크 찾기
+        links = driver.find_elements(By.CSS_SELECTOR, 'a[href^="/portal/foreigner/ko/"]')
+        unique_links = set(link.get_attribute('href') for link in links if link.get_attribute('href'))
+
+        for link in unique_links:
+            if link in processed_links:
+                continue
+
+            logger.info(f"링크 접속: {link}")
+            driver.get(link)
+            time.sleep(3)
+            processed_links.add(link)
+
+            title = extract_title(driver)
+            content = extract_content(driver)
+
+            if content:
+                crawled_data.append({
+                    'url': link,
+                    'title': title,
+                    'content': content
+                })
+                logger.info(f"제목: {title}")
+                logger.info(f"내용: {content[:200]}...")  # 처음 200자만 출력
+            else:
+                logger.warning(f"내용을 찾을 수 없습니다: {link}")
+
+        logger.info(f"총 {len(crawled_data)}개의 항목이 처리되었습니다.")
+
+        if not crawled_data:
+            logger.warning("크롤링된 데이터가 없습니다. 웹사이트 구조를 확인해주세요.")
+            return [], 0
+
+        # FAISS 인덱스 업데이트
+        logger.info("FAISS 인덱스 업데이트를 시작합니다.")
+        total_vectors = update_faiss_index(crawled_data, embeddings, f"{index_name}_page")
+        logger.info(f"FAISS 인덱스 업데이트가 완료되었습니다. 총 {total_vectors}개의 벡터가 저장되었습니다.")
+
+        return crawled_data, total_vectors
+
+    except Exception as e:
+        logger.error(f"crawl_law_a 함수 실행 중 오류 발생: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return [], 0
+
+def extract_title(driver):
+    title_selectors = ['h2', 'h1', 'h3', '.title', '.tit', '.sub-title']
+    for selector in title_selectors:
+        try:
+            title_elements = driver.find_elements(By.CSS_SELECTOR, selector)
+            for title_element in title_elements:
+                title = title_element.text.strip()
+                if title:
+                    logger.info(f"제목 추출 성공 (선택자: {selector}): {title}")
+                    return title
+            logger.warning(f"제목 요소를 찾았으나 내용이 비어 있습니다 (선택자: {selector})")
+        except Exception as e:
+            logger.warning(f"제목 추출 실패 (선택자: {selector}): {str(e)}")
+            continue
+    
+    # 모든 텍스트 내용을 가져와서 첫 번째 의미 있는 라인을 제목으로 사용
+    try:
+        body_text = driver.find_element(By.TAG_NAME, 'body').text
+        lines = body_text.split('\n')
+        for line in lines:
+            if line.strip():
+                logger.info(f"본문에서 추출한 제목: {line.strip()}")
+                return line.strip()
+    except Exception as e:
+        logger.warning(f"본문에서 제목 추출 실패: {str(e)}")
+    
+    logger.warning("모든 방법으로 제목을 찾지 못했습니다. 페이지 URL을 사용합니다.")
+    return driver.current_url
+
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
+def extract_content(driver):
+    content_selectors = [
+        '.cont-group', '.content', '.txt_cont', 
+        'article', 'section', '.main-content'
+    ]
+    for selector in content_selectors:
+        try:
+            element = WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, selector))
+            )
+            
+            formatted_content = []
+            
+            # 모든 <li> 태그 찾기
+            li_elements = element.find_elements(By.TAG_NAME, 'li')
+            for li in li_elements:
+                try:
+                    dt = li.find_element(By.TAG_NAME, 'dt')
+                    dd = li.find_element(By.TAG_NAME, 'dd')
+                    dt_text = dt.text.strip()
+                    dd_text = dd.text.strip()
+                    formatted_content.append(f"{dt_text}: {dd_text}")
+                except NoSuchElementException:
+                    # <dt>와 <dd>가 없는 경우 그냥 텍스트 추가
+                    li_text = li.text.strip()
+                    if li_text:
+                        formatted_content.append(li_text)
+            
+            # <li> 태그 외의 다른 텍스트도 포함
+            other_elements = element.find_elements(By.XPATH, './/*[not(self::li) and not(self::dt) and not(self::dd)]')
+            for elem in other_elements:
+                if elem.text.strip():
+                    formatted_content.append(elem.text.strip())
+            
+            return '\n'.join(formatted_content)
+
+        except TimeoutException:
+            continue
+    return ""
+
+def update_faiss_index(documents: List[Dict[str, str]], embeddings: OpenAIEmbeddings, index_name: str) -> int:
+    if not documents:
+        logger.warning("문서가 없어 FAISS 인덱스를 업데이트하지 않습니다.")
+        return 0
+
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=500,
+        chunk_overlap=50,
+        length_function=len,
+    )
+
+    all_chunks = []
+    for doc in documents:
+        text = f"{doc['title']}\n\n{doc['content']}"
+        chunks = text_splitter.split_text(text)
+        all_chunks.extend(chunks)
+
+    # 임베딩 생성
+    chunk_embeddings = [embeddings.embed_query(chunk) for chunk in all_chunks]
+
+    # FAISS 인덱싱
+    embedding_matrix = np.array(chunk_embeddings).astype('float32')
+    dimension = embedding_matrix.shape[1]
+
+    try:
+        index = faiss.read_index(f"{index_name}.index")
+        logger.info(f"기존 인덱스를 로드했습니다: {index_name}")
+    except:
+        index = faiss.IndexFlatL2(dimension)
+        logger.info(f"새 인덱스를 생성했습니다: {index_name}")
+
+    index.add(embedding_matrix)
+    faiss.write_index(index, f"{index_name}.index")
+    
+    logger.info(f"인덱스가 업데이트되었습니다: {index_name}, 총 {index.ntotal}개의 벡터")
+    
+    return index.ntotal
 
 # --------------------------------------------------------------------------------- #
 # 기존 코드에서 가져온 get_content 함수
@@ -502,12 +682,38 @@ def clean_content(content):
 
 # FAISS 인덱스를 업데이트하는 함수
 def update_faiss_index(laws, embeddings, index_name):
-    documents = []
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=500,
         chunk_overlap=50,
         length_function=len,
     )
+
+    all_chunks = []
+    for law in laws:
+        text = f"{law['title']}\n\n{law['content']}"
+        chunks = text_splitter.split_text(text)
+        all_chunks.extend(chunks)
+
+    # 임베딩 생성
+    chunk_embeddings = [embeddings.embed_query(chunk) for chunk in all_chunks]
+
+    # FAISS 인덱싱
+    embedding_matrix = np.array(chunk_embeddings).astype('float32')
+    dimension = embedding_matrix.shape[1]
+
+    try:
+        index = faiss.read_index(f"{index_name}.index")
+        print(f"기존 인덱스를 로드했습니다: {index_name}")
+    except:
+        index = faiss.IndexFlatL2(dimension)
+        print(f"새 인덱스를 생성했습니다: {index_name}")
+
+    index.add(embedding_matrix)
+    faiss.write_index(index, f"{index_name}.index")
+    
+    print(f"인덱스가 업데이트되었습니다: {index_name}, 총 {index.ntotal}개의 벡터")
+    
+    return index.ntotal
 
 # 임베딩 생성 함수
 def create_embeddings(laws):
@@ -613,31 +819,3 @@ def parse_law_content(content: str) -> Dict[str, str]:
         elif current_article:
             articles[current_article] += line + "\n"
     return articles
-
-def update_faiss_index(laws: List[Dict[str, Any]], embeddings: Any, index_name: str) -> int:
-    if not laws:
-        print(f"업데이트할 법률 정보가 없습니다: {index_name}")
-        return 0
-
-    vectors = [law['embedding'] for law in laws if 'embedding' in law]
-    
-    if not vectors:
-        print(f"유효한 임베딩이 없습니다: {index_name}")
-        return 0
-
-    vectors_np = np.array(vectors).astype('float32')
-    dimension = vectors_np.shape[1]
-
-    try:
-        index = faiss.read_index(f"{index_name}.index")
-        print(f"기존 인덱스를 로드했습니다: {index_name}")
-    except:
-        index = faiss.IndexFlatL2(dimension)
-        print(f"새 인덱스를 생성했습니다: {index_name}")
-
-    index.add(vectors_np)
-    faiss.write_index(index, f"{index_name}.index")
-    
-    print(f"인덱스가 업데이트되었습니다: {index_name}, 총 {index.ntotal}개의 벡터")
-    
-    return index.ntotal
