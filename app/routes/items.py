@@ -38,7 +38,7 @@ async def lifespan(app):
     yield
     # 종료 시 실행할 코드 (필요한 경우)
 
-@router.post("/job_and_study")
+@router.post("/study")
 def query_agent(query: Query):
     try:
         agent_result = agent_executor.invoke({"input": query.input})
