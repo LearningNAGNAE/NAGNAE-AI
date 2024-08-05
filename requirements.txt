@@ -43,3 +43,4 @@ xlrd
 XlsxWriter
 yarl
 yfinance
+BeautifulSoup
