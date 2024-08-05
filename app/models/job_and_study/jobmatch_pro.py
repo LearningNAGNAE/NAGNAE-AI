@@ -21,6 +21,7 @@ import json
 import os
 import spacy
 from dotenv import load_dotenv
+from langid import classify
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 load_dotenv()
@@ -33,6 +34,11 @@ nlp = spacy.load("ko_core_news_sm")
 llm = ChatOpenAI(
     model="gpt-3.5-turbo", api_key=os.getenv("OPENAI_API_KEY"), temperature=0.1
 )
+
+# 언어 감지 함수
+def detect_language(text):
+    lang, _ = classify(text)
+    return lang
 
 def extract_entities(query):
     doc = nlp(query)
@@ -93,7 +99,7 @@ def extract_entities(query):
     
     return entities
 
-def jobploy_crawler(pages=1):
+def jobploy_crawler(lang, pages=1):
     if isinstance(pages, dict):
         pages = 1
     elif not isinstance(pages, int):
@@ -115,60 +121,94 @@ def jobploy_crawler(pages=1):
 
     results = []
 
-    languages = ['ko', 'en', 'vi', 'mn', 'uz']
+    #languages = ['ko', 'en', 'vi', 'mn', 'uz']
     
     try:
-        for lang in languages:
-            for page in range(1, pages + 1):
-                url = f"https://www.jobploy.kr/{lang}/recruit?page={page}"
-                driver.get(url)
+        for page in range(1, pages + 1):
+            url = f"https://www.jobploy.kr/{lang}/recruit?page={page}"
+            driver.get(url)
 
-                WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.CLASS_NAME, "content"))
-                )
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CLASS_NAME, "content"))
+            )
 
-                job_listings = driver.find_elements(By.CSS_SELECTOR, ".item.col-6")
+            job_listings = driver.find_elements(By.CSS_SELECTOR, ".item.col-6")
 
-                for job in job_listings:
-                    title_element = job.find_element(By.CSS_SELECTOR, "h6.mb-1")
-                    link_element = job.find_element(By.CSS_SELECTOR, "a").get_attribute("href")
-                    pay_element = job.find_element(By.CSS_SELECTOR, "p.pay")
-                    badge_elements = job.find_elements(By.CSS_SELECTOR, ".badge.text-dark.bg-secondary-150.rounded-pill")
+            for job in job_listings:
+                title_element = job.find_element(By.CSS_SELECTOR, "h6.mb-1")
+                link_element = job.find_element(By.CSS_SELECTOR, "a").get_attribute("href")
+                pay_element = job.find_element(By.CSS_SELECTOR, "p.pay")
+                badge_elements = job.find_elements(By.CSS_SELECTOR, ".badge.text-dark.bg-secondary-150.rounded-pill")
 
-                    if len(badge_elements) >= 3:
-                        location_element = badge_elements[0]
-                        task_element = badge_elements[1]
-                        closing_date_element = badge_elements[2]
-                        location = location_element.text
-                        task = task_element.text
-                        closing_date = closing_date_element.text
-                    else:
-                        closing_date = "마감 정보 없음"
-                        location = "위치 정보 없음"
-                        task = "직무 정보 없음"
+                if len(badge_elements) >= 3:
+                    location_element = badge_elements[0]
+                    task_element = badge_elements[1]
+                    closing_date_element = badge_elements[2]
+                    location = location_element.text
+                    task = task_element.text
+                    closing_date = closing_date_element.text
+                else:
+                    closing_date = "마감 정보 없음"
+                    location = "위치 정보 없음"
+                    task = "직무 정보 없음"
 
-                    title = title_element.text
-                    pay = pay_element.text
-                    results.append({
-                        "title": title,
-                        "link": link_element,
-                        "closing_date": closing_date,
-                        "location": location,
-                        "pay": pay,
-                        "task": task,
-                        "language": lang  # 추가된 언어 필드
-                    })
+                title = title_element.text
+                pay = pay_element.text
+                results.append({
+                    "title": title,
+                    "link": link_element,
+                    "closing_date": closing_date,
+                    "location": location,
+                    "pay": pay,
+                    "task": task,
+                    "language": lang
+                })
 
     finally:
         driver.quit()
         
     return results
 
+# 언어별 데이터 저장 및 로드 함수
+def save_data_to_file(data, lang):
+    filename = f"crawled_data_{lang}.txt"
+    with open(filename, "w", encoding="utf-8") as file:
+        json.dump(data, file, ensure_ascii=False, indent=2)
+
+def load_data_from_file(lang):
+    filename = f"crawled_data_{lang}.txt"
+    try:
+        with open(filename, "r", encoding="utf-8") as file:
+            return json.load(file)
+    except FileNotFoundError:
+        return None
+    
+# 벡터 스토어 생성 함수
+def create_vectorstore(data):
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    texts = text_splitter.split_documents([
+        Document(page_content=json.dumps(item, ensure_ascii=False)) 
+        for item in data
+    ])
+    embeddings = OpenAIEmbeddings()
+    return FAISS.from_texts([text.page_content for text in texts], embeddings)
+
+# 글로벌 변수로 벡터 스토어 딕셔너리 선언
+vectorstores = {}
+
 @tool
 def search_jobs(query: str) -> str:
     """Search for job listings based on the given query."""
+    lang = detect_language(query)
+    if lang not in vectorstores:
+        data = load_data_from_file(lang)
+        if data is None:
+            data = jobploy_crawler(lang)
+            save_data_to_file(data, lang)
+        vectorstores[lang] = create_vectorstore(data)
+
     entities = extract_entities(query)
-    docs = vectorstore.similarity_search(query, k=10)
+    docs = vectorstores[lang].similarity_search(query, k=10)
     results = []
     relevant_results = []
     location_results = []
@@ -187,12 +227,26 @@ def search_jobs(query: str) -> str:
         
         if entities["MONEY"]:
             try:
-                required_salary = int(entities["MONEY"][0].replace(',', '').replace('원', ''))
-                job_salary = int(job_info['pay'].split()[2].replace(',', ''))
-                if job_salary >= required_salary:
-                    relevance_score += 1
+                # 사용자가 입력한 급여 정보 추출 및 정수로 변환
+                required_salary_str = entities["MONEY"][0].replace(',', '').replace('원', '').strip()
+                required_salary = int(required_salary_str)
+                
+                # 직무의 급여 정보 추출 및 정수로 변환
+                pay_elements = job_info['pay'].split()
+                if len(pay_elements) >= 3:
+                    job_salary_str = pay_elements[2].replace(',', '').replace('원', '').strip()
+                    job_salary = int(job_salary_str)    
+                    
+                    # 직무의 급여가 요구 급여보다 낮으면 필터링
+                    if job_salary < required_salary:
+                        continue
+                else:
+                    # 급여 정보가 부족한 경우 필터링
+                    continue
+                    
             except ValueError:
-                pass
+                # 급여 정보가 올바르지 않거나 변환 실패 시 필터링
+                continue
         
         if entities["OCCUPATION"]:
             occupation_match = any(occ.lower() in job_info['title'].lower() or 
@@ -226,7 +280,8 @@ def search_jobs(query: str) -> str:
     }, ensure_ascii=False, indent=2)
 
 # 크롤링 데이터 가져오기 및 파일로 저장
-crawled_data = jobploy_crawler(pages=1)
+default_lang = 'ko'  # 기본 언어를 한국어로 설정
+crawled_data = jobploy_crawler(lang=default_lang, pages=1)
 
 # 크롤링 데이터를 파일로 저장하는 함수
 def save_data_to_file(data, filename):
@@ -234,7 +289,7 @@ def save_data_to_file(data, filename):
         json.dump(data, file, ensure_ascii=False, indent=2)
 
 # 크롤링 데이터를 텍스트 파일로 저장
-save_data_to_file(crawled_data, "crawled_data.txt")
+save_data_to_file(crawled_data, f"crawled_data_{default_lang}.txt")
 
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
 texts = text_splitter.split_documents([
@@ -242,8 +297,8 @@ texts = text_splitter.split_documents([
     for item in crawled_data
 ])
 
-embeddings = OpenAIEmbeddings()
-vectorstore = FAISS.from_texts([text.page_content for text in texts], embeddings)
+# embeddings = OpenAIEmbeddings()
+# vectorstore = FAISS.from_texts([text.page_content for text in texts], embeddings)
 
 tools = [search_jobs]
 
@@ -322,6 +377,14 @@ agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 @app.post("/search_jobs")
 async def search_jobs_endpoint(request: Request, query: str = Form(...)):
     chat_history = []
+
+    detected_lang = detect_language(query)
+    if detected_lang not in vectorstores:
+        data = load_data_from_file(detected_lang)
+        if data is None:
+            data = jobploy_crawler(detected_lang)
+            save_data_to_file(data, detected_lang)
+        vectorstores[detected_lang] = create_vectorstore(data)
 
     result = agent_executor.invoke({"input": query, "chat_history": chat_history})
     chat_history.extend(
