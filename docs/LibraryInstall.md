@@ -28,6 +28,39 @@ pip install spacy
 
 python -m spacy download ko_core_news_sm
 
+pip install rank_bm25
+
+pip install chromadb
+
+pip install spacy
+python -m spacy download en_core_web_sm
+python -m spacy download ko_core_news_sm
+python -m spacy download zh_core_web_sm
+python -m spacy download ja_core_news_sm
+
+pip install pdfplumber
+
+pip install deep-translator
+
+pip install elasticsearch
+
+pip install tabula-py
+
+pip install JPype1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
