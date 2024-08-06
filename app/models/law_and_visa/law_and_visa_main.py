@@ -14,6 +14,10 @@ from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain.schema import BaseChatMessageHistory
 from fastapi.middleware.cors import CORSMiddleware
 import logging
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+import torch
+# 메모리 사용량 최적화
+torch.cuda.empty_cache()
 
 # 환경 변수 로드 및 FastAPI 애플리케이션 생성
 load_dotenv()
@@ -36,6 +40,17 @@ class Query(BaseModel):
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Fine-tuned Gemma-2b 모델 및 토크나이저 로드
+quantization_config = BitsAndBytesConfig(load_in_4bit=True)
+model_path = './app/models/law_and_visa/fine_tuned_gemma'  # Fine-tuned 모델이 저장된 경로
+tokenizer_gemma = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
+model_gemma = AutoModelForCausalLM.from_pretrained(
+    model_path, 
+    quantization_config=quantization_config, 
+    local_files_only=True,
+    device_map="auto"  # 이 옵션을 추가하여 자동으로 적절한 디바이스에 모델을 로드합니다.
+)
 
 # FAISS 인덱스 로드 및 설정
 embeddings = OpenAIEmbeddings()
@@ -120,8 +135,9 @@ human_template = """
 RESPONSE_LANGUAGE: {language}
 CONTEXT: {context}
 QUESTION: {question}
+GEMMA_RESPONSE: {gemma_response}
 
-Please provide a detailed and comprehensive answer to the above question in the specified RESPONSE_LANGUAGE, including specific visa information when relevant. Organize your response clearly and include all pertinent details.
+Please provide a detailed and comprehensive answer to the above question in the specified RESPONSE_LANGUAGE, including specific visa information when relevant. Incorporate insights from the GEMMA_RESPONSE if applicable. Organize your response clearly and include all pertinent details.
 """
 human_message_prompt = HumanMessagePromptTemplate.from_template(human_template)
 
@@ -136,11 +152,19 @@ def get_context(question: str):
     context = "\n".join(doc.page_content for doc in docs)
     return process_context(context)
 
+# Gemma-2b로 텍스트 생성 함수
+def generate_text_with_gemma(question: str) -> str:
+    prompt = f"<start_of_turn>user\n{question}<end_of_turn>\n<start_of_turn>model\n"
+    input_ids = tokenizer_gemma(prompt, return_tensors="pt").to(model_gemma.device)
+    outputs = model_gemma.generate(**input_ids, max_length=512, num_return_sequences=1)
+    return tokenizer_gemma.decode(outputs[0], skip_special_tokens=True)
+
 retrieval_chain = (
     {
         "context": lambda x: get_context(x["question"]),
         "question": lambda x: x["question"],
-        "language": lambda x: x["language"]
+        "language": lambda x: x["language"],
+        "gemma_response": lambda x: generate_text_with_gemma(x["question"])
     }
     | chat_prompt
     | chat
@@ -202,19 +226,15 @@ async def chat_endpoint(query: Query):
         logger.info(f"Received question: {question}")
 
         language = detect_language(question)
-        logger.info(f"Detected language: {language}")
-
-        # Generate response using RunnableWithMessageHistory
-        response = chain_with_history.invoke(
+        
+        response = await chain_with_history.ainvoke(
             {"question": question, "language": language},
-            {"configurable": {"session_id": session_id}}
+            config={"configurable": {"session_id": session_id}},
         )
-        answer = response if isinstance(response, str) else "Error: Unable to generate response"
 
         return {
             "question": question,
-            "answer": answer,
-            "detected_language": language,
+            "answer": response,
         }
     except Exception as e:
         logger.error(f"Error processing request: {str(e)}", exc_info=True)
