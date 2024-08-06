@@ -32,19 +32,17 @@ async def job_search(query: Query, request: Request):
 @asynccontextmanager
 async def lifespan(app):
     # 시작 시 실행할 코드
-    app.state.agent_executor = await setup_langchain()
+    global agent_executor
+    agent_executor = setup_langchain()
     app.state.agent_executor_job = await create_agent_executor_job()
     yield
     # 종료 시 실행할 코드 (필요한 경우)
 
 @router.post("/study")
-async def query_agent(query: Query, request: Request):
-    agent_executor = request.app.state.agent_executor
-    if agent_executor is None:
-        raise HTTPException(status_code=500, detail="Agent executor not initialized")
+def query_agent(query: Query):
     try:
-        agent_result = await agent_executor.ainvoke({"input": query.input})
-        return {"result": agent_result["output"]}
+        agent_result = agent_executor.invoke({"input": query.input})
+        return {"result": agent_result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

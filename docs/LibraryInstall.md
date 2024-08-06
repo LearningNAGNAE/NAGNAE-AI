@@ -48,11 +48,11 @@ pip install tabula-py
 
 pip install JPype1
 
+pip install fitz
 
+pip install frontend
 
-
-
-
+pip install PyMuPDF
 
 
 
