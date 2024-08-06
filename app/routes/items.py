@@ -6,9 +6,8 @@ from app.models.t2t import t2t
 from pydantic import BaseModel
 from app.models.study_crawl import setup_langchain
 from contextlib import asynccontextmanager
-from app.models.medical import Medical
+from app.models.medical import MedicalAssistant
 from app.models.job_crawl import create_agent_executor_job
-import re
 
 router = APIRouter()
 
@@ -16,6 +15,7 @@ class Query(BaseModel):
     input: str
 
 agent_executor = None
+medical_assistant = MedicalAssistant()
 
 @router.post("/job_search")
 async def job_search(query: Query, request: Request):
@@ -77,7 +77,7 @@ async def t2t_endpoint(file: UploadFile = File(...)):
 @router.post("/medical")
 async def medical(query: Query):
     try:
-        result = await Medical.chatbot(query.input)
-        return {"answer": result}
+        result = await medical_assistant.provide_medical_information(query.input)
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
