@@ -14,7 +14,7 @@ def create_directory(path):
     """디렉토리가 존재하지 않으면 생성"""
     os.makedirs(path, exist_ok=True)
 
-def split_documents(documents, chunk_size=300, chunk_overlap=50):
+def split_documents(documents, chunk_size=500, chunk_overlap=100):
     """문서를 주어진 크기와 중첩으로 분할"""
     text_splitter = CharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
     return text_splitter.split_documents(documents)
