@@ -179,8 +179,7 @@ def jobploy_crawler(lang, pages=3):
     return results
 
 # 언어별 데이터 저장 및 로드 함수
-def save_data_to_file(data, lang):
-    filename = f"crawled_data_{lang}.txt"
+def save_data_to_file(data, filename):
     with open(filename, "w", encoding="utf-8") as file:
         json.dump(data, file, ensure_ascii=False, indent=2)
 
@@ -241,17 +240,29 @@ def search_jobs(query: str) -> str:
         # 급여 필터링
         if entities["MONEY"] and match:
             try:
-                required_salary_str = entities["MONEY"][0].replace(',', '').replace('원', '').strip()
-                required_salary = int(required_salary_str)
-
-                # 3백만원 이상인지 확인
+                # 요구 월급을 정수로 변환
+                required_salary_str = entities["MONEY"][0].replace(',', '').replace('KRW', '').strip()
+                if 'million' in required_salary_str:
+                    required_salary_str = required_salary_str.replace('million', '').strip()
+                    required_salary = int(required_salary_str) * 1000000
+                else:
+                    required_salary = int(required_salary_str)
+                
+                # 최소 월급 설정
                 minimum_salary = 3000000
 
+                # job_info['pay'] 값 처리
                 pay_elements = job_info['pay'].split()
                 if len(pay_elements) >= 3:
                     job_salary_str = pay_elements[2].replace(',', '').replace('원', '').strip()
-                    job_salary = int(job_salary_str)    
-                    
+                    if 'per year' in job_info['pay']:
+                        job_salary = int(job_salary_str) // 12
+                    elif 'million' in job_salary_str:
+                        job_salary_str = job_salary_str.replace('million', '').strip()
+                        job_salary = int(job_salary_str) * 1000000
+                    else:
+                        job_salary = int(job_salary_str)
+
                     # 급여가 요구 급여 이상인지 확인
                     if job_salary < minimum_salary:
                         match = False
@@ -260,6 +271,7 @@ def search_jobs(query: str) -> str:
 
             except ValueError:
                 match = False
+
 
         # 직무 필터링
         if entities["OCCUPATION"] and match:
@@ -289,11 +301,6 @@ def search_jobs(query: str) -> str:
 # 크롤링 데이터 가져오기 및 파일로 저장
 default_lang = 'ko'  # 기본 언어를 한국어로 설정
 crawled_data = jobploy_crawler(lang=default_lang, pages=3)
-
-# 크롤링 데이터를 파일로 저장하는 함수
-def save_data_to_file(data, filename):
-    with open(filename, "w", encoding="utf-8") as file:
-        json.dump(data, file, ensure_ascii=False, indent=2)
 
 # 크롤링 데이터를 텍스트 파일로 저장
 save_data_to_file(crawled_data, f"crawled_data_{default_lang}.txt")
