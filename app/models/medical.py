@@ -7,25 +7,44 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from langchain_community.retrievers import BM25Retriever
 from langchain.retrievers import EnsembleRetriever
+from typing import List
+from googleapiclient.discovery import build
+from langchain.schema import BaseRetriever, Document
 
-# 필요한 모듈들을 임포트합니다.
+class GoogleSearchRetriever(BaseRetriever):
+
+    def _search(self, query: str, **kwargs) -> List[Document]:
+        service = build("customsearch", "v1", developerKey=os.getenv("GOOGLE_API_KEY"))
+        res = service.cse().list(q=query, cx=os.getenv("GOOGLE_CSE_ID"), num=5, dateRestrict="m6", fields="items(title,link,snippet)", **kwargs).execute()
+        documents = []
+
+        for item in res.get('items', []):
+            doc = Document(
+                page_content=item['snippet'],
+                metadata={'source': item['link'], 'title': item['title']}
+            )
+            documents.append(doc)
+    
+        return documents
+
+    def get_relevant_documents(self, query: str) -> List[Document]:
+        return self._search(query)
 
 class MedicalAssistant:
     def __init__(self):
-        load_dotenv()  # .env 파일에서 환경 변수를 로드합니다.
         self.llm = ChatOpenAI(
             model="gpt-3.5-turbo",
             temperature=0, 
             openai_api_key=os.getenv("OPENAI_API_KEY")
-        )  # OpenAI의 ChatGPT 모델을 초기화합니다.
-        self.vector_store = self.__initialize_faiss_index()  # FAISS 인덱스를 초기화합니다.
-        self.ensemble_retriever = self.__setup_ensemble_retriever()  # 앙상블 리트리버를 설정합니다.
+        )
+        self.vector_store = self.__initialize_faiss_index()
+        self.ensemble_retriever = self.__setup_ensemble_retriever()
+        # self.google_retriever = GoogleSearchRetriever()
 
     def __initialize_faiss_index(self):
         medical_faiss_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "models", "medical", "medical_faiss")
         embeddings = OpenAIEmbeddings(api_key=os.getenv("OPENAI_API_KEY"))
         return FAISS.load_local(medical_faiss_dir, embeddings, allow_dangerous_deserialization=True)
-        # FAISS 인덱스를 로컬에서 로드합니다.
 
     def __identify_query_language(self, text):
         system_prompt = "You are a language detection expert. Detect the language of the given text and respond with only the language name in English, using lowercase."
@@ -38,20 +57,28 @@ class MedicalAssistant:
         detected_language = response.content.strip().lower()
         print(f"Detected language: {detected_language}")
         return detected_language
-        # 쿼리 언어를 식별합니다.
 
     def __setup_ensemble_retriever(self):
         bm25_texts = [
             "Emergency medical services: Call 119 for immediate assistance. English support available. Check KDCA website for current health advisories.",
-            "Health insurance: Mandatory for most visas. Maintain coverage when changing jobs. Covers most medical expenses at reduced rates.",
-            "Hospitals for foreigners: Many offer language services. International Healthcare Centers available at major hospitals for specialized care.",
-            "Preventive care: Free or discounted health check-ups and vaccinations for National Health Insurance subscribers. Regular screenings recommended.",
-            "Medical information resources: Contact HIRA (1577-1000) or NHIS (1577-1000) for inquiries. Visit www.nhis.or.kr for comprehensive health insurance details."
+            "Health insurance: Mandatory for most visas. Maintain coverage when changing jobs. Covers 60-80% of medical expenses. Visit www.nhis.or.kr for details.",
+            "Hospitals for foreigners: Seoul - Severance, Samsung Medical Center. Busan - Pusan National University Hospital. Many offer language services.",
+            "Preventive care: Free annual check-ups for National Health Insurance subscribers over 40. Includes blood tests, chest X-ray, and cancer screenings.",
+            "Medical information resources: NHIS (1577-1000) for insurance. HIRA (1644-2000) for medical costs. Medical 1339 for 24/7 health advice in English.",
+            "Common medications: Tylenol (acetaminophen) for pain/fever, available OTC. Prescription needed for antibiotics. Always consult a pharmacist.",
+            "Mental health services: Seoul Global Center offers free counseling. National suicide prevention hotline: 1393 (24/7, English available).",
+            "Vaccinations: MMR, influenza, and hepatitis B recommended. Many available for free or discounted rates for insurance subscribers.",
+            "COVID-19 information: Check KDCA website for current guidelines. Free testing and treatment for confirmed cases. Mask required in medical facilities.",
+            "Specialist care: Referral from general practitioner often required. International clinics at major hospitals can assist with appointments.",
         ]
-        bm25_retriever = BM25Retriever.from_texts(bm25_texts, k=4)
+        bm25_retriever = BM25Retriever.from_texts(bm25_texts, k=2)
         faiss_retriever = self.vector_store.as_retriever(search_kwargs={"k": 2})
-        return EnsembleRetriever(retrievers=[bm25_retriever, faiss_retriever], weights=[0.3, 0.7])
-        # BM25와 FAISS 리트리버를 결합한 앙상블 리트리버를 설정합니다.
+        google_retriever = GoogleSearchRetriever()
+
+        return EnsembleRetriever(
+            retrievers=[bm25_retriever, faiss_retriever, google_retriever],
+            weights=[0.2, 0.5, 0.3]
+        )
 
     def __create_chat_prompt(self):
         system_prompt = """
@@ -113,7 +140,6 @@ class MedicalAssistant:
             system_message_prompt,
             human_message_prompt
         ])
-        # 챗봇 프롬프트를 생성합니다.
 
     def __create_retrieval_chain(self):
         chat_prompt = self.__create_chat_prompt()
@@ -127,7 +153,6 @@ class MedicalAssistant:
             | self.llm
             | StrOutputParser()
         )
-        # 검색 체인을 생성합니다.
 
     async def provide_medical_information(self, query: str):
         print(f"Received question: {query}")
@@ -139,14 +164,25 @@ class MedicalAssistant:
                 "question": query,
                 "answer": error_message,
                 "detected_language": language,
+                "google_search_results": []
             }
 
         retrieval_chain = self.__create_retrieval_chain()
         response = retrieval_chain.invoke({"question": query, "language": language})
 
+        # Google Custom Search API 결과 가져오기
+        # google_search_results = self.google_retriever.get_relevant_documents(query)
+
         return {
             "question": query,
             "answer": response,
             "detected_language": language
+            # "detected_language": language,
+            # "google_search_results": [
+            #     {
+            #         "title": doc.metadata.get('title', ''),
+            #         "link": doc.metadata.get('source', ''),
+            #         "snippet": doc.page_content
+            #     } for doc in google_search_results
+            # ]
         }
-        # 의료 정보를 제공하는 비동기 메서드입니다.
