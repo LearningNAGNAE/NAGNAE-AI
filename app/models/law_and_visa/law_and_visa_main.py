@@ -41,6 +41,10 @@ class Query(BaseModel):
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# CUDA 사용 가능 여부 확인
+device = "cuda" if torch.cuda.is_available() else "cpu"
+print(f"Using device: {device}")
+
 # Fine-tuned Gemma-2b 모델 및 토크나이저 로드
 quantization_config = BitsAndBytesConfig(load_in_4bit=True)
 model_path = './app/models/law_and_visa/fine_tuned_gemma'  # Fine-tuned 모델이 저장된 경로
@@ -49,8 +53,11 @@ model_gemma = AutoModelForCausalLM.from_pretrained(
     model_path, 
     quantization_config=quantization_config, 
     local_files_only=True,
-    device_map="auto"  # 이 옵션을 추가하여 자동으로 적절한 디바이스에 모델을 로드합니다.
+    device_map="auto",  # 이 옵션을 유지하여 자동으로 적절한 디바이스에 모델을 로드합니다.
+    torch_dtype=torch.float16 if device == "cuda" else torch.float32  # GPU에서는 float16 사용
 )
+
+
 
 # FAISS 인덱스 로드 및 설정
 embeddings = OpenAIEmbeddings()
@@ -132,10 +139,10 @@ Remember, your goal is to provide as much relevant, accurate, and detailed infor
 system_message_prompt = SystemMessagePromptTemplate.from_template(system_prompt)
 
 human_template = """
-RESPONSE_LANGUAGE: {language}
-CONTEXT: {context}
-QUESTION: {question}
-GEMMA_RESPONSE: {gemma_response}
+Question: {question}
+Language: {language}
+Context: {context_summary}
+Gemma's input: {gemma_response}
 
 Please provide a detailed and comprehensive answer to the above question in the specified RESPONSE_LANGUAGE, including specific visa information when relevant. Incorporate insights from the GEMMA_RESPONSE if applicable. Organize your response clearly and include all pertinent details.
 """
@@ -154,14 +161,30 @@ def get_context(question: str):
 
 # Gemma-2b로 텍스트 생성 함수
 def generate_text_with_gemma(question: str) -> str:
-    prompt = f"<start_of_turn>user\n{question}<end_of_turn>\n<start_of_turn>model\n"
+    prompt = f"Summarize briefly: {question}"
     input_ids = tokenizer_gemma(prompt, return_tensors="pt").to(model_gemma.device)
-    outputs = model_gemma.generate(**input_ids, max_length=512, num_return_sequences=1)
+    with torch.no_grad():
+        outputs = model_gemma.generate(
+            **input_ids, 
+            max_length=128,  # 더 짧게 줄임
+            num_return_sequences=1,
+            temperature=0.7,
+            top_k=50,
+            top_p=0.95,
+        )
     return tokenizer_gemma.decode(outputs[0], skip_special_tokens=True)
+
+def summarize_context(context: dict) -> str:
+    summary = "Context summary:\n"
+    if context['general']:
+        summary += "General info: " + " ".join(context['general'][:2]) + "\n"
+    if context['specific']:
+        summary += "Specific info: " + " ".join(context['specific'][:2]) + "\n"
+    return summary
 
 retrieval_chain = (
     {
-        "context": lambda x: get_context(x["question"]),
+        "context_summary": lambda x: summarize_context(get_context(x["question"])),
         "question": lambda x: x["question"],
         "language": lambda x: x["language"],
         "gemma_response": lambda x: generate_text_with_gemma(x["question"])
