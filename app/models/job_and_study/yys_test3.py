@@ -1,4 +1,6 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
+import asyncio
+import pickle
 from pydantic import BaseModel
 from langchain.agents import AgentExecutor, create_openai_tools_agent
 from langchain.tools.retriever import create_retriever_tool
@@ -16,8 +18,13 @@ from typing import List, Dict
 from langchain.retrievers import BM25Retriever
 from langchain.retrievers import BM25Retriever, EnsembleRetriever
 from contextlib import asynccontextmanager
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 load_dotenv()
+
+agent_executor = None
+vectordb = None
+bm25_retriever = None
 
 app = FastAPI()
 
@@ -164,31 +171,58 @@ def preprocess_text(text):
     
     return text.strip()
 
-def setup_langchain():
+async def process_pdf_in_chunks(pdf_path, chunk_size=10):
     loader = PyPDFLoader(pdf_path)
-    pages = loader.load_and_split()
+    pages = await asyncio.to_thread(loader.load_and_split)
+    
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=200,
+        length_function=len,
+    )
+    
+    all_chunks = []
+    for i in range(0, len(pages), chunk_size):
+        chunk = pages[i:i+chunk_size]
+        processed_chunk = []
+        for page in chunk:
+            content = preprocess_text(page.page_content)
+            regions = extract_regions(content)
+            splits = text_splitter.split_text(content)
+            for split in splits:
+                doc = Document(page_content=split, metadata={"page": page.metadata["page"], "regions": regions})
+                processed_chunk.append(doc)
+        all_chunks.extend(processed_chunk)
+    
+    return all_chunks
 
-    documents = []
-    for i, page in enumerate(pages):
-        content = preprocess_text(page.page_content)
-        regions = extract_regions(content)
-        doc = Document(page_content=content, metadata={"page": i+1, "regions": regions})
-        documents.append(doc)
+async def process_and_save_data():
+    documents = await process_pdf_in_chunks(pdf_path)
+    
+    # FAISS 벡터 데이터베이스 생성 및 저장
+    vectordb = await asyncio.to_thread(FAISS.from_documents, documents, OpenAIEmbeddings())
+    await asyncio.to_thread(vectordb.save_local, "vectordb_index", allow_dangerous_deserialization=True)
+    
+    # BM25 검색기 생성 및 저장
+    bm25_retriever = await asyncio.to_thread(BM25Retriever.from_documents, documents)
+    with open("bm25_retriever.pkl", "wb") as f:
+        pickle.dump(bm25_retriever, f)
 
-    # FAISS 벡터 검색
-    vectordb = FAISS.from_documents(documents, OpenAIEmbeddings())
+async def initialize_langchain():
+    global agent_executor, vectordb, bm25_retriever
+    
+    # 저장된 인덱스 로드
+    vectordb = await asyncio.to_thread(FAISS.load_local, "vectordb_index", OpenAIEmbeddings(), allow_dangerous_deserialization=True)
+    with open("bm25_retriever.pkl", "rb") as f:
+        bm25_retriever = pickle.load(f)
+    
+    # 검색기 설정
     faiss_retriever = vectordb.as_retriever(search_kwargs={"k": 3})
-
-    # BM25 키워드 검색
-    bm25_retriever = BM25Retriever.from_documents(documents)
-    bm25_retriever.k = 3
-
-    # 하이브리드 검색기 설정
     ensemble_retriever = EnsembleRetriever(
         retrievers=[bm25_retriever, faiss_retriever],
         weights=[0.5, 0.5]
     )
-
+    
     retriever_tool = create_retriever_tool(
         ensemble_retriever,
         "pdf_search",
@@ -201,40 +235,95 @@ def setup_langchain():
         model="gpt-3.5-turbo", api_key=os.getenv("OPENAI_API_KEY"), temperature=0.1)
 
     prompt = ChatPromptTemplate.from_messages([
-        ("system", """
-        당신은 한국 대학의 외국인 특별전형에 대한 전문가입니다. 주어진 PDF 문서의 내용을 바탕으로 질문에 답변해야 합니다.
-        답변 시 다음 지침을 따르세요:
-        1. PDF 문서의 정보만을 사용하여 답변하세요.
-        2. 문서에 없는 정보에 대해서는 "해당 정보는 제공된 문서에 없습니다"라고 답변하세요.
-        3. 지원 자격, 전형 방법, 제출 서류, 전형 일정 등에 대해 구체적으로 답변하세요.
-        4. 대학별 특징이나 차이점이 있다면 언급하세요.
-        5. 답변은 친절하고 명확하게 제공하세요.
-        6. 필요한 경우 답변을 목록화하여 제시하세요.
-        7. 이전 대화 내용을 참고하여 일관성 있는 답변을 제공하세요.
-        8. 표의 내용을 참조할 때는 행과 열의 관계를 명확히 설명하세요.
-        9. 질문에 언급된 지역과 관련된 대학교 정보가 있다면 반드시 포함하여 답변하세요.
-        10. 제공된 대학교 목록을 참고하여 관련 대학들의 정보를 포함해 답변하세요.
-        """),
+        (
+        "system", """
+        # 한국 대학의 외국인 특별전형 전문가
+
+        ## 역할 및 책임
+        당신은 한국 대학의 외국인 특별전형에 대한 전문가입니다. 주어진 PDF 문서의 내용과 제공된 대학 정보를 바탕으로 질문에 답변해야 합니다. PDF 문서는 다음 구조로 되어 있습니다:
+
+        1. 2025학년도 대학입학전형기본사항 (1페이지)
+        2. 대학별 모집유형 (11페이지)
+        3. 모집단위 및 모집인원 (21페이지)
+        4. 전형방법 및 전형요소 (167페이지)
+
+        이 구조를 참고하여 답변 시 관련 섹션을 언급하면서 정보를 제공하세요. 주요 목표는 다음과 같습니다:
+
+        1. PDF 문서의 정보와 제공된 대학 정보(university_by_region)를 활용하여 정확하고 상세한 답변을 제공합니다.
+        2. 문서나 제공된 대학 정보에 없는 내용에 대해서는 "해당 정보는 제공된 자료에 없습니다"라고 명확히 답변합니다.
+        3. 지원 자격, 전형 방법, 제출 서류, 전형 일정 등에 대해 구체적으로 안내합니다.
+        4. 대학별 특징이나 차이점이 있다면 이를 언급합니다.
+        5. 답변은 친절하고 명확하게 제공합니다.
+        6. 필요한 경우 답변을 목록화하여 제시합니다.
+        7. 이전 대화 내용을 참고하여 일관성 있는 답변을 제공합니다.
+        8. 표의 내용을 참조할 때는 행과 열의 관계를 명확히 설명합니다.
+        9. 질문에 언급된 지역과 관련된 대학교 정보가 있다면 반드시 포함하여 답변합니다.
+        10. 제공된 대학교 목록(university_by_region)을 참고하여 관련 대학들의 정보를 포함하여 답변합니다.
+        11. 특정 지역이나 대학에 대한 질문이 있을 경우, university_by_region 정보를 활용하여 해당 지역의 대학 목록을 제공하고, 가능한 경우 PDF 문서의 정보와 연계하여 답변합니다.
+        12. 특정 대학교에 대한 정보를 요청받았을 경우, 해당 대학교에 대한 정보만을 제공합니다. 다른 대학교의 정보는 언급하지 않습니다.
+
+        ## 지침
+
+        1. 정보 범위:
+            - 비자 규정: 다양한 비자 유형, 신청 절차, 제한 사항, 변경 사항에 대한 상세한 정보를 제공하십시오.
+            - 학문적 법률: 학생 권리, 학문적 청렴성, 장학금 규정 및 비자 상태와의 상호작용을 상세히 설명하십시오.
+            - 일반 생활: 비자 소지자와 관련된 학업, 건강 관리, 주거, 교통 및 문화적 규범에 대한 통찰을 제공하십시오.
+            - 지역별 대학 정보: university_by_region 데이터를 활용하여 특정 지역의 대학 목록과 관련 정보를 제공하십시오.
+
+        2. 특정 초점 영역:
+            - 비자 유형별 규칙에 대한 명확한 구분을 제공합니다 (예: E-7, E-9, D-10, F-2-7, F-4).
+            - 각 비자 범주에 특화된 학생의 권리에 대해 안내합니다.
+            - 특정 지역이나 대학에 대한 질문에 대해 university_by_region 정보를 활용하여 상세히 답변합니다.
+
+        3. 완전성: 항상 가능한 모든 맥락을 기반으로 포괄적인 답변을 제공합니다. 다음을 포함합니다:
+            - 특정 시간 제한이나 기한
+            - 필요한 절차 (예: 입학 방법)
+            - 비준수 시 잠재적 결과
+            - 특정 상황에 따른 변동 사항 (알려진 경우)
+            - 관련된 지역의 대학 목록 및 특징
+
+        4. 정확성 및 업데이트: 자세한 정보를 제공하더라도 입시 정보 및 대학 정보는 변경될 수 있음을 강조합니다. 항상 사용자가 공식 출처에서 현재 규칙을 확인하도록 권장합니다.
+
+        5. 구조화된 응답: 복잡한 정보를 나누어 명확하게 조직된 응답을 제공합니다. 적절할 경우 목록이나 번호 매기기를 사용합니다.
+
+        6. 예시 및 시나리오: 관련이 있을 때 규칙이 실제로 어떻게 적용되는지 설명하기 위해 예시나 가상의 시나리오를 제공합니다.
+
+        7. 불확실성 처리: 특정 세부 사항에 대해 불확실한 경우 이를 명확히 하고, 가능한 가장 관련성 높은 일반 정보를 제공합니다. 항상 최신 및 사례별 지침을 위해 공식 출처를 참조할 것을 권장합니다.
+
+        8. 문서 구조 활용: 답변 시 관련 정보가 PDF의 어느 섹션에 있는지 언급하여 사용자가 원본 자료를 쉽게 찾을 수 있도록 합니다.
+
+        9. 대학 통합 정보 제공: 경주대학교와 신경대학교가 통합되었다는 점을 유의하여 관련 정보를 제공할 때 이를 반영합니다.
+
+        10. 특정 대학 정보 제공: 사용자가 특정 대학에 대한 정보를 요청할 경우, 해당 대학에 대한 정보만을 제공합니다. 이 경우 다른 대학들과의 비교나 추가적인 대학 목록은 제시하지 않습니다.
+
+        기억하십시오, 당신의 목표는 가능한 많은 관련성 있고 정확하며 상세한 정보를 제공하는 동시에 이해하기 쉽고 실행 가능한 정보를 제공하는 것입니다. PDF 문서의 정보와 university_by_region 데이터를 효과적으로 결합하여 사용자에게 가장 유용한 정보를 제공하세요. 또한, 문서의 마지막에 명시된 대로 대학의 구조 개편 및 학과 개편 등에 따라 정보가 변경될 수 있음을 항상 염두에 두고 사용자에게 안내하세요. 특정 대학에 대한 질문에는 그 대학에 대한 정보만을 집중적으로 제공하여 사용자의 요구에 정확히 부응하도록 합니다.
+        """
+         ),
         ("human", "{input}"),
         MessagesPlaceholder(variable_name="chat_history"),
         MessagesPlaceholder(variable_name="agent_scratchpad"),
     ])
 
     agent = create_openai_tools_agent(llm=openai, tools=tools, prompt=prompt)
-    return AgentExecutor(agent=agent, tools=tools, verbose=True)
+    agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 시작 시 실행할 코드
     global agent_executor
-    agent_executor = setup_langchain()
+    if not os.path.exists("vectordb_index") or not os.path.exists("bm25_retriever.pkl"):
+        await process_and_save_data()
+    
+    await initialize_langchain()
     yield
     # 종료 시 실행할 코드 (필요한 경우)
 
 app = FastAPI(lifespan=lifespan)
 
 @app.post("/query")
-async def query(query: Query):
+async def query(query: Query, background_tasks: BackgroundTasks):
+    if agent_executor is None:
+        return {"message": "서버가 초기화 중입니다. 잠시 후 다시 시도해주세요."}
+    
     try:
         memory = get_memory(query.session_id)
         
@@ -244,7 +333,8 @@ async def query(query: Query):
         university_info = "\n".join([f"{region}: {', '.join(unis)}" for region, unis in universities.items()])
         enhanced_query = f"{query.input}\n추출된 지역 정보: {regions}\n관련 대학교:\n{university_info}"
         
-        response = agent_executor.invoke(
+        response = await asyncio.to_thread(
+            agent_executor.invoke,
             {"input": enhanced_query, "chat_history": memory.chat_memory.messages},
             {"memory": memory}
         )
