@@ -135,7 +135,7 @@ def generate_question_based_on_documents(documents):
 
 
 # Example query to the agent
-query = "경기도에서 일하고 싶어"  # 빈 질문으로 설정하여 에이전트가 자체적으로 질문 생성
+query = "경기도에서 월급 300만원 이상인 일자리를 알려주세요."  # 빈 질문으로 설정하여 에이전트가 자체적으로 질문 생성
 
 # 빈 질문인 경우 질문을 생성합니다.
 if not query:

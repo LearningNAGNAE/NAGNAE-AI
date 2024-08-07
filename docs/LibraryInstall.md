@@ -54,7 +54,9 @@ pip install frontend
 
 pip install PyMuPDF
 
+pip install googlesearch-python
 
+pip install konlpy
 
 
 

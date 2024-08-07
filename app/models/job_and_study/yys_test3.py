@@ -1,387 +1,260 @@
-import os
-import time
-from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from langchain.agents import AgentExecutor, create_openai_tools_agent
+from langchain.tools.retriever import create_retriever_tool
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.vectorstores import FAISS
-from langchain_community.retrievers import BM25Retriever
-from langchain_community.chat_message_histories import ChatMessageHistory
-from langchain.retrievers import EnsembleRetriever
-from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables.history import RunnableWithMessageHistory
-from langchain.schema import BaseChatMessageHistory
-from fastapi.middleware.cors import CORSMiddleware
-import logging
-import pdfplumber
+from langchain_community.document_loaders import PyPDFLoader
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.memory import ConversationBufferMemory
+from langchain.schema import Document
+import os
+from dotenv import load_dotenv
 import re
-from spacy import load
-from sklearn.feature_extraction.text import TfidfVectorizer
-import numpy as np
-import tiktoken
-from functools import lru_cache
+from konlpy.tag import Kkma
+from typing import List, Dict
+from langchain.retrievers import BM25Retriever
+from langchain.retrievers import BM25Retriever, EnsembleRetriever
+from contextlib import asynccontextmanager
 
-# 환경 변수 로드 및 FastAPI 애플리케이션 생성
 load_dotenv()
+
 app = FastAPI()
 
-# CORS 미들웨어 추가
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# 입력 데이터 모델 정의
 class Query(BaseModel):
-    question: str
+    input: str
     session_id: str
 
-# 로깅 설정
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# PDF 파일 경로 설정
 pdf_path = r"C:\Users\hi02\dev\NAGNAE\NAGNAE-AI\pdf\2025학년도 재외국민과 외국인 특별전형 시행계획 주요사항.pdf"
 
-def extract_pdf_content(pdf_path):
-    with pdfplumber.open(pdf_path) as pdf:
-        all_content = []
-        for page in pdf.pages:
-            all_content.append(page.extract_text())
-            for table in page.extract_tables():
-                processed_table = [[str(cell) if cell is not None else '' for cell in row] for row in table]
-                all_content.append("\n".join(["\t".join(row) for row in processed_table]))
-    return "\n.join(all_content)"
+# 세션별 메모리 저장소
+session_memories = {}
 
-# PDF 내용 추출 및 처리
-pdf_content = extract_pdf_content(pdf_path)
+# KoNLPy 초기화
+kkma = Kkma()
 
-# FAISS 인덱스 설정
-embeddings = OpenAIEmbeddings(model="text-embedding-ada-002")
-vectorstore = FAISS.from_texts([pdf_content], embeddings)
-faiss_retriever = vectorstore.as_retriever(search_kwargs={"k": 2})
-
-# BM25 검색기 설정
-bm25_retriever = BM25Retriever.from_texts([pdf_content], k=2)
-
-# 하이브리드 검색기 설정
-ensemble_retriever = EnsembleRetriever(
-    retrievers=[bm25_retriever, faiss_retriever],
-    weights=[0.4, 0.6]
-)
-
-# TF-IDF 벡터라이저 초기화 및 피팅
-vectorizer = TfidfVectorizer(max_features=500)
-tfidf_matrix = vectorizer.fit_transform([pdf_content])
-feature_names = vectorizer.get_feature_names_out()
-
-# 키워드 인덱스 생성
-keyword_index = {word: [] for word in feature_names}
-for i, word in enumerate(feature_names):
-    if tfidf_matrix[0, i] > 0:
-        keyword_index[word].append((tfidf_matrix[0, i], i))
-
-# 키워드 검색 함수
-def search_keywords(query, top_k=3):
-    query_vec = vectorizer.transform([query])
-    scores = []
-    for word in query_vec.indices:
-        if word < len(feature_names):
-            word_text = feature_names[word]
-            if word_text in keyword_index:
-                scores.extend(keyword_index[word_text])
-    return sorted(scores, reverse=True)[:top_k]
-
-
-# ChatOpenAI 모델 초기화
-chat = ChatOpenAI(temperature=0, model="gpt-3.5-turbo")
-
-# NER 모델 로드
-nlp = load("ko_core_news_sm")
-
-# System prompt
-system_prompt = """
-AI Assistant for University Admission Policies for International Students in Korea
-Role and Responsibility
-You are a specialized AI assistant focused on analyzing and providing information about university admission policies for international students in Korea. Your primary goals are to:
-
-1. Provide Accurate Information:
-    - Offer precise, detailed, and easily understandable information based on the PDF documents you have access to.
-    - Always verify and cross-check information from multiple sources when possible.
-
-2. Address Specific Queries:
-    - Address both general and specific questions related to university admission policies, ensuring a focus on information relevant to international students.
-    - Provide examples or hypothetical scenarios when applicable to clarify policies and procedures.
-    - If a question includes a specific region, provide information about all universities in that region from the provided PDF documents and `region_translations`.
-
-3. Ensure Clarity and Precision:
-    - Guide users clearly on admission requirements, procedures, and related matters.
-    - Use bullet points or numbered lists to break down complex information.
-    - Highlight specific deadlines, steps, and potential consequences of non-compliance.
-
-4. Be Culturally Sensitive:
-    - Maintain awareness of cultural differences and address queries with sensitivity.
-    - Adapt communication style to be respectful and considerate of diverse cultural backgrounds.
-
-Guidelines
-Language:
-    - ALWAYS respond in the language specified in the 'RESPONSE_LANGUAGE' field. This will match the user's question language.
-
-Information Scope:
-    - Admission Policies: Provide detailed information on application requirements, procedures, deadlines, and any specific criteria for international students.
-    - Documents Required: Explain the types of documents needed, such as proof of previous academic qualifications, language proficiency test scores, and others.
-    - Special Admission Procedures: Detail any special procedures or additional requirements for overseas Koreans or foreign students.
-    - Scholarships and Financial Aid: Offer guidance on available scholarships, eligibility, and application procedures.
-    - Health Insurance and Housing: Provide insights into university policies on health insurance, accommodation, and other living conditions.
-
-Specific Focus Areas:
-    - Document Requirements: Provide clear details on the necessary documentation for different types of admissions.
-    - Application Procedures: Explain the step-by-step process for applying, including any special procedures.
-    - Deadlines and Time Limits: Clearly outline application deadlines and time limits for submission or changes.
-    - Consequences of Non-Compliance: Detail the implications of failing to meet admission requirements or deadlines.
-
-Completeness:
-    - Ensure your answers are comprehensive. Include specific deadlines and time limits, required steps and procedures, and potential consequences of not following the guidelines.
-    - Consider variations based on specific circumstances, if applicable.
-
-Accuracy and Updates:
-    - Emphasize that while you provide detailed information based on the documents, policies may change. Always advise users to verify current details with official sources.
-
-Handling Uncertainty:
-    - If uncertain about specific details, clearly state this and provide the most relevant general information available.
-    - Recommend consulting official sources for the most accurate and case-specific guidance.
-
-Regional Information:
-    - When a question includes a specific region, ensure to provide information about all universities in that region from the provided PDF documents and `region_translations`.
-    - The regions to be recognized include Seoul, Busan, Daegu, Incheon, Gwangju, Daejeon, Ulsan, Gyeonggi-do, Gangwon-do, Chungcheongbuk-do, Chungcheongnam-do, Jeollabuk-do, Jeollanam-do, Gyeongsangbuk-do, Gyeongsangnam-do, and Jeju-do.
-    - Make sure to clearly distinguish between these regions and provide relevant information accordingly.
-    - Do not include universities that are not listed in the PDF documents.
-
-Remember, your role is to deliver relevant, accurate, and detailed information in a clear and actionable manner for the user.
-
-"""
-
-# 프롬프트 템플릿 설정
-system_message_prompt = SystemMessagePromptTemplate.from_template(system_prompt)
-
-human_template = """
-RESPONSE_LANGUAGE: {language}
-CONTEXT: {context}
-QUESTION: {question}
-
-Please provide a detailed and comprehensive answer to the above question in the specified RESPONSE_LANGUAGE, including specific admission policy information when relevant. Organize your response clearly and include all pertinent details.
-"""
-human_message_prompt = HumanMessagePromptTemplate.from_template(human_template)
-
-chat_prompt = ChatPromptTemplate.from_messages([
-    system_message_prompt,
-    human_message_prompt,
-])
-
-# 토큰 제한 함수
-def limit_tokens(text, max_tokens=2000):
-    encoding = tiktoken.encoding_for_model("gpt-3.5-turbo-16k")
-    tokens = encoding.encode(text)
-    return encoding.decode(tokens[:max_tokens])
-
-# 검색 체인 구성
-def get_context(question: str):
-    # 키워드 기반 검색
-    top_keywords = search_keywords(question, top_k=2)
-    keyword_context = "\n".join([pdf_content[kw[1]:kw[1]+300] for kw in top_keywords])
-    
-    # FAISS 및 BM25 검색
-    ensemble_docs = ensemble_retriever.get_relevant_documents(question)
-    ensemble_context = "\n".join(doc.page_content[:300] for doc in ensemble_docs[:1])
-    
-    # NER을 사용하여 질문에서 지역 엔티티 추출
-    doc = nlp(question)
-    mentioned_regions = [ent.text for ent in doc.ents if ent.label_ == "LOC"]
-    
-    if mentioned_regions:
-        region_docs = vectorstore.similarity_search(question, k=1, filter={"region": mentioned_regions[0]})
-        region_context = "\n".join(doc.page_content[:300] for doc in region_docs)
-    else:
-        region_context = ""
-    
-    # 결과 조합 및 토큰 제한
-    combined_context = f"{keyword_context}\n\n{ensemble_context}\n\n{region_context}"
-    limited_context = limit_tokens(combined_context, max_tokens=2000)
-    
-    return post_process_context(limited_context, question)
-
-def post_process_context(context, question):
-    regions = ["충북", "충남", "경북", "경남", "전북", "전남", "강원도", "제주도", "서울", "부산", "대구", "인천", "광주", "대전", "울산", "경기도"]
-    mentioned_region = next((region for region in regions if region in question), None)
-    
-    if mentioned_region:
-        lines = context.split('\n')
-        relevant_lines = [line for line in lines if mentioned_region in line]
-        return "\n".join(relevant_lines) if relevant_lines else context
-    return context
-
-retrieval_chain = (
-    {
-        "context": lambda x: get_context(x["question"]),
-        "question": lambda x: x["question"],
-        "language": lambda x: x["language"]
-    }
-    | chat_prompt
-    | chat
-    | StrOutputParser()
-)
-
-# 메모리 저장소 설정
-memory_store = {}
-
-def get_memory(session_id: str) -> BaseChatMessageHistory:
-    if session_id not in memory_store:
-        memory_store[session_id] = ChatMessageHistory()
-    return memory_store[session_id]
-
-# RunnableWithMessageHistory 설정
-chain_with_history = RunnableWithMessageHistory(
-    retrieval_chain,
-    get_memory,
-    input_messages_key="question",
-    history_messages_key="chat_history",
-)
-
-# 지역명 번역 데이터
-region_translations = {
-    "서울": {
-        "ko": "서울", "zh": "首尔", "ja": "ソウル", "vi": "Seoul", "uz": "Seul", "mn": "Сөүл",
-        "full_name": {"ko": "서울특별시", "zh": "首尔特别市", "ja": "ソウル特別市", "vi": "Thành phố Seoul", "uz": "Seul shahar", "mn": "Сөүл"}
-    },
-    "부산": {
-        "ko": "부산", "zh": "釜山", "ja": "釜山", "vi": "Busan", "uz": "Busan", "mn": "Пусан",
-        "full_name": {"ko": "부산광역시", "zh": "釜山广域市", "ja": "釜山広域市", "vi": "Thành phố Busan", "uz": "Busan shahar", "mn": "Пусан"}
-    },
-    "대구": {
-        "ko": "대구", "zh": "大邱", "ja": "大邱", "vi": "Daegu", "uz": "Daegu", "mn": "대구",
-        "full_name": {"ko": "대구광역시", "zh": "大邱广域市", "ja": "大邱広域市", "vi": "Thành phố Daegu", "uz": "Daegu shahar", "mn": "대구"}
-    },
-    "인천": {
-        "ko": "인천", "zh": "仁川", "ja": "仁川", "vi": "Incheon", "uz": "Incheon", "mn": "인천",
-        "full_name": {"ko": "인천광역시", "zh": "仁川广域市", "ja": "仁川広域市", "vi": "Thành phố Incheon", "uz": "Incheon shahar", "mn": "인천"}
-    },
-    "광주": {
-        "ko": "광주", "zh": "光州", "ja": "光州", "vi": "Gwangju", "uz": "Gwangju", "mn": "광주",
-        "full_name": {"ko": "광주광역시", "zh": "光州广域市", "ja": "光州広域市", "vi": "Thành phố Gwangju", "uz": "Gwangju shahar", "mn": "광주"}
-    },
-    "대전": {
-        "ko": "대전", "zh": "大田", "ja": "大田", "vi": "Daejeon", "uz": "Daejeon", "mn": "대전",
-        "full_name": {"ko": "대전광역시", "zh": "大田广域市", "ja": "大田広域市", "vi": "Thành phố Daejeon", "uz": "Daejeon shahar", "mn": "대전"}
-    },
-    "울산": {
-        "ko": "울산", "zh": "蔚山", "ja": "蔚山", "vi": "Ulsan", "uz": "Ulsan", "mn": "울산",
-        "full_name": {"ko": "울산광역시", "zh": "蔚山广域市", "ja": "蔚山広域市", "vi": "Thành phố Ulsan", "uz": "Ulsan shahar", "mn": "울산"}
-    },
-    "경기도": {
-        "ko": "경기도", "zh": "京畿道", "ja": "京畿道", "vi": "Gyeonggi-do", "uz": "Gyeonggi-do", "mn": "Кёнгидо",
-        "full_name": {"ko": "경기도", "zh": "京畿道", "ja": "京畿道", "vi": "Tỉnh Gyeonggi", "uz": "Gyeonggi-do", "mn": "Кёнгидо"}
-    },
-    "충북": {
-        "ko": "충북", "zh": "忠北", "ja": "忠北", "vi": "Chungbuk", "uz": "Chungbuk", "mn": "Чунбук",
-        "full_name": {"ko": "충청북도", "zh": "忠清北道", "ja": "忠清北道", "vi": "Tỉnh Chungbuk", "uz": "Chungbuk", "mn": "Чунбук"}
-    },
-    "충남": {
-        "ko": "충남", "zh": "忠南", "ja": "忠南", "vi": "Chungnam", "uz": "Chungnam", "mn": "Чуннам",
-        "full_name": {"ko": "충청남도", "zh": "忠清南道", "ja": "忠清南道", "vi": "Tỉnh Chungnam", "uz": "Chungnam", "mn": "Чуннам"}
-    },
-    "경남": {
-        "ko": "경남", "zh": "庆南", "ja": "慶南", "vi": "Gyeongnam", "uz": "Gyeongnam", "mn": "Гёнсан",
-        "full_name": {"ko": "경상남도", "zh": "庆尚南道", "ja": "慶尚南道", "vi": "Tỉnh Gyeongnam", "uz": "Gyeongnam", "mn": "Гёнсан"}
-    },
-    "경북": {
-        "ko": "경북", "zh": "庆北", "ja": "慶北", "vi": "Gyeongbuk", "uz": "Gyeongbuk", "mn": "Гёнбук",
-        "full_name": {"ko": "경상북도", "zh": "庆尚北道", "ja": "慶尚北道", "vi": "Tỉnh Gyeongbuk", "uz": "Gyeongbuk", "mn": "Гёнбук"}
-    },
-    "전북": {
-        "ko": "전북", "zh": "全罗北道", "ja": "全羅北道", "vi": "Jeollabuk-do", "uz": "Jeollabuk-do", "mn": "전라북도",
-        "full_name": {"ko": "전라북도", "zh": "全罗北道", "ja": "全羅北道", "vi": "Tỉnh Jeollabuk", "uz": "Jeollabuk-do", "mn": "전라북도"}
-    },
-    "전남": {
-        "ko": "전남", "zh": "全罗南道", "ja": "全羅南道", "vi": "Jeollanam-do", "uz": "Jeollanam-do", "mn": "전라남도",
-        "full_name": {"ko": "전라남도", "zh": "全罗南道", "ja": "全羅南道", "vi": "Tỉnh Jeollanam", "uz": "Jeollanam-do", "mn": "전라남도"}
-    },
-    "강원도": {
-        "ko": "강원도", "zh": "江原道", "ja": "江原道", "vi": "Gangwon-do", "uz": "Gangwon-do", "mn": "강원도",
-        "full_name": {"ko": "강원도", "zh": "江原道", "ja": "江原道", "vi": "Tỉnh Gangwon", "uz": "Gangwon-do", "mn": "강원도"}
-    },
-    "제주도": {
-        "ko": "제주도", "zh": "济州岛", "ja": "済州島", "vi": "Jeju-do", "uz": "Jeju-do", "mn": "제주도",
-        "full_name": {"ko": "제주특별자치도", "zh": "济州特别自治道", "ja": "済州特別自治道", "vi": "Tỉnh Jeju", "uz": "Jeju-do", "mn": "제주특별자치도"}
-    }
+# 지역명 사전 정의
+region_dict = {
+    "서울": ["서울", "서울시", "서울특별시"],
+    "경기": ["경기", "경기도"],
+    "인천": ["인천", "인천시", "인천광역시"],
+    "부산": ["부산", "부산시", "부산광역시"],
+    "대구": ["대구", "대구시", "대구광역시"],
+    "광주": ["광주", "광주시", "광주광역시"],
+    "대전": ["대전", "대전시", "대전광역시"],
+    "울산": ["울산", "울산시", "울산광역시"],
+    "세종": ["세종", "세종시", "세종특별자치시"],
+    "강원": ["강원", "강원도"],
+    "충북": ["충북", "충청북도"],
+    "충남": ["충남", "충청남도"],
+    "전북": ["전북", "전라북도"],
+    "전남": ["전남", "전라남도"],
+    "경북": ["경북", "경상북도"],
+    "경남": ["경남", "경상남도"],
+    "제주": ["제주", "제주도", "제주특별자치도"]
 }
 
-# 캐시 설정
-@lru_cache(maxsize=100)
-def cached_chat_response(question: str, language: str, session_id: str):
-    response = chain_with_history.invoke(
-        {"question": question, "language": language},
-        {"configurable": {"session_id": session_id}}
-    )
-    return response if isinstance(response, str) else "Error: Unable to generate response"
-
-
-# 채팅 엔드포인트
-@app.post("/study")
-async def chat_endpoint(query: Query):
-    try:
-        question = query.question
-        session_id = query.session_id
-
-        language = detect_language(question)
-
-        # 캐시된 응답 사용
-        answer = cached_chat_response(question, language, session_id)
-
-        # 요청 간 지연 추가
-        time.sleep(1)
-
-        return {
-            "question": question,
-            "answer": answer,
-            "detected_language": language,
-        }
-    except Exception as e:
-        logger.error(f"Error processing request: {str(e)}", exc_info=True)
-        if "rate_limit_exceeded" in str(e):
-            raise HTTPException(status_code=429, detail="Rate limit exceeded. Please try again later.")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
-
-
-# 지역명 번역 엔드포인트
-@app.get("/translate_region")
-async def translate_region_endpoint(region_name: str, language_code: str):
-    translations = region_translations.get(region_name)
-    if translations:
-        translated_name = translations.get(language_code)
-        full_name = translations.get("full_name", {}).get(language_code)
-        return {
-            "region_name": region_name,
-            "language_code": language_code,
-            "translated_name": translated_name,
-            "full_name": full_name
-        }
-    else:
-        return {"error": "Translation not found for the given region and language."}
-
-# 언어 감지 함수
-@lru_cache(maxsize=100)
-def detect_language(text: str) -> str:
-    system_prompt = "You are a language detection expert. Detect the language of the given text and respond with only the language name in English, using lowercase."
-    human_prompt = f"Text: {text}"
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": human_prompt}
+# 지역별 대학교 정보 (예시, 실제 데이터로 채워넣어야 함)
+university_by_region = {
+    "서울": [
+        "서울대학교", "고려대학교", "연세대학교", "서강대학교", "성균관대학교", "한양대학교", 
+        "중앙대학교", "경희대학교", "홍익대학교", "동국대학교", "건국대학교", "숙명여자대학교", 
+        "이화여자대학교", "한국외국어대학교", "서울시립대학교", "숭실대학교", "세종대학교", 
+        "국민대학교", "덕성여자대학교", "동덕여자대학교", "서울과학기술대학교", "삼육대학교", 
+        "상명대학교", "성신여자대학교", "한성대학교", "KC대학교", "감리교신학대학교", 
+        "서울기독대학교", "서울장신대학교", "성공회대학교", "총신대학교", "추계예술대학교", 
+        "한국성서대학교", "한국체육대학교", "한영신학대학교"
+    ],
+    "경기": [
+        "아주대학교", "성균관대학교(자연과학캠퍼스)", "한국외국어대학교(글로벌캠퍼스)", "경희대학교(국제캠퍼스)", 
+        "가천대학교", "경기대학교", "단국대학교", "한양대학교(ERICA)", "명지대학교", "강남대학교", 
+        "경동대학교", "수원대학교", "신한대학교", "안양대학교", "용인대학교", "을지대학교", 
+        "평택대학교", "한경대학교", "한국산업기술대학교", "한국항공대학교", "한세대학교", 
+        "협성대학교", "가톨릭대학교", "루터대학교", "서울신학대학교", "성결대학교", 
+        "중앙승가대학교", "칼빈대학교"
+    ],
+    "인천": [
+        "인천대학교", "인하대학교", "가천대학교(메디컬캠퍼스)", "경인교육대학교", "인천가톨릭대학교"
+    ],
+    "부산": [
+        "부산대학교", "동아대학교", "부경대학교", "동의대학교", "경성대학교", "신라대학교", 
+        "고신대학교", "부산외국어대학교", "동서대학교", "한국해양대학교", "부산가톨릭대학교"
+    ],
+    "대구": [
+        "경북대학교", "계명대학교", "영남대학교", "대구대학교", "대구가톨릭대학교", 
+        "대구한의대학교", "금오공과대학교", "경일대학교", "대구예술대학교"
+    ],
+    "광주": [
+        "전남대학교", "조선대학교", "광주과학기술원", "호남대학교", "광주대학교", 
+        "광주여자대학교", "남부대학교", "송원대학교"
+    ],
+    "대전": [
+        "충남대학교", "한국과학기술원(KAIST)", "한밭대학교", "대전대학교", "배재대학교", 
+        "우송대학교", "을지대학교(대전캠퍼스)", "침례신학대학교", "한남대학교"
+    ],
+    "울산": [
+        "울산대학교", "울산과학기술원(UNIST)", "울산과학대학교"
+    ],
+    "세종": [
+        "고려대학교(세종캠퍼스)", "홍익대학교(세종캠퍼스)"
+    ],
+    "강원": [
+        "강원대학교", "연세대학교(미래캠퍼스)", "강릉원주대학교", "한림대학교", "춘천교육대학교", 
+        "강원도립대학교", "상지대학교", "가톨릭관동대학교", "경동대학교", "한라대학교"
+    ],
+    "충북": [
+        "충북대학교", "청주대학교", "서원대학교", "세명대학교", "충주대학교", "극동대학교", 
+        "중원대학교", "건국대학교(글로컬캠퍼스)", "한국교통대학교"
+    ],
+    "충남": [
+        "충남대학교", "공주대학교", "순천향대학교", "남서울대학교", "건양대학교", "백석대학교", 
+        "호서대학교", "선문대학교", "한서대학교", "나사렛대학교", "중부대학교", "청운대학교"
+    ],
+    "전북": [
+        "전북대학교", "전주대학교", "원광대학교", "군산대학교", "우석대학교", "예수대학교", 
+        "한일장신대학교", "호원대학교"
+    ],
+    "전남": [
+        "전남대학교(여수캠퍼스)", "순천대학교", "목포대학교", "동신대학교", "세한대학교", 
+        "초당대학교", "목포해양대학교"
+    ],
+    "경북": [
+        "경북대학교(상주캠퍼스)", "포항공과대학교(POSTECH)", "안동대학교", "경주대학교", 
+        "김천대학교", "대구가톨릭대학교(경산캠퍼스)", "동국대학교(경주캠퍼스)", 
+        "위덕대학교", "한동대학교"
+    ],
+    "경남": [
+        "경상국립대학교", "창원대학교", "인제대학교", "경남대학교", "영산대학교", "울산대학교", 
+        "한국해양대학교(통영캠퍼스)", "진주교육대학교"
+    ],
+    "제주": [
+        "제주대학교", "제주국제대학교", "탐라대학교"
     ]
-    response = chat.invoke(messages)
-    detected_language = response.content.strip().lower()
-    logger.info(f"Detected language: {detected_language}")
-    return detected_language
+}
+
+def get_memory(session_id: str) -> ConversationBufferMemory:
+    if session_id not in session_memories:
+        session_memories[session_id] = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+    return session_memories[session_id]
+
+def extract_regions(text: str) -> List[str]:
+    nouns = kkma.nouns(text)
+    extracted_regions = []
+    for noun in nouns:
+        for region, aliases in region_dict.items():
+            if noun in aliases:
+                extracted_regions.append(region)
+                break
+    return extracted_regions
+
+def get_universities_by_region(regions: List[str]) -> Dict[str, List[str]]:
+    result = {}
+    for region in regions:
+        if region in university_by_region:
+            result[region] = university_by_region[region]
+    return result
+
+def preprocess_text(text):
+    text = re.sub(r'\n\s*\n', '\n', text)
+    text = re.sub(r'\s+', ' ', text)
+    
+    regions = extract_regions(text)
+    for region in regions:
+        text = text.replace(region, f"[REGION]{region}[/REGION]")
+    
+    return text.strip()
+
+def setup_langchain():
+    loader = PyPDFLoader(pdf_path)
+    pages = loader.load_and_split()
+
+    documents = []
+    for i, page in enumerate(pages):
+        content = preprocess_text(page.page_content)
+        regions = extract_regions(content)
+        doc = Document(page_content=content, metadata={"page": i+1, "regions": regions})
+        documents.append(doc)
+
+    # FAISS 벡터 검색
+    vectordb = FAISS.from_documents(documents, OpenAIEmbeddings())
+    faiss_retriever = vectordb.as_retriever(search_kwargs={"k": 3})
+
+    # BM25 키워드 검색
+    bm25_retriever = BM25Retriever.from_documents(documents)
+    bm25_retriever.k = 3
+
+    # 하이브리드 검색기 설정
+    ensemble_retriever = EnsembleRetriever(
+        retrievers=[bm25_retriever, faiss_retriever],
+        weights=[0.5, 0.5]
+    )
+
+    retriever_tool = create_retriever_tool(
+        ensemble_retriever,
+        "pdf_search",
+        "외국인 특별전형 시행계획 주요사항 PDF 파일에서 추출한 정보를 검색할 때 이 툴을 사용하세요. 지역명이 언급된 경우 해당 지역의 대학교 정보를 함께 제공합니다."
+    )
+
+    tools = [retriever_tool]
+
+    openai = ChatOpenAI(
+        model="gpt-3.5-turbo", api_key=os.getenv("OPENAI_API_KEY"), temperature=0.1)
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", """
+        당신은 한국 대학의 외국인 특별전형에 대한 전문가입니다. 주어진 PDF 문서의 내용을 바탕으로 질문에 답변해야 합니다.
+        답변 시 다음 지침을 따르세요:
+        1. PDF 문서의 정보만을 사용하여 답변하세요.
+        2. 문서에 없는 정보에 대해서는 "해당 정보는 제공된 문서에 없습니다"라고 답변하세요.
+        3. 지원 자격, 전형 방법, 제출 서류, 전형 일정 등에 대해 구체적으로 답변하세요.
+        4. 대학별 특징이나 차이점이 있다면 언급하세요.
+        5. 답변은 친절하고 명확하게 제공하세요.
+        6. 필요한 경우 답변을 목록화하여 제시하세요.
+        7. 이전 대화 내용을 참고하여 일관성 있는 답변을 제공하세요.
+        8. 표의 내용을 참조할 때는 행과 열의 관계를 명확히 설명하세요.
+        9. 질문에 언급된 지역과 관련된 대학교 정보가 있다면 반드시 포함하여 답변하세요.
+        10. 제공된 대학교 목록을 참고하여 관련 대학들의 정보를 포함해 답변하세요.
+        """),
+        ("human", "{input}"),
+        MessagesPlaceholder(variable_name="chat_history"),
+        MessagesPlaceholder(variable_name="agent_scratchpad"),
+    ])
+
+    agent = create_openai_tools_agent(llm=openai, tools=tools, prompt=prompt)
+    return AgentExecutor(agent=agent, tools=tools, verbose=True)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 시작 시 실행할 코드
+    global agent_executor
+    agent_executor = setup_langchain()
+    yield
+    # 종료 시 실행할 코드 (필요한 경우)
+
+app = FastAPI(lifespan=lifespan)
+
+@app.post("/query")
+async def query(query: Query):
+    try:
+        memory = get_memory(query.session_id)
+        
+        regions = extract_regions(query.input)
+        universities = get_universities_by_region(regions)
+        
+        university_info = "\n".join([f"{region}: {', '.join(unis)}" for region, unis in universities.items()])
+        enhanced_query = f"{query.input}\n추출된 지역 정보: {regions}\n관련 대학교:\n{university_info}"
+        
+        response = agent_executor.invoke(
+            {"input": enhanced_query, "chat_history": memory.chat_memory.messages},
+            {"memory": memory}
+        )
+        
+        # 대학교 정보를 응답에 추가
+        final_response = f"{response['output']}\n\n추가 대학교 정보:\n{university_info}"
+        
+        memory.chat_memory.add_user_message(query.input)
+        memory.chat_memory.add_ai_message(final_response)
+        
+        return {"response": final_response, "extracted_regions": regions, "related_universities": universities}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
