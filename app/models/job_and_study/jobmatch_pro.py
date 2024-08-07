@@ -22,11 +22,20 @@ import os
 import spacy
 from dotenv import load_dotenv
 from langid import classify
+from fastapi.middleware.cors import CORSMiddleware
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 load_dotenv()
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 허용할 Origin 목록
+    allow_credentials=True,
+    allow_methods=["*"],  # 허용할 HTTP 메서드 목록
+    allow_headers=["*"],  # 허용할 HTTP 헤더 목록
+)
 templates = Jinja2Templates(directory="templates")
 
 nlp = spacy.load("ko_core_news_sm")
@@ -99,14 +108,14 @@ def extract_entities(query):
     
     return entities
 
-def jobploy_crawler(lang, pages=1):
+def jobploy_crawler(lang, pages=3):
     if isinstance(pages, dict):
-        pages = 1
+        pages = 3
     elif not isinstance(pages, int):
         try:
             pages = int(pages)
         except ValueError:
-            pages = 1
+            pages = 3
 
     chrome_driver_path = r"C:\chromedriver\chromedriver.exe"
 
@@ -209,79 +218,77 @@ def search_jobs(query: str) -> str:
 
     entities = extract_entities(query)
     docs = vectorstores[lang].similarity_search(query, k=10)
-    results = []
-    relevant_results = []
-    location_results = []
-    
+    filtered_results = []
+
     for doc in docs:
         job_info = json.loads(doc.page_content)
-        relevance_score = 0
-        
+        match = True  # 조건이 모두 충족되는지 확인하는 플래그
+
+        # 위치 필터링
         if entities["LOCATION"]:
-            for loc in entities["LOCATION"]:
-                if loc.lower() in job_info['location'].lower() or any(part.lower() in job_info['location'].lower() for part in loc.split()):
-                    location_results.append(job_info)
-                    break
-            else:
-                continue
-        
-        if entities["MONEY"]:
+            location_match = any(
+                loc.lower() in job_info['location'].lower() or 
+                any(part.lower() in job_info['location'].lower() for part in loc.split()) 
+                for loc in entities["LOCATION"]
+            )
+            if not location_match:
+                match = False
+        else:
+            # 사용자가 위치를 명시하지 않은 경우 '서울'을 기본값으로 사용
+            if 'Gyeonggi' not in job_info['location']:
+                match = False
+
+        # 급여 필터링
+        if entities["MONEY"] and match:
             try:
-                # 사용자가 입력한 급여 정보 추출 및 정수로 변환
                 required_salary_str = entities["MONEY"][0].replace(',', '').replace('원', '').strip()
                 required_salary = int(required_salary_str)
-                
-                # 직무의 급여 정보 추출 및 정수로 변환
+
+                # 3백만원 이상인지 확인
+                minimum_salary = 3000000
+
                 pay_elements = job_info['pay'].split()
                 if len(pay_elements) >= 3:
                     job_salary_str = pay_elements[2].replace(',', '').replace('원', '').strip()
                     job_salary = int(job_salary_str)    
                     
-                    # 직무의 급여가 요구 급여보다 낮으면 필터링
-                    if job_salary < required_salary:
-                        continue
+                    # 급여가 요구 급여 이상인지 확인
+                    if job_salary < minimum_salary:
+                        match = False
                 else:
-                    # 급여 정보가 부족한 경우 필터링
-                    continue
-                    
+                    match = False
+
             except ValueError:
-                # 급여 정보가 올바르지 않거나 변환 실패 시 필터링
-                continue
-        
-        if entities["OCCUPATION"]:
-            occupation_match = any(occ.lower() in job_info['title'].lower() or 
-                                   occ.lower() in job_info['task'].lower() 
-                                   for occ in entities["OCCUPATION"])
-            if occupation_match:
-                relevance_score += 1
-        
-        if relevance_score > 0:
-            relevant_results.append(job_info)
-        else:
-            results.append(job_info)
-    
-    if entities["LOCATION"]:
-        filtered_results = location_results
-    else:
-        filtered_results = location_results + relevant_results + results
-    
+                match = False
+
+        # 직무 필터링
+        if entities["OCCUPATION"] and match:
+            occupation_match = any(
+                occ.lower() in job_info['title'].lower() or 
+                occ.lower() in job_info['task'].lower() 
+                for occ in entities["OCCUPATION"]
+            )
+            if not occupation_match:
+                match = False
+
+        if match:
+            filtered_results.append(job_info)
+
     if not filtered_results:
-        return f"No job listings found for the specified criteria."
-    
+        return "No job listings found for the specified criteria."
+
     return json.dumps({
         "search_summary": {
-            "total_jobs_found": len(filtered_results),
-            "location_specific_jobs": len(location_results),
-            "relevant_jobs": len(relevant_results),
-            "other_jobs": len(results)
+            "total_jobs_found": len(filtered_results)
         },
         "job_listings": filtered_results,
-        "additional_info": f"These are the job listings that match your query. {len(location_results)} jobs are specifically in the requested location."
+        "additional_info": f"These are the job listings that match your query."
     }, ensure_ascii=False, indent=2)
+
 
 # 크롤링 데이터 가져오기 및 파일로 저장
 default_lang = 'ko'  # 기본 언어를 한국어로 설정
-crawled_data = jobploy_crawler(lang=default_lang, pages=1)
+crawled_data = jobploy_crawler(lang=default_lang, pages=3)
 
 # 크롤링 데이터를 파일로 저장하는 함수
 def save_data_to_file(data, filename):
