@@ -1,272 +1,812 @@
 [
   {
-    "title": "Chúng tôi đang tuyển nhân viên trang trại lươn.",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042118",
+    "title": "Tuyển công nhân sản xuất máy tiện tự động CNC (mới, có kinh nghiệm)",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042902",
     "closing_date": "Hạn chót D-29",
-    "location": "전라남도 강진군",
-    "pay": "Lương : 2,800,000 KRW",
-    "task": "Nuôi trồng thủy sản",
-    "language": "vi"
-  },
-  {
-    "title": "Tuyển dụng các vị trí đơn giản trong sản xuất và di chuyển sản phẩm",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042117",
-    "closing_date": "Hạn chót D-58",
-    "location": "경기도 이천시",
+    "location": "부산광역시 강서구",
     "pay": "một giờ : 9,860 KRW",
-    "task": "Sản xuất thực phẩm",
+    "task": "Vận hành máy móc, thiết bị",
     "language": "vi"
   },
   {
-    "title": "Chúng tôi đang tuyển công nhân sản xuất.",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042116",
-    "closing_date": "Hạn chót D-6",
-    "location": "경상남도 창녕군",
-    "pay": "một giờ : 10,030 KRW",
-    "task": "Hàn",
+    "title": "Tuyển dụng phòng công nghệ đúc thổi nhựa",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042901",
+    "closing_date": "Hạn chót D-23",
+    "location": "경기도 화성시",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "Vận hành máy móc, thiết bị",
     "language": "vi"
   },
   {
-    "title": "Nhà hàng chi nhánh trụ sở công ty quản lý - Tuyển đầu bếp Hàn Quốc mới/có kinh nghiệm",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042115",
+    "title": "Tìm kiếm nhân viên cho Trung tâm Phân phối Phân bón lỏng Tổng công ty Hợp tác xã Nông nghiệp [Yêu cầu giấy phép lớn/cung cấp ký túc xá 1 phòng/người]",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042900",
     "closing_date": "Hạn chót D-29",
-    "location": "인천광역시 연수구",
-    "pay": "Lương : 3,500,000 KRW",
+    "location": "전라남도 장흥군",
+    "pay": "Lương : 3,400,000 KRW",
+    "task": "Xe nặng/Đặc biệt",
+    "language": "vi"
+  },
+  {
+    "title": "Phục vụ hội trường",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042899",
+    "closing_date": "Hạn chót D-29",
+    "location": "부산광역시 해운대구",
+    "pay": "Lương : 3,000,000 KRW",
     "task": "Đầu bếp",
     "language": "vi"
   },
   {
-    "title": "Tuyển nhân viên liên quan đến sản xuất xi mạ",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042114",
-    "closing_date": "Hạn chót D-29",
-    "location": "인천광역시 남동구",
-    "pay": "một giờ : 9,860 KRW",
-    "task": "Vận hành máy móc, thiết bị",
-    "language": "vi"
-  },
-  {
-    "title": "Tuyển dụng công nhân sản xuất chính",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042113",
-    "closing_date": "Hạn chót D-25",
-    "location": "인천광역시 남동구",
-    "pay": "một giờ : 9,860 KRW",
-    "task": "Cơ khí",
-    "language": "vi"
-  },
-  {
-    "title": "Tuyển nhân viên xi mạ phụ tùng ô tô và sản xuất ngoài trời",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042112",
-    "closing_date": "Hạn chót D-29",
-    "location": "인천광역시 남동구",
-    "pay": "một giờ : 9,860 KRW",
-    "task": "Cơ khí",
-    "language": "vi"
-  },
-  {
-    "title": "[Cấp] Tuyển nhân viên rửa bát (máy rửa chén) cho Khu ẩm thực Starfield Hanam",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042111",
-    "closing_date": "Hạn chót D-12",
-    "location": "경기도 하남시",
-    "pay": "Lương : 2,650,000 KRW",
-    "task": "Phụ bếp",
-    "language": "vi"
-  },
-  {
-    "title": "Làng thịt bò Hàn Quốc Pyeongchang Nhà hàng Hongcheon Daemyung tuyển dụng nhân viên (bộ phận dịch vụ thiết bị/cơ sở vật chất)",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042110",
-    "closing_date": "Hạn chót D-29",
-    "location": "강원도 홍천군",
-    "pay": "Lương : 3,000,000 KRW",
-    "task": "Phục vụ",
-    "language": "vi"
-  },
-  {
-    "title": "Làng thịt bò Hàn Quốc Pyeongchang Nhà hàng Hongcheon Daemyung tuyển nhân viên (phục vụ hội trường)",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042109",
-    "closing_date": "Hạn chót D-29",
-    "location": "강원도 홍천군",
-    "pay": "Lương : 3,000,000 KRW",
-    "task": "Phục vụ",
-    "language": "vi"
-  },
-  {
-    "title": "Tuyển nhân viên giao hàng",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042108",
-    "closing_date": "Hạn chót D-29",
-    "location": "경기도 안산시",
-    "pay": "Lương : 2,600,000 KRW",
-    "task": "Dịch vụ chuyển phát",
-    "language": "vi"
-  },
-  {
-    "title": "Công việc lao động giản đơn và thuyền viên đánh cá ven bờ",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042107",
-    "closing_date": "Hạn chót D-29",
-    "location": "전라남도 목포시",
-    "pay": "Lương : 2,100,000 KRW",
-    "task": "vân vân",
-    "language": "vi"
-  },
-  {
-    "title": "Chúng tôi đang tuyển dụng nhân viên.",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042106",
-    "closing_date": "Hạn chót D-29",
-    "location": "충청남도 홍성군",
-    "pay": "Lương : 2,100,000 KRW",
-    "task": "Vận hành máy móc, thiết bị",
-    "language": "vi"
-  },
-  {
-    "title": "Tuyển dụng vị trí quản lý kho mới/có kinh nghiệm tại View Media nửa đầu năm 2024",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042105",
-    "closing_date": "Hạn chót D-29",
-    "location": "경기도 김포시",
-    "pay": "Lương : 1,800,000 KRW",
-    "task": "quản lý kho",
-    "language": "vi"
-  },
-  {
-    "title": "Cụm phụ trợ gắn lỗ cát",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042104",
-    "closing_date": "Hạn chót D-29",
-    "location": "경상남도 창녕군",
-    "pay": "một giờ : 9,860 KRW",
-    "task": "Cơ khí",
-    "language": "vi"
-  },
-  {
-    "title": "Công ty TNHH Koban Industry tuyển công nhân sản xuất (có ký túc xá, bao ăn)",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042103",
-    "closing_date": "Hạn chót D-29",
-    "location": "경기도 김포시",
-    "pay": "một giờ : 12,670 KRW",
-    "task": "vân vân",
-    "language": "vi"
-  },
-  {
-    "title": "Gia công, lắp ráp &amp; tuyển dụng phóng điện khuôn (chào đón nhân viên mới)",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042102",
-    "closing_date": "Hạn chót D-29",
-    "location": "경상남도 창원시",
-    "pay": "một giờ : 9,860 KRW",
-    "task": "Vận hành máy móc, thiết bị",
-    "language": "vi"
-  },
-  {
-    "title": "Tuyển người nuôi cá (lồng)",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042101",
-    "closing_date": "Hạn chót D-29",
-    "location": "경상남도 거제시",
-    "pay": "Lương : 2,300,000 KRW",
-    "task": "Nuôi trồng thủy sản",
-    "language": "vi"
-  },
-  {
-    "title": "Hàn, lắp đặt, hoàn thiện, sở hữu (tìm người có kinh nghiệm, mới bắt đầu)",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042100",
-    "closing_date": "Hạn chót D-29",
-    "location": "전라남도 영암군",
-    "pay": "một giờ : 9,860 KRW",
-    "task": "Hàn",
-    "language": "vi"
-  },
-  {
-    "title": "Trang trại cá (tuyển nhân viên nuôi lươn nước ngọt)",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042099",
-    "closing_date": "Hạn chót D-24",
-    "location": "전라남도 나주시",
-    "pay": "Lương : 2,800,000 KRW",
-    "task": "Ngư nghiệp",
-    "language": "vi"
-  },
-  {
-    "title": "Tuyển nhân viên quản lý dây chuyền sản xuất nội thất",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042098",
-    "closing_date": "Hạn chót D-13",
-    "location": "경기도 광주시",
+    "title": "Tuyển công nhân sản xuất băng dính/nhân viên mới cấp 3060 (làm thêm ngoài giờ riêng)",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042898",
+    "closing_date": "Hạn chót D-6",
+    "location": "경기도 화성시",
     "pay": "hàng năm : 40,000,000 KRW",
     "task": "vân vân",
     "language": "vi"
   },
   {
-    "title": "Tuyển nhân viên sản xuất mạ kẽm",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042097",
+    "title": "Sản xuất linh kiện nhựa lao động giản đơn",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042897",
+    "closing_date": "Hạn chót D-59",
+    "location": "충청북도 음성군",
+    "pay": "Lương : 2,100,000 KRW",
+    "task": "vân vân",
+    "language": "vi"
+  },
+  {
+    "title": "Người có khả năng xử lý profile và điện cực phóng điện tốc độ cao",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042896",
     "closing_date": "Hạn chót D-29",
     "location": "경기도 안산시",
+    "pay": "Lương : 2,670,000 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "cổ áo màu xanh",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042895",
+    "closing_date": "Hạn chót D-53",
+    "location": "경기도 안산시",
+    "pay": "Lương : 2,700,000 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Máy kiểm tra đo lường kim loại xử lý tốc độ cao",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042894",
+    "closing_date": "Hạn chót D-29",
+    "location": "경기도 안산시",
+    "pay": "Lương : 2,670,000 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển dụng kỹ thuật viên uốn",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042893",
+    "closing_date": "Hạn chót D-13",
+    "location": "경기도 평택시",
+    "pay": "Lương : 3,500,000 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển nhân viên mới cho tổ sản xuất nửa đầu năm 2024",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042892",
+    "closing_date": "Hạn chót D-23",
+    "location": "전라남도 순천시",
+    "pay": "một giờ : 12,000 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển công nhân sản xuất (phụ tùng ô tô)",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042891",
+    "closing_date": "Hạn chót D-17",
+    "location": "경상북도 김천시",
+    "pay": "một giờ : 9,910 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển nhân viên sản xuất Seal Korea",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042890",
+    "closing_date": "Hạn chót D-29",
+    "location": "경기도 여주시",
+    "pay": "hàng năm : 34,000,000 KRW",
+    "task": "vân vân",
+    "language": "vi"
+  },
+  {
+    "title": "Công việc bảo trì thiết bị xử lý (có kinh nghiệm/mới)",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042889",
+    "closing_date": "Hạn chót D-17",
+    "location": "경상북도 김천시",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "Lắp đặt/bảo trì thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển nhân viên sản xuất chế biến sản phẩm chăn nuôi (gà)",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042888",
+    "closing_date": "Hạn chót D-15",
+    "location": "경기도 여주시",
+    "pay": "hàng năm : 27,000,000 KRW",
+    "task": "Sản xuất thực phẩm",
+    "language": "vi"
+  },
+  {
+    "title": "Tìm thợ vận hành máy gia công 5 mặt lớn",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042887",
+    "closing_date": "Hạn chót D-22",
+    "location": "대구광역시 달서구",
+    "pay": "hàng năm : 100,000,000 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "phụ bếp",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042886",
+    "closing_date": "Hạn chót D-29",
+    "location": "부산광역시 강서구",
+    "pay": "Lương : 2,100,000 KRW",
+    "task": "Phụ bếp",
+    "language": "vi"
+  },
+  {
+    "title": "Công ty TNHH Saerontech Tuyển dụng nhân viên điện trường tàu biển",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042885",
+    "closing_date": "Hạn chót D-7",
+    "location": "경상남도 거제시",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "vân vân",
+    "language": "vi"
+  },
+  {
+    "title": "Gia công máy tiện đa năng",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042884",
+    "closing_date": "Hạn chót D-29",
+    "location": "대구광역시 달성군",
     "pay": "một giờ : 9,860 KRW",
     "task": "Vận hành máy móc, thiết bị",
     "language": "vi"
   },
   {
-    "title": "Tuyển dụng nhà sản xuất đơn giản Taesan ENG",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042096",
-    "closing_date": "Hạn chót D-13",
-    "location": "전라북도 익산시",
+    "title": "Tuyển công nhân sản xuất (có người mới bắt đầu/trung niên)",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042883",
+    "closing_date": "Hạn chót D-8",
+    "location": "경기도 파주시",
+    "pay": "hàng năm : 40,000,000 KRW",
+    "task": "Sản xuất sản phẩm nhựa và cao su",
+    "language": "vi"
+  },
+  {
+    "title": "Việc làm ngành sản xuất thực phẩm",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042882",
+    "closing_date": "Hạn chót D-23",
+    "location": "충청남도 논산시",
+    "pay": "hàng năm : 50,000,000 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Thiết kế xây dựng",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042881",
+    "closing_date": "마감 정보 없음",
+    "location": "위치 정보 없음",
+    "pay": "Lương : 2,100,000 KRW",
+    "task": "직무 정보 없음",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển dụng công nhân sản xuất",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042880",
+    "closing_date": "Hạn chót D-23",
+    "location": "경상북도 고령군",
     "pay": "một giờ : 9,860 KRW",
-    "task": "Cơ khí",
+    "task": "vân vân",
     "language": "vi"
   },
   {
-    "title": "Tìm người phụ bếp11",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042095",
-    "closing_date": "Hạn chót D-29",
-    "location": "충청북도 영동군",
-    "pay": "một giờ : 10,000 KRW",
-    "task": "Phụ bếp",
+    "title": "Chúng tôi đang tuyển nhân viên dán nhãn chế biến thịt.",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042879",
+    "closing_date": "Hạn chót D-28",
+    "location": "경상남도 양산시",
+    "pay": "Lương : 2,500,000 KRW",
+    "task": "Sản xuất thực phẩm",
     "language": "vi"
   },
   {
-    "title": "Tuyển dụng công nhân thủy sản (thuyền viên đánh cá, nuôi cá)",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042094",
-    "closing_date": "Hạn chót D-29",
-    "location": "충청남도 서천군",
+    "title": "tuyển dụng thuyền viên câu cá",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042878",
+    "closing_date": "Hạn chót D-6",
+    "location": "경상북도 포항시",
     "pay": "một giờ : 9,860 KRW",
     "task": "Ngư nghiệp",
     "language": "vi"
   },
   {
-    "title": "[Borim Tech] Tuyển dụng công nhân sản xuất (công ty tham gia chương trình song song vừa học vừa làm - liên kết với Đại học Bách Khoa)",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042093",
-    "closing_date": "Hạn chót D-13",
-    "location": "전라북도 익산시",
-    "pay": "một giờ : 9,860 KRW",
+    "title": "[Tuyển Nhân Viên Gia Công Hộp Giấy]_Irum In Pack",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042877",
+    "closing_date": "Hạn chót D-15",
+    "location": "경기도 고양시",
+    "pay": "Lương : 2,200,000 KRW",
     "task": "vân vân",
     "language": "vi"
   },
   {
-    "title": "Tuyển công nhân sản xuất ép nhựa",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042092",
-    "closing_date": "Hạn chót D-55",
-    "location": "광주광역시 광산구",
+    "title": "Tuyển công nhân sản xuất",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042876",
+    "closing_date": "Hạn chót D-53",
+    "location": "경상북도 김천시",
     "pay": "một giờ : 9,860 KRW",
-    "task": "vân vân",
+    "task": "Sản xuất sản phẩm nhựa và cao su",
     "language": "vi"
   },
   {
-    "title": "Tuyển nhân viên dọn vệ sinh chung cư Deoksori Dongbu Centerville",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042091",
+    "title": "Ngư dân tham gia đánh bắt ven bờ",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042875",
     "closing_date": "Hạn chót D-29",
-    "location": "경기도 남양주시",
-    "pay": "Lương : 1,670,920 KRW",
+    "location": "경상남도 고성군",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "Ngư nghiệp",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển kỹ thuật viên phun sơn (thủ công)",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042874",
+    "closing_date": "Hạn chót D-23",
+    "location": "경기도 평택시",
+    "pay": "hàng năm : 35,000,000 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Tìm nhân viên trang trại nuôi cá rong biển",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042873",
+    "closing_date": "Hạn chót D-29",
+    "location": "전라남도 해남군",
+    "pay": "Lương : 2,070,000 KRW",
+    "task": "Nuôi trồng thủy sản",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển quản lý nhà máy (sản xuất đậu hũ)",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042872",
+    "closing_date": "Hạn chót D-29",
+    "location": "경기도 포천시",
+    "pay": "Lương : 3,000,000 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển nhân viên bộ phận sản xuất (có kinh nghiệm và mới trong ngành in ống đồng)",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042871",
+    "closing_date": "Hạn chót D-29",
+    "location": "경기도 이천시",
+    "pay": "Lương : 4,000,000 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển nhân viên bộ phận sản xuất (có kinh nghiệm và mới trong ngành in ống đồng)",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042870",
+    "closing_date": "Hạn chót D-23",
+    "location": "경기도 안성시",
+    "pay": "Lương : 4,000,000 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển ngư dân (thuyền viên)",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042869",
+    "closing_date": "Hạn chót D-29",
+    "location": "강원도 삼척시",
+    "pay": "Lương : 2,060,740 KRW",
+    "task": "Ngư nghiệp",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển trợ lý sản xuất đơn giản",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042868",
+    "closing_date": "Hạn chót D-29",
+    "location": "경기도 양주시",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "vân vân",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển nhân viên sản xuất nhà máy chế biến gốm sứ",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042867",
+    "closing_date": "Hạn chót D-29",
+    "location": "경기도 용인시",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Chúng tôi đang tìm người vận hành máy ép phanh (bender).",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042866",
+    "closing_date": "Hạn chót D-29",
+    "location": "경기도 부천시",
+    "pay": "hàng năm : 25,000,000 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "(Ô tô) Sản xuất khuôn ép. Sản xuất khuôn ép - Hệ thống giấy phép lao động mong muốn tuyển dụng người nước ngoài",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042865",
+    "closing_date": "Hạn chót D-30",
+    "location": "전라북도 완주군",
+    "pay": "Lương : 3,000,000 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Tổ hợp ven biển (Octopus) Tuyển dụng thuyền viên",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042864",
+    "closing_date": "Hạn chót D-29",
+    "location": "전라남도 여수시",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "vân vân",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển dụng sản xuất, chế tạo bình chữa cháy đơn giản",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042863",
+    "closing_date": "Hạn chót D-29",
+    "location": "충청북도 음성군",
+    "pay": "Lương : 2,200,000 KRW",
+    "task": "vân vân",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển nhân viên phục vụ sảnh và phụ bếp",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042862",
+    "closing_date": "Hạn chót D-29",
+    "location": "경기도 용인시",
+    "pay": "Lương : 3,300,000 KRW",
+    "task": "Phụ bếp",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển dụng phụ bếp",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042861",
+    "closing_date": "Hạn chót D-29",
+    "location": "경기도 평택시",
+    "pay": "một giờ : 10,000 KRW",
+    "task": "Phụ bếp",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển công nhân sản xuất",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042860",
+    "closing_date": "Hạn chót D-23",
+    "location": "경상북도 고령군",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Chúng tôi đang tuyển dụng công nhân sản xuất cửa sổ PVC mới và có kinh nghiệm.",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042859",
+    "closing_date": "Hạn chót D-53",
+    "location": "충청북도 음성군",
+    "pay": "hàng năm : 30,000,000 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển nhân viên toàn thời gian sản xuất chăn nuôi và đóng gói (hỗ trợ ký túc xá)",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042858",
+    "closing_date": "Hạn chót D-29",
+    "location": "충청북도 음성군",
+    "pay": "Lương : 2,120,000 KRW",
+    "task": "vân vân",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển dụng thuyền viên",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042857",
+    "closing_date": "Hạn chót D-13",
+    "location": "경상북도 포항시",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "vân vân",
+    "language": "vi"
+  },
+  {
+    "title": "Sản xuất sản xuất ngũ cốc/vận hành máy móc",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042856",
+    "closing_date": "Hạn chót D-29",
+    "location": "경상북도 경주시",
+    "pay": "Lương : 2,600,000 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "[Gumi/Seokjeok] Tuyển dụng công nhân đóng gói/kiểm tra bộ phận camera sau ô tô 2 đội, 2 ca",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042855",
+    "closing_date": "Hạn chót D-13",
+    "location": "경상북도 칠곡군",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "vân vân",
+    "language": "vi"
+  },
+  {
+    "title": "Tìm nhân viên trang trại bào ngư",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042854",
+    "closing_date": "Hạn chót D-29",
+    "location": "전라남도 완도군",
+    "pay": "Lương : 2,500,000 KRW",
+    "task": "Nuôi trồng thủy sản",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển công nhân sản xuất",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042853",
+    "closing_date": "Hạn chót D-13",
+    "location": "경기도 광주시",
+    "pay": "Lương : 2,200,000 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển nhân viên vận hành máy đúc",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042852",
+    "closing_date": "Hạn chót D-54",
+    "location": "경기도 화성시",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "Hàn",
+    "language": "vi"
+  },
+  {
+    "title": "Thợ lắp ráp và kiểm tra máy móc khác",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042851",
+    "closing_date": "Hạn chót D-54",
+    "location": "경기도 화성시",
+    "pay": "ngày : 78,880 KRW",
+    "task": "Cơ khí",
+    "language": "vi"
+  },
+  {
+    "title": "Chúng tôi đang tuyển nhân viên siêng năng đóng gói/kiểm tra/quản lý bưu kiện.",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042850",
+    "closing_date": "Hạn chót D-13",
+    "location": "경기도 김포시",
+    "pay": "Lương : 2,200,000 KRW",
+    "task": "vân vân",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển dụng nhân viên vận hành lò xử lý nhiệt liên tục (công nhân)",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042849",
+    "closing_date": "Hạn chót D-13",
+    "location": "경상남도 김해시",
+    "pay": "hàng năm : 41,400,000 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển công nhân sản xuất sản phẩm giấy (vận hành máy xén)",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042848",
+    "closing_date": "Hạn chót D-23",
+    "location": "경기도 파주시",
+    "pay": "Lương : 2,200,000 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển công nhân sản xuất thời vụ",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042847",
+    "closing_date": "Hạn chót D-14",
+    "location": "경기도 화성시",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "vân vân",
+    "language": "vi"
+  },
+  {
+    "title": "Sản xuất lắp ráp đơn giản và các công việc liên quan",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042846",
+    "closing_date": "Hạn chót D-8",
+    "location": "경기도 안양시",
+    "pay": "hàng năm : 32,000,000 KRW",
+    "task": "Sản xuất sản phẩm điện, điện tử",
+    "language": "vi"
+  },
+  {
+    "title": "Người điều khiển xe nâng",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042845",
+    "closing_date": "Hạn chót D-23",
+    "location": "부산광역시 강서구",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "vân vân",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển dụng nhân viên ngành sữa",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042844",
+    "closing_date": "Hạn chót D-29",
+    "location": "경기도 화성시",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "Chăn nuôi",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển nhân viên dọn phòng khách sạn",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042843",
+    "closing_date": "Hạn chót D-29",
+    "location": "제주특별자치도 제주시",
+    "pay": "Lương : 2,100,000 KRW",
     "task": "Dịch vụ vệ sinh/Lau dọn",
     "language": "vi"
   },
   {
-    "title": "Công ty TNHH YJC - Tuyển nhân viên tổ sản xuất nhà máy số 2",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042090",
-    "closing_date": "Hạn chót D-55",
-    "location": "전라남도 함평군",
-    "pay": "một giờ : 10,750 KRW",
+    "title": "Tuyển dụng kỹ thuật viên máy tiện CNC",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042842",
+    "closing_date": "Hạn chót D-29",
+    "location": "경상남도 김해시",
+    "pay": "một giờ : 11,000 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Người làm việc cùng (Ưu đãi MCT)",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042841",
+    "closing_date": "Hạn chót D-29",
+    "location": "경상남도 김해시",
+    "pay": "hàng năm : 55,000,000 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển dụng người tổ chức phân loại và thu gom tái chế",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042840",
+    "closing_date": "Hạn chót D-5",
+    "location": "경기도 고양시",
+    "pay": "Lương : 2,500,000 KRW",
+    "task": "Dịch vụ vệ sinh/Lau dọn",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển dụng công nhân trang trại Seokcheon",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042839",
+    "closing_date": "Hạn chót D-29",
+    "location": "경상남도 고성군",
+    "pay": "Lương : 2,500,000 KRW",
+    "task": "Chăn nuôi",
+    "language": "vi"
+  },
+  {
+    "title": "Tìm công nhân sản xuất đơn giản",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042838",
+    "closing_date": "Hạn chót D-5",
+    "location": "경상북도 경주시",
+    "pay": "Lương : 2,060,740 KRW",
     "task": "vân vân",
     "language": "vi"
   },
   {
-    "title": "Chào các bạn, chúng tôi đang cần tuyển nhân viên phụ bếp và phục vụ.",
-    "link": "https://www.jobploy.kr/vi/recruit/RS0000042089",
+    "title": "Trợ lý cơ khí sản xuất",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042837",
+    "closing_date": "Hạn chót D-29",
+    "location": "경상북도 경주시",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Sản xuất ép đùn _ Trộn/Kiểm tra/Đóng gói",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042836",
+    "closing_date": "Hạn chót D-23",
+    "location": "경기도 김포시",
+    "pay": "Lương : 2,060,740 KRW",
+    "task": "vân vân",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển dụng nhân viên boong bờ biển",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042835",
+    "closing_date": "Hạn chót D-29",
+    "location": "제주특별자치도 제주시",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "Ngư nghiệp",
+    "language": "vi"
+  },
+  {
+    "title": "Chúng tôi đang tuyển công nhân sản xuất.",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042834",
+    "closing_date": "Hạn chót D-29",
+    "location": "경상북도 경주시",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "vân vân",
+    "language": "vi"
+  },
+  {
+    "title": "Quản lý chăn nuôi lợn",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042833",
+    "closing_date": "Hạn chót D-16",
+    "location": "전라남도 무안군",
+    "pay": "Lương : 2,405,840 KRW",
+    "task": "Chăn nuôi",
+    "language": "vi"
+  },
+  {
+    "title": "[Hyeonpung/Nongong/Sangli/Okpo] Tuyển nhân viên sản xuất Khu công nghiệp Sangni",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042832",
+    "closing_date": "Hạn chót D-29",
+    "location": "대구광역시 달성군",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "vân vân",
+    "language": "vi"
+  },
+  {
+    "title": "Sản xuất nội thất phòng tắm, tuyển công nhân sản xuất, người có kinh nghiệm cắt/lắp ráp (chấp nhận người mới bắt đầu)",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042831",
+    "closing_date": "Hạn chót D-29",
+    "location": "경상남도 김해시",
+    "pay": "Lương : 3,000,000 KRW",
+    "task": "vân vân",
+    "language": "vi"
+  },
+  {
+    "title": "Chúng tôi đang tuyển dụng công nhân hiện trường, những người sẽ làm việc đồng thời học hỏi công nghệ liên quan đến sản xuất hộp.",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042830",
+    "closing_date": "Hạn chót D-15",
+    "location": "경기도 안산시",
+    "pay": "Lương : 2,900,000 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển công nhân sản xuất ca 2",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042829",
+    "closing_date": "Hạn chót D-15",
+    "location": "충청북도 옥천군",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "vân vân",
+    "language": "vi"
+  },
+  {
+    "title": "Chúng tôi đang tuyển công nhân sản xuất.",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042828",
+    "closing_date": "Hạn chót D-8",
+    "location": "대구광역시 달성군",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "vân vân",
+    "language": "vi"
+  },
+  {
+    "title": "Thông báo tuyển dụng nhân viên vận hành sản xuất chip nhựa H2",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042827",
+    "closing_date": "Hạn chót D-29",
+    "location": "경기도 화성시",
+    "pay": "hàng năm : 42,000,000 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Lắp ráp linh kiện thang máy",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042826",
+    "closing_date": "Hạn chót D-13",
+    "location": "경기도 화성시",
+    "pay": "Lương : 3,000,000 KRW",
+    "task": "Cơ khí",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển thợ lắp ráp và kiểm tra sản phẩm nhựa",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042825",
+    "closing_date": "Hạn chót D-29",
+    "location": "경기도 화성시",
+    "pay": "Lương : 2,700,000 KRW",
+    "task": "Sản xuất sản phẩm nhựa và cao su",
+    "language": "vi"
+  },
+  {
+    "title": "Chúng tôi đang tìm kiếm công nhân hiện trường.",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042824",
+    "closing_date": "Hạn chót D-29",
+    "location": "경상북도 고령군",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển nhân viên lao động giản đơn cho công ty cắt mô hình thép tấm",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042823",
+    "closing_date": "Hạn chót D-29",
+    "location": "인천광역시 연수구",
+    "pay": "Lương : 2,508,000 KRW",
+    "task": "vân vân",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển công nhân lắp ráp",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042822",
+    "closing_date": "Hạn chót D-29",
+    "location": "경상북도 고령군",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "Sản xuất sản phẩm nhựa và cao su",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển công nhân sản xuất liên quan đến sản xuất",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042821",
     "closing_date": "Hạn chót D-6",
     "location": "경기도 화성시",
-    "pay": "Lương : 2,530,000 KRW",
-    "task": "Phụ bếp",
+    "pay": "Lương : 2,700,000 KRW",
+    "task": "vân vân",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển nhân viên phụ trách nông nghiệp nói chung, nuôi ong, v.v.",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042820",
+    "closing_date": "Hạn chót D-29",
+    "location": "경상북도 영양군",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "Cây trồng lương thực",
+    "language": "vi"
+  },
+  {
+    "title": "Chúng tôi đang tuyển dụng đầu bếp và đầu bếp.",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042819",
+    "closing_date": "Hạn chót D-29",
+    "location": "강원도 춘천시",
+    "pay": "hàng năm : 40,000,000 KRW",
+    "task": "Đầu bếp",
+    "language": "vi"
+  },
+  {
+    "title": "Công ty TNHH Three Seven Tuyển lao động phổ thông (có tuyển mới)",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042818",
+    "closing_date": "Hạn chót D-14",
+    "location": "충청남도 천안시",
+    "pay": "một giờ : 9,900 KRW",
+    "task": "vân vân",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển nhân viên sản xuất tại Công ty TNHH Three Seven (có tuyển mới)",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042817",
+    "closing_date": "Hạn chót D-14",
+    "location": "충청남도 천안시",
+    "pay": "một giờ : 11,500 KRW",
+    "task": "Cơ khí",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển công nhân sản xuất giặt quần áo chống bụi",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042816",
+    "closing_date": "Hạn chót D-9",
+    "location": "경기도 안성시",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "vân vân",
+    "language": "vi"
+  },
+  {
+    "title": "Tuyển dụng nguồn nạp khí cao áp công nghiệp (Trang web kinh doanh Gimcheon)",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042815",
+    "closing_date": "Hạn chót D-13",
+    "location": "경상북도 김천시",
+    "pay": "hàng năm : 33,638,969 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Chúng tôi đang tuyển dụng những người có kinh nghiệm in ống đồng (cấp sĩ quan thứ nhất).",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042814",
+    "closing_date": "Hạn chót D-29",
+    "location": "경기도 안성시",
+    "pay": "Lương : 3,000,000 KRW",
+    "task": "Vận hành máy móc, thiết bị",
+    "language": "vi"
+  },
+  {
+    "title": "Toán tử phân loại và băm nhỏ có thể tái chế",
+    "link": "https://www.jobploy.kr/vi/recruit/RS0000042813",
+    "closing_date": "Hạn chót D-29",
+    "location": "경상남도 양산시",
+    "pay": "một giờ : 9,860 KRW",
+    "task": "vân vân",
     "language": "vi"
   }
 ]

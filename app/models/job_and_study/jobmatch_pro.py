@@ -36,7 +36,7 @@ app.add_middleware(
     allow_methods=["*"],  # 허용할 HTTP 메서드 목록
     allow_headers=["*"],  # 허용할 HTTP 헤더 목록
 )
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory="templates") #html 파일내 동적 콘텐츠 삽입 할 수 있게 해줌(렌더링).
 
 nlp = spacy.load("ko_core_news_sm")
 
@@ -49,6 +49,7 @@ def detect_language(text):
     lang, _ = classify(text)
     return lang
 
+# 엔터티 추출 함수
 def extract_entities(query):
     doc = nlp(query)
     entities = {
@@ -69,32 +70,34 @@ def extract_entities(query):
     }
     
     major_areas = {
-        "수원": "시", "성남": "시", "안양": "시", "안산": "시", "용인": "시", "부천": "시", 
-        "광명": "시", "평택": "시", "과천": "시", "오산": "시", "시흥": "시", "군포": "시", 
-        "의왕": "시", "하남": "시", "이천": "시", "안성": "시", "김포": "시", "화성": "시", 
-        "광주": "시", "여주": "시", "고양": "시", "의정부": "시", "파주": "시", "양주": "시", 
-        "구리": "시", "남양주": "시", "포천": "시", "동두천": "시",
-        "가평": "군", "양평": "군", "연천": "군",
-        "청주": "시", "충주": "시", "제천": "시", "보은": "군", "옥천": "군", "영동": "군", 
-        "증평": "군", "진천": "군", "괴산": "군", "음성": "군", "단양": "군",
-        "천안": "시", "공주": "시", "보령": "시", "아산": "시", "서산": "시", "논산": "시", 
-        "계룡": "시", "당진": "시", "금산": "군", "부여": "군", "서천": "군", "청양": "군", 
-        "홍성": "군", "예산": "군", "태안": "군",
-        "전주": "시", "군산": "시", "익산": "시", "정읍": "시", "남원": "시", "김제": "시", 
-        "완주": "군", "진안": "군", "무주": "군", "장수": "군", "임실": "군", "순창": "군", 
-        "고창": "군", "부안": "군",
-        "목포": "시", "여수": "시", "순천": "시", "나주": "시", "광양": "시", "담양": "군", 
-        "곡성": "군", "구례": "군", "고흥": "군", "보성": "군", "화순": "군", "장흥": "군", 
-        "강진": "군", "해남": "군", "영암": "군", "무안": "군", "함평": "군", "영광": "군", 
-        "장성": "군", "완도": "군", "진도": "군", "신안": "군",
-        "포항": "시", "경주": "시", "김천": "시", "안동": "시", "구미": "시", "영주": "시", 
-        "영천": "시", "상주": "시", "문경": "시", "경산": "시", "군위": "군", "의성": "군", 
-        "청송": "군", "영양": "군", "영덕": "군", "청도": "군", "고령": "군", "성주": "군", 
-        "칠곡": "군", "예천": "군", "봉화": "군", "울진": "군", "울릉": "군",
-        "창원": "시", "진주": "시", "통영": "시", "사천": "시", "김해": "시", "밀양": "시", 
-        "거제": "시", "양산": "시", "의령": "군", "함안": "군", "창녕": "군", "고성": "군", 
-        "남해": "군", "하동": "군", "산청": "군", "함양": "군", "거창": "군", "합천": "군",
-        "제주": "시", "서귀포": "시"
+        "수원": "수원시", "성남": "성남시", "안양": "안양시", "안산": "안산시", "용인": "용인시", 
+        "부천": "부천시", "광명": "광명시", "평택": "평택시", "과천": "과천시", "오산": "오산시", 
+        "시흥": "시흥시", "군포": "군포시", "의왕": "의왕시", "하남": "하남시", "이천": "이천시", 
+        "안성": "안성시", "김포": "김포시", "화성": "화성시", "광주": "광주시", "여주": "여주시", 
+        "고양": "고양시", "의정부": "의정부시", "파주": "파주시", "양주": "양주시", "구리": "구리시", 
+        "남양주": "남양주시", "포천": "포천시", "동두천": "동두천시", "가평": "가평군", "양평": "양평군", 
+        "연천": "연천군", "청주": "청주시", "충주": "충주시", "제천": "제천시", "보은": "보은군", 
+        "옥천": "옥천군", "영동": "영동군", "증평": "증평군", "진천": "진천군", "괴산": "괴산군", 
+        "음성": "음성군", "단양": "단양군", "천안": "천안시", "공주": "공주시", "보령": "보령시", 
+        "아산": "아산시", "서산": "서산시", "논산": "논산시", "계룡": "계룡시", "당진": "당진시", 
+        "금산": "금산군", "부여": "부여군", "서천": "서천군", "청양": "청양군", "홍성": "홍성군", 
+        "예산": "예산군", "태안": "태안군", "전주": "전주시", "군산": "군산시", "익산": "익산시", 
+        "정읍": "정읍시", "남원": "남원시", "김제": "김제시", "완주": "완주군", "진안": "진안군", 
+        "무주": "무주군", "장수": "장수군", "임실": "임실군", "순창": "순창군", "고창": "고창군", 
+        "부안": "부안군", "목포": "목포시", "여수": "여수시", "순천": "순천시", "나주": "나주시", 
+        "광양": "광양시", "담양": "담양군", "곡성": "곡성군", "구례": "구례군", "고흥": "고흥군", 
+        "보성": "보성군", "화순": "화순군", "장흥": "장흥군", "강진": "강진군", "해남": "해남군", 
+        "영암": "영암군", "무안": "무안군", "함평": "함평군", "영광": "영광군", "장성": "장성군", 
+        "완도": "완도군", "진도": "진도군", "신안": "신안군", "포항": "포항시", "경주": "경주시", 
+        "김천": "김천시", "안동": "안동시", "구미": "구미시", "영주": "영주시", "영천": "영천시", 
+        "상주": "상주시", "문경": "문경시", "경산": "경산시", "군위": "군위군", "의성": "의성군", 
+        "청송": "청송군", "영양": "영양군", "영덕": "영덕군", "청도": "청도군", "고령": "고령군", 
+        "성주": "성주군", "칠곡": "칠곡군", "예천": "예천군", "봉화": "봉화군", "울진": "울진군", 
+        "울릉": "울릉군", "창원": "창원시", "진주": "진주시", "통영": "통영시", "사천": "사천시", 
+        "김해": "김해시", "밀양": "밀양시", "거제": "거제시", "양산": "양산시", "의령": "의령군", 
+        "함안": "함안군", "창녕": "창녕군", "고성": "고성군", "남해": "남해군", "하동": "하동군", 
+        "산청": "산청군", "함양": "함양군", "거창": "거창군", "합천": "합천군", "제주": "제주시", 
+        "서귀포": "서귀포시"
     }
     
     words = query.split()
@@ -106,6 +109,9 @@ def extract_entities(query):
         elif word in major_areas:
             entities["LOCATION"].append(word + major_areas[word])
     
+    if "kitchen" in query.lower():
+        entities["OCCUPATION"].append("kitchen")
+
     return entities
 
 def jobploy_crawler(lang, pages=3):
@@ -137,7 +143,7 @@ def jobploy_crawler(lang, pages=3):
             url = f"https://www.jobploy.kr/{lang}/recruit?page={page}"
             driver.get(url)
 
-            WebDriverWait(driver, 10).until(
+            WebDriverWait(driver, 20).until(
                 EC.presence_of_element_located((By.CLASS_NAME, "content"))
             )
 
@@ -234,44 +240,32 @@ def search_jobs(query: str) -> str:
                 match = False
         else:
             # 사용자가 위치를 명시하지 않은 경우 '서울'을 기본값으로 사용
-            if 'Gyeonggi' not in job_info['location']:
+            if 'Hwaseong' not in job_info['location']:
                 match = False
 
         # 급여 필터링
-        if entities["MONEY"] and match:
+        if entities["MONEY"]:
             try:
-                # 요구 월급을 정수로 변환
-                required_salary_str = entities["MONEY"][0].replace(',', '').replace('KRW', '').strip()
-                if 'million' in required_salary_str:
-                    required_salary_str = required_salary_str.replace('million', '').strip()
-                    required_salary = int(required_salary_str) * 1000000
-                else:
-                    required_salary = int(required_salary_str)
+                # 사용자가 입력한 급여 정보 추출 및 정수로 변환
+                required_salary_str = entities["MONEY"][0].replace(',', '').replace('원', '').strip()
+                required_salary = int(required_salary_str)
                 
-                # 최소 월급 설정
-                minimum_salary = 3000000
-
-                # job_info['pay'] 값 처리
+                # 직무의 급여 정보 추출 및 정수로 변환
                 pay_elements = job_info['pay'].split()
                 if len(pay_elements) >= 3:
                     job_salary_str = pay_elements[2].replace(',', '').replace('원', '').strip()
-                    if 'per year' in job_info['pay']:
-                        job_salary = int(job_salary_str) // 12
-                    elif 'million' in job_salary_str:
-                        job_salary_str = job_salary_str.replace('million', '').strip()
-                        job_salary = int(job_salary_str) * 1000000
-                    else:
-                        job_salary = int(job_salary_str)
-
-                    # 급여가 요구 급여 이상인지 확인
-                    if job_salary < minimum_salary:
-                        match = False
+                    job_salary = int(job_salary_str)    
+                    
+                    # 직무의 급여가 요구 급여보다 낮으면 필터링
+                    if job_salary < required_salary:
+                        continue
                 else:
-                    match = False
-
+                    # 급여 정보가 부족한 경우 필터링
+                    continue
+                    
             except ValueError:
-                match = False
-
+                # 급여 정보가 올바르지 않거나 변환 실패 시 필터링
+                continue
 
         # 직무 필터링
         if entities["OCCUPATION"] and match:
@@ -333,9 +327,10 @@ prompt = ChatPromptTemplate.from_messages(
             1. Analyze user queries by language type to extract relevant entities.
             2. Search the job database using the extracted information.
             3. Filter and prioritize job listings based on the user's requirements.
-            4. Provide a comprehensive summary of the search results.
-            5. Offer detailed information about each relevant job listing.
-            6. If the keyword or numerical value does not match the user's query, do not provide any other data.
+            4. **If the query includes a LOCATION keyword, ensure that all relevant job listings for that location are retrieved and included in the response.**  # 추가된 부분
+            5. Provide a comprehensive summary of the search results.
+            6. Offer detailed information about each relevant job listing.
+            7. If the keyword or numerical value does not match the user's query, do not provide any other data.
 
             Include the following information for each job listing:
             - Title
@@ -347,7 +342,7 @@ prompt = ChatPromptTemplate.from_messages(
             - Key requirements (if available)
             - Application link
 
-            Ensure your response is clear, concise, and directly addresses the user's query.
+            Ensure your response is clear, concise, and directly addresses the user's query. If a LOCATION is mentioned in the query, include all relevant job listings from that location.
             """
         ),
         (
@@ -364,7 +359,7 @@ prompt = ChatPromptTemplate.from_messages(
         ),
         (
             "assistant",
-            "Thank you for your query. I'll search for job listings based on your request using the search_jobs tool. I'll provide a summary of the results and detailed information about relevant job listings."
+            "Thank you for your query. I'll search for job listings based on your request using the search_jobs tool. I'll provide a summary of the results and detailed information about relevant job listings.If you mentioned a specific location, I'll ensure to include all relevant job listings from that location."
         ),
         MessagesPlaceholder(variable_name=MEMORY_KEY),
         MessagesPlaceholder(variable_name="agent_scratchpad"),
