@@ -1,30 +1,35 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
 import asyncio
-import pickle
+from functools import partial
 from pydantic import BaseModel
 from langchain.agents import AgentExecutor, create_openai_tools_agent
 from langchain.tools.retriever import create_retriever_tool
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
-from langchain_community.vectorstores import FAISS
-from langchain_community.document_loaders import PyPDFLoader
+from langchain.embeddings import OpenAIEmbeddings
+from langchain.document_loaders import PyPDFLoader
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.memory import ConversationBufferMemory
-from langchain.schema import Document
 import os
 from dotenv import load_dotenv
 import re
 from konlpy.tag import Kkma
 from typing import List, Dict
-from langchain.retrievers import BM25Retriever
-from langchain.retrievers import BM25Retriever, EnsembleRetriever
+from langchain_community.retrievers.elastic_search_bm25 import ElasticSearchBM25Retriever as ElasticsearchRetriever
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain.schema import BaseRetriever, Document
+from typing import List
 from contextlib import asynccontextmanager
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from elasticsearch import helpers  # bulk 작업을 위해 필요합니다
+from elasticsearch import Elasticsearch  # 이 줄을 추가합니다
 
 load_dotenv()
 
+
+
 agent_executor = None
-vectordb = None
-bm25_retriever = None
+es_client = None
+es_retriever = None
 
 app = FastAPI()
 
@@ -34,108 +39,329 @@ class Query(BaseModel):
 
 pdf_path = r"C:\Users\hi02\dev\NAGNAE\NAGNAE-AI\pdf\2025학년도 재외국민과 외국인 특별전형 시행계획 주요사항.pdf"
 
-# 세션별 메모리 저장소
+# Session memories storage
 session_memories = {}
 
-# KoNLPy 초기화
+# Initialize KoNLPy
 kkma = Kkma()
 
 # 지역명 사전 정의
 region_dict = {
-    "서울": ["서울", "서울시", "서울특별시"],
-    "경기": ["경기", "경기도"],
-    "인천": ["인천", "인천시", "인천광역시"],
-    "부산": ["부산", "부산시", "부산광역시"],
-    "대구": ["대구", "대구시", "대구광역시"],
-    "광주": ["광주", "광주시", "광주광역시"],
-    "대전": ["대전", "대전시", "대전광역시"],
-    "울산": ["울산", "울산시", "울산광역시"],
-    "세종": ["세종", "세종시", "세종특별자치시"],
-    "강원": ["강원", "강원도"],
-    "충북": ["충북", "충청북도"],
-    "충남": ["충남", "충청남도"],
-    "전북": ["전북", "전라북도"],
-    "전남": ["전남", "전라남도"],
-    "경북": ["경북", "경상북도"],
-    "경남": ["경남", "경상남도"],
-    "제주": ["제주", "제주도", "제주특별자치도"]
+    "서울": [
+        ["서울", "서울시", "서울특별시"],
+        ["Seoul", "Seoul City", "Seoul Special City"],
+        ["首尔", "首尔市", "首尔特别市"],
+        ["ソウル", "ソウル市", "ソウル特別市"]
+    ],
+    "경기": [
+        ["경기", "경기도"],
+        ["Gyeonggi", "Gyeonggi Province"],
+        ["京畿", "京畿道"],
+        ["キョンギ", "キョンギ道"]
+    ],
+    "인천": [
+        ["인천", "인천시", "인천광역시"],
+        ["Incheon", "Incheon City", "Incheon Metropolitan City"],
+        ["仁川", "仁川市", "仁川广域市"],
+        ["インチョン", "インチョン市", "インチョン広域市"]
+    ],
+    "부산": [
+        ["부산", "부산시", "부산광역시"],
+        ["Busan", "Busan City", "Busan Metropolitan City"],
+        ["釜山", "釜山市", "釜山广域市"],
+        ["プサン", "プサン市", "プサン広域市"]
+    ],
+    "대구": [
+        ["대구", "대구시", "대구광역시"],
+        ["Daegu", "Daegu City", "Daegu Metropolitan City"],
+        ["大邱", "大邱市", "大邱广域市"],
+        ["テグ", "テグ市", "テグ広域市"]
+    ],
+    "광주": [
+        ["광주", "광주시", "광주광역시"],
+        ["Gwangju", "Gwangju City", "Gwangju Metropolitan City"],
+        ["光州", "光州市", "光州广域市"],
+        ["クァンジュ", "クァンジュ市", "クァンジュ広域市"]
+    ],
+    "대전": [
+        ["대전", "대전시", "대전광역시"],
+        ["Daejeon", "Daejeon City", "Daejeon Metropolitan City"],
+        ["大田", "大田市", "大田广域市"],
+        ["テジョン", "テジョン市", "テジョン広域市"]
+    ],
+    "울산": [
+        ["울산", "울산시", "울산광역시"],
+        ["Ulsan", "Ulsan City", "Ulsan Metropolitan City"],
+        ["蔚山", "蔚山市", "蔚山广域市"],
+        ["ウルサン", "ウルサン市", "ウルサン広域市"]
+    ],
+    "세종": [
+        ["세종", "세종시", "세종특별자치시"],
+        ["Sejong", "Sejong City", "Sejong Special Self-Governing City"],
+        ["世宗", "世宗市", "世宗特别自治市"],
+        ["セジョン", "セジョン市", "セジョン特別自治市"]
+    ],
+    "강원": [
+        ["강원", "강원도"],
+        ["Gangwon", "Gangwon Province"],
+        ["江原", "江原道"],
+        ["カンウォン", "カンウォン道"]
+    ],
+    "충북": [
+        ["충북", "충청북도"],
+        ["Chungbuk", "North Chungcheong Province"],
+        ["忠北", "忠清北道"],
+        ["チュンブク", "忠清北道"]
+    ],
+    "충남": [
+        ["충남", "충청남도"],
+        ["Chungnam", "South Chungcheong Province"],
+        ["忠南", "忠清南道"],
+        ["チュンナム", "忠清南道"]
+    ],
+    "전북": [
+        ["전북", "전라북도"],
+        ["Jeonbuk", "North Jeolla Province"],
+        ["全北", "全罗北道"],
+        ["チョンブク", "全羅北道"]
+    ],
+    "전남": [
+        ["전남", "전라남도"],
+        ["Jeonnam", "South Jeolla Province"],
+        ["全南", "全罗南道"],
+        ["チョンナム", "全羅南道"]
+    ],
+    "경북": [
+        ["경북", "경상북도"],
+        ["Gyeongbuk", "North Gyeongsang Province"],
+        ["庆北", "庆尚北道"],
+        ["キョンブク", "慶尚北道"]
+    ],
+    "경남": [
+        ["경남", "경상남도"],
+        ["Gyeongnam", "South Gyeongsang Province"],
+        ["庆南", "庆尚南道"],
+        ["キョンナム", "慶尚南道"]
+    ],
+    "제주": [
+        ["제주", "제주도", "제주특별자치도"],
+        ["Jeju", "Jeju Island", "Jeju Special Self-Governing Province"],
+        ["济州", "济州岛", "济州特别自治道"],
+        ["チェジュ", "済州島", "済州特別自治道"]
+    ]
 }
 
 # 지역별 대학교 정보 (예시, 실제 데이터로 채워넣어야 함)
 university_by_region = {
     "서울": [
-        "서울대학교", "고려대학교", "연세대학교", "서강대학교", "성균관대학교", "한양대학교", 
-        "중앙대학교", "경희대학교", "홍익대학교", "동국대학교", "건국대학교", "숙명여자대학교", 
-        "이화여자대학교", "한국외국어대학교", "서울시립대학교", "숭실대학교", "세종대학교", 
-        "국민대학교", "덕성여자대학교", "동덕여자대학교", "서울과학기술대학교", "삼육대학교", 
-        "상명대학교", "성신여자대학교", "한성대학교", "KC대학교", "감리교신학대학교", 
-        "서울기독대학교", "서울장신대학교", "성공회대학교", "총신대학교", "추계예술대학교", 
-        "한국성서대학교", "한국체육대학교", "한영신학대학교"
+        ["서울대학교", "Seoul National University", "ソウル大学校", "首尔大学"],
+        ["고려대학교", "Korea University", "高麗大学校", "高丽大学"],
+        ["연세대학교", "Yonsei University", "延世大学校", "延世大学"],
+        ["서강대학교", "Sogang University", "西江大学校", "西江大学"],
+        ["성균관대학교", "Sungkyunkwan University", "成均館大学校", "成均馆大学"],
+        ["한양대학교", "Hanyang University", "漢陽大学校", "汉阳大学"],
+        ["중앙대학교", "Chung-Ang University", "中央大学校", "中央大学"],
+        ["경희대학교", "Kyung Hee University", "慶熙大学校", "庆熙大学"],
+        ["홍익대학교", "Hongik University", "弘益大学校", "弘益大学"],
+        ["동국대학교", "Dongguk University", "東国大学校", "东国大学"],
+        ["건국대학교", "Konkuk University", "建国大学校", "建国大学"],
+        ["숙명여자대학교", "Sookmyung Women's University", "淑明女子大学校", "淑明女子大学"],
+        ["이화여자대학교", "Ewha Womans University", "梨花女子大学校", "梨花女子大学"],
+        ["한국외국어대학교", "Hankuk University of Foreign Studies", "韓国外国語大学校", "韩国外国语大学"],
+        ["서울시립대학교", "University of Seoul", "ソウル市立大学校", "首尔市立大学"],
+        ["숭실대학교", "Soongsil University", "崇實大学校", "崇实大学"],
+        ["세종대학교", "Sejong University", "世宗大学校", "世宗大学"],
+        ["국민대학교", "Kookmin University", "国民大学校", "国民大学"],
+        ["덕성여자대학교", "Duksung Women's University", "徳成女子大学校", "德成女子大学"],
+        ["동덕여자대학교", "Dongduk Women's University", "同德女子大学校", "同德女子大学"],
+        ["서울과학기술대학교", "Seoul National University of Science and Technology", "ソウル科学技術大学校", "首尔科学技术大学"],
+        ["삼육대학교", "Sahmyook University", "三育大学校", "三育大学"],
+        ["상명대학교", "Sangmyung University", "相明大学校", "相明大学"],
+        ["성신여자대학교", "Sungshin Women's University", "誠信女子大学校", "诚信女子大学"],
+        ["한성대학교", "Hansung University", "韓成大学校", "韩成大学"],
+        ["KC대학교", "KC University", "KC大学校", "KC大学"],
+        ["감리교신학대학교", "Methodist Theological University", "監理教神学大学校", "监理教神学大学"],
+        ["서울기독대학교", "Seoul Christian University", "ソウルキリスト教大学校", "首尔基督教大学"],
+        ["서울장신대학교", "Seoul Jangsin University", "ソウル長神大学校", "首尔长神大学"],
+        ["성공회대학교", "Sungkonghoe University", "聖公会大学校", "圣公会大学"],
+        ["총신대학교", "Chongshin University", "総神大学校", "总神大学"],
+        ["추계예술대학교", "Chugye University for the Arts", "秋渓芸術大学校", "秋溪艺术大学"],
+        ["한국성서대학교", "Korean Bible University", "韓国聖書大学校", "韩国圣经大学"],
+        ["한국체육대학교", "Korea National Sport University", "韓国体育大学校", "韩国体育大学"],
+        ["한영신학대학교", "Hanying Theological University", "韓英神学大学校", "韩英神学大学"]
     ],
     "경기": [
-        "아주대학교", "성균관대학교(자연과학캠퍼스)", "한국외국어대학교(글로벌캠퍼스)", "경희대학교(국제캠퍼스)", 
-        "가천대학교", "경기대학교", "단국대학교", "한양대학교(ERICA)", "명지대학교", "강남대학교", 
-        "경동대학교", "수원대학교", "신한대학교", "안양대학교", "용인대학교", "을지대학교", 
-        "평택대학교", "한경대학교", "한국산업기술대학교", "한국항공대학교", "한세대학교", 
-        "협성대학교", "가톨릭대학교", "루터대학교", "서울신학대학교", "성결대학교", 
-        "중앙승가대학교", "칼빈대학교"
+        ["아주대학교", "Ajou University", "亜州大学校", "亚洲大学"],
+        ["성균관대학교(자연과학캠퍼스)", "Sungkyunkwan University (Natural Sciences Campus)", "成均館大学校（自然科学キャンパス）", "成均馆大学（自然科学校区）"],
+        ["한국외국어대학교(글로벌캠퍼스)", "Hankuk University of Foreign Studies (Global Campus)", "韓国外国語大学校（グローバルキャンパス）", "韩国外国语大学（国际校区）"],
+        ["경희대학교(국제캠퍼스)", "Kyung Hee University (Global Campus)", "慶熙大学校（国際キャンパス）", "庆熙大学（国际校区）"],
+        ["가천대학교", "Gachon University", "加川大学校", "加川大学"],
+        ["경기대학교", "Kyonggi University", "京畿大学校", "京畿大学"],
+        ["단국대학교", "Dankook University", "檀国大学校", "檀国大学"],
+        ["한양대학교(ERICA)", "Hanyang University (ERICA Campus)", "漢陽大学校（ERICA）", "汉阳大学（ERICA校区）"],
+        ["명지대학교", "Myongji University", "明知大学校", "明知大学"],
+        ["강남대학교", "Kangnam University", "江南大学校", "江南大学"],
+        ["경동대학교", "Kyungdong University", "京東大学校", "京东大学"],
+        ["수원대학교", "University of Suwon", "水原大学校", "水原大学"],
+        ["신한대학교", "Shinhan University", "新韓大学校", "新韩大学"],
+        ["안양대학교", "Anyang University", "安養大学校", "安养大学"],
+        ["용인대학교", "Yongin University", "龍仁大学校", "龙仁大学"],
+        ["을지대학교", "Eulji University", "乙支大学校", "乙支大学"],
+        ["평택대학교", "Pyeongtaek University", "平澤大学校", "平泽大学"],
+        ["한경대학교", "Hankyong National University", "韓京大学校", "韩京大学"],
+        ["한국산업기술대학교", "Korea Polytechnic University", "韓国産業技術大学校", "韩国产业技术大学"],
+        ["한국항공대학교", "Korea Aerospace University", "韓国航空大学校", "韩国航空大学"],
+        ["한세대학교", "Hansei University", "韓世大学校", "韩世大学"],
+        ["협성대학교", "Hyupsung University", "協成大学校", "协成大学"],
+        ["가톨릭대학교", "The Catholic University of Korea", "カトリック大学校", "天主教大学"],
+        ["루터대학교", "Luther University", "ルーテル大学校", "路德大学"],
+        ["서울신학대학교", "Seoul Theological University", "ソウル神学大学校", "首尔神学大学"],
+        ["성결대학교", "Sungkyul University", "聖潔大学校", "圣洁大学"],
+        ["중앙승가대학교", "Joong-Ang Sangha University", "中央僧伽大学校", "中央僧伽大学"],
+        ["칼빈대학교", "Calvin University", "カルバン大学校", "加尔文大学"]
     ],
     "인천": [
-        "인천대학교", "인하대학교", "가천대학교(메디컬캠퍼스)", "경인교육대학교", "인천가톨릭대학교"
+        ["인천대학교", "Incheon National University", "仁川大学校", "仁川大学"],
+        ["인하대학교", "Inha University", "仁荷大学校", "仁荷大学"],
+        ["가천대학교(메디컬캠퍼스)", "Gachon University (Medical Campus)", "加川大学校（メディカルキャンパス）", "加川大学（医学校区）"],
+        ["경인교육대학교", "Gyeongin National University of Education", "京仁教育大学校", "京仁教育大学"],
+        ["인천가톨릭대학교", "Incheon Catholic University", "仁川カトリック大学校", "仁川天主教大学"]
     ],
     "부산": [
-        "부산대학교", "동아대학교", "부경대학교", "동의대학교", "경성대학교", "신라대학교", 
-        "고신대학교", "부산외국어대학교", "동서대학교", "한국해양대학교", "부산가톨릭대학교"
+        ["부산대학교", "Pusan National University", "釜山大学校", "釜山大学"],
+        ["동아대학교", "Dong-A University", "東亜大学校", "东亚大学"],
+        ["부경대학교", "Pukyong National University", "釜慶大学校", "釜庆大学"],
+        ["동의대학교", "Dong-Eui University", "東義大学校", "东义大学"],
+        ["경성대학교", "Kyungsung University", "慶星大学校", "庆星大学"],
+        ["신라대학교", "Silla University", "新羅大学校", "新罗大学"],
+        ["고신대학교", "Kosin University", "高神大学校", "高神大学"],
+        ["부산외국어대학교", "Busan University of Foreign Studies", "釜山外国語大学校", "釜山外国语大学"],
+        ["동서대학교", "Dongseo University", "東西大学校", "东西大学"],
+        ["한국해양대학교", "Korea Maritime and Ocean University", "韓国海洋大学校", "韩国海洋大学"],
+        ["부산가톨릭대학교", "Catholic University of Pusan", "釜山カトリック大学校", "釜山天主教大学"]
     ],
     "대구": [
-        "경북대학교", "계명대학교", "영남대학교", "대구대학교", "대구가톨릭대학교", 
-        "대구한의대학교", "금오공과대학교", "경일대학교", "대구예술대학교"
+        ["경북대학교", "Kyungpook National University", "慶北大学校", "庆北大学"],
+        ["계명대학교", "Keimyung University", "啓明大学校", "启明大学"],
+        ["영남대학교", "Yeungnam University", "嶺南大学校", "岭南大学"],
+        ["대구대학교", "Daegu University", "大邱大学校", "大邱大学"],
+        ["대구가톨릭대학교", "Daegu Catholic University", "大邱カトリック大学校", "大邱天主教大学"],
+        ["대구한의대학교", "Daegu Haany University", "大邱韓医大学校", "大邱韩医大学"],
+        ["금오공과대학교", "Kumoh National Institute of Technology", "金烏工科大学校", "金乌工科大学"],
+        ["경일대학교", "Kyungil University", "慶一大学校", "庆一大学"],
+        ["대구예술대학교", "Daegu Arts University", "大邱芸術大学校", "大邱艺术大学"]
     ],
     "광주": [
-        "전남대학교", "조선대학교", "광주과학기술원", "호남대학교", "광주대학교", 
-        "광주여자대학교", "남부대학교", "송원대학교"
+        ["전남대학교", "Chonnam National University", "全南大学校", "全南大学"],
+        ["조선대학교", "Chosun University", "朝鮮大学校", "朝鲜大学"],
+        ["광주과학기술원", "Gwangju Institute of Science and Technology", "光州科学技術院", "光州科学技术院"],
+        ["호남대학교", "Honam University", "湖南大学校", "湖南大学"],
+        ["광주대학교", "Gwangju University", "光州大学校", "光州大学"],
+        ["광주여자대학교", "Kwangju Women's University", "光州女子大学校", "光州女子大学"],
+        ["남부대학교", "Nambu University", "南部大学校", "南部大学"],
+        ["송원대학교", "Songwon University", "松原大学校", "松原大学"]
     ],
-    "대전": [
-        "충남대학교", "한국과학기술원(KAIST)", "한밭대학교", "대전대학교", "배재대학교", 
-        "우송대학교", "을지대학교(대전캠퍼스)", "침례신학대학교", "한남대학교"
+"대전": [
+        ["충남대학교", "Chungnam National University", "忠南大学校", "忠南大学"],
+        ["한국과학기술원(KAIST)", "Korea Advanced Institute of Science and Technology (KAIST)", "韓国科学技術院（KAIST）", "韩国科学技术院（KAIST）"],
+        ["한밭대학교", "Hanbat National University", "韓吧大学校", "韩吧大学"],
+        ["대전대학교", "Daejeon University", "大田大学校", "大田大学"],
+        ["배재대학교", "Pai Chai University", "培材大学校", "培材大学"],
+        ["우송대학교", "Woosong University", "又松大学校", "又松大学"],
+        ["을지대학교(대전캠퍼스)", "Eulji University (Daejeon Campus)", "乙支大学校（大田キャンパス）", "乙支大学（大田校区）"],
+        ["침례신학대학교", "Korea Baptist Theological University", "浸礼神学大学校", "浸礼神学大学"],
+        ["한남대학교", "Hannam University", "韓南大学校", "韩南大学"]
     ],
     "울산": [
-        "울산대학교", "울산과학기술원(UNIST)", "울산과학대학교"
+        ["울산대학교", "University of Ulsan", "蔚山大学校", "蔚山大学"],
+        ["울산과학기술원(UNIST)", "Ulsan National Institute of Science and Technology (UNIST)", "蔚山科学技術院（UNIST）", "蔚山科学技术院（UNIST）"],
+        ["울산과학대학교", "Ulsan College", "蔚山科学大学校", "蔚山科学大学"]
     ],
     "세종": [
-        "고려대학교(세종캠퍼스)", "홍익대학교(세종캠퍼스)"
+        ["고려대학교(세종캠퍼스)", "Korea University (Sejong Campus)", "高麗大学校（世宗キャンパス）", "高丽大学（世宗校区）"],
+        ["홍익대학교(세종캠퍼스)", "Hongik University (Sejong Campus)", "弘益大学校（世宗キャンパス）", "弘益大学（世宗校区）"]
     ],
     "강원": [
-        "강원대학교", "연세대학교(미래캠퍼스)", "강릉원주대학교", "한림대학교", "춘천교육대학교", 
-        "강원도립대학교", "상지대학교", "가톨릭관동대학교", "경동대학교", "한라대학교"
+        ["강원대학교", "Kangwon National University", "江原大学校", "江原大学"],
+        ["연세대학교(미래캠퍼스)", "Yonsei University (Mirae Campus)", "延世大学校（未来キャンパス）", "延世大学（未来校区）"],
+        ["강릉원주대학교", "Gangneung-Wonju National University", "江陵原州大学校", "江陵原州大学"],
+        ["한림대학교", "Hallym University", "翰林大学校", "翰林大学"],
+        ["춘천교육대학교", "Chuncheon National University of Education", "春川教育大学校", "春川教育大学"],
+        ["강원도립대학교", "Gangwon Provincial College", "江原道立大学校", "江原道立大学"],
+        ["상지대학교", "Sangji University", "尚志大学校", "尚志大学"],
+        ["가톨릭관동대학교", "Catholic Kwandong University", "カトリック関東大学校", "天主教关东大学"],
+        ["경동대학교", "Kyungdong University", "京東大学校", "京东大学"],
+        ["한라대학교", "Halla University", "漢拏大学校", "汉拿大学"]
     ],
     "충북": [
-        "충북대학교", "청주대학교", "서원대학교", "세명대학교", "충주대학교", "극동대학교", 
-        "중원대학교", "건국대학교(글로컬캠퍼스)", "한국교통대학교"
+        ["충북대학교", "Chungbuk National University", "忠北大学校", "忠北大学"],
+        ["청주대학교", "Cheongju University", "清州大学校", "清州大学"],
+        ["서원대학교", "Seowon University", "西原大学校", "西原大学"],
+        ["세명대학교", "Semyung University", "世明大学校", "世明大学"],
+        ["충주대학교", "Chungju National University", "忠州大学校", "忠州大学"],
+        ["극동대학교", "Far East University", "極東大学校", "远东大学"],
+        ["중원대학교", "Jungwon University", "中原大学校", "中原大学"],
+        ["건국대학교(글로컬캠퍼스)", "Konkuk University (GLOCAL Campus)", "建国大学校（グローカルキャンパス）", "建国大学（全球本地化校区）"],
+        ["한국교통대학교", "Korea National University of Transportation", "韓国交通大学校", "韩国交通大学"]
     ],
     "충남": [
-        "충남대학교", "공주대학교", "순천향대학교", "남서울대학교", "건양대학교", "백석대학교", 
-        "호서대학교", "선문대학교", "한서대학교", "나사렛대학교", "중부대학교", "청운대학교"
+        ["충남대학교", "Chungnam National University", "忠南大学校", "忠南大学"],
+        ["공주대학교", "Kongju National University", "公州大学校", "公州大学"],
+        ["순천향대학교", "Soonchunhyang University", "順天郷大学校", "顺天乡大学"],
+        ["남서울대학교", "Namseoul University", "南ソウル大学校", "南首尔大学"],
+        ["건양대학교", "Konyang University", "建陽大学校", "建阳大学"],
+        ["백석대학교", "Baekseok University", "白石大学校", "白石大学"],
+        ["호서대학교", "Hoseo University", "湖西大学校", "湖西大学"],
+        ["선문대학교", "Sun Moon University", "鮮文大学校", "鲜文大学"],
+        ["한서대학교", "Hanseo University", "韓瑞大学校", "韩瑞大学"],
+        ["나사렛대학교", "Korea Nazarene University", "ナザレ大学校", "拿撒勒大学"],
+        ["중부대학교", "Joongbu University", "中部大学校", "中部大学"],
+        ["청운대학교", "Chungwoon University", "清雲大学校", "清云大学"]
     ],
     "전북": [
-        "전북대학교", "전주대학교", "원광대학교", "군산대학교", "우석대학교", "예수대학교", 
-        "한일장신대학교", "호원대학교"
+        ["전북대학교", "Jeonbuk National University", "全北大学校", "全北大学"],
+        ["전주대학교", "Jeonju University", "全州大学校", "全州大学"],
+        ["원광대학교", "Wonkwang University", "圓光大学校", "圆光大学"],
+        ["군산대학교", "Kunsan National University", "群山大学校", "群山大学"],
+        ["우석대학교", "Woosuk University", "又石大学校", "又石大学"],
+        ["예수대학교", "Jesus University", "イエス大学校", "耶稣大学"],
+        ["한일장신대학교", "Hanil University and Presbyterian Theological Seminary", "韓一長神大学校", "韩一长神大学"],
+        ["호원대학교", "Howon University", "湖原大学校", "湖原大学"]
     ],
     "전남": [
-        "전남대학교(여수캠퍼스)", "순천대학교", "목포대학교", "동신대학교", "세한대학교", 
-        "초당대학교", "목포해양대학교"
+        ["전남대학교(여수캠퍼스)", "Chonnam National University (Yeosu Campus)", "全南大学校（麗水キャンパス）", "全南大学（丽水校区）"],
+        ["순천대학교", "Sunchon National University", "順天大学校", "顺天大学"],
+        ["목포대학교", "Mokpo National University", "木浦大学校", "木浦大学"],
+        ["동신대학교", "Dongshin University", "東新大学校", "东新大学"],
+        ["세한대학교", "Sehan University", "世韓大学校", "世韩大学"],
+        ["초당대학교", "Chodang University", "草堂大学校", "草堂大学"],
+        ["목포해양대학교", "Mokpo National Maritime University", "木浦海洋大学校", "木浦海洋大学"]
     ],
     "경북": [
-        "경북대학교(상주캠퍼스)", "포항공과대학교(POSTECH)", "안동대학교", "경주대학교", 
-        "김천대학교", "대구가톨릭대학교(경산캠퍼스)", "동국대학교(경주캠퍼스)", 
-        "위덕대학교", "한동대학교"
+        ["경북대학교(상주캠퍼스)", "Kyungpook National University (Sangju Campus)", "慶北大学校（尚州キャンパス）", "庆北大学（尚州校区）"],
+        ["포항공과대학교(POSTECH)", "Pohang University of Science and Technology (POSTECH)", "浦項工科大学校（POSTECH）", "浦项工科大学（POSTECH）"],
+        ["안동대학교", "Andong National University", "安東大学校", "安东大学"],
+        ["경주대학교", "Gyeongju University", "慶州大学校", "庆州大学"],
+        ["김천대학교", "Gimcheon University", "金泉大学校", "金泉大学"],
+        ["대구가톨릭대학교(경산캠퍼스)", "Daegu Catholic University (Gyeongsan Campus)", "大邱カトリック大学校（慶山キャンパス）", "大邱天主教大学（庆山校区）"],
+        ["동국대학교(경주캠퍼스)", "Dongguk University (Gyeongju Campus)", "東国大学校（慶州キャンパス）", "东国大学（庆州校区）"],
+        ["위덕대학교", "Uiduk University", "威德大学校", "威德大学"],
+        ["한동대학교", "Handong Global University", "韓東大学校", "韩东大学"]
     ],
     "경남": [
-        "경상국립대학교", "창원대학교", "인제대학교", "경남대학교", "영산대학교", "울산대학교", 
-        "한국해양대학교(통영캠퍼스)", "진주교육대학교"
+        ["경상국립대학교", "Gyeongsang National University", "慶尚国立大学校", "庆尚国立大学"],
+        ["창원대학교", "Changwon National University", "昌原大学校", "昌原大学"],
+        ["인제대학교", "Inje University", "仁済大学校", "仁济大学"],
+        ["경남대학교", "Kyungnam University", "慶南大学校", "庆南大学"],
+        ["영산대학교", "Youngsan University", "霊山大学校", "灵山大学"],
+        ["울산대학교", "University of Ulsan", "蔚山大学校", "蔚山大学"],
+        ["한국해양대학교(통영캠퍼스)", "Korea Maritime and Ocean University (Tongyeong Campus)", "韓国海洋大学校（統営キャンパス）", "韩国海洋大学（统营校区）"],
+        ["진주교육대학교", "Chinju National University of Education", "晋州教育大学校", "晋州教育大学"]
     ],
     "제주": [
-        "제주대학교", "제주국제대학교", "탐라대학교"
+        ["제주대학교", "Jeju National University", "済州大学校", "济州大学"],
+        ["제주국제대학교", "Jeju International University", "済州国際大学校", "济州国际大学"],
+        ["탐라대학교", "Tamna University", "耽羅大学校", "耽罗大学"]
     ]
 }
 
@@ -171,9 +397,9 @@ def preprocess_text(text):
     
     return text.strip()
 
-async def process_pdf_in_chunks(pdf_path, chunk_size=10):
+def process_pdf_in_chunks(pdf_path, chunk_size=10):
     loader = PyPDFLoader(pdf_path)
-    pages = await asyncio.to_thread(loader.load_and_split)
+    pages = loader.load_and_split()
     
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
@@ -190,139 +416,245 @@ async def process_pdf_in_chunks(pdf_path, chunk_size=10):
             regions = extract_regions(content)
             splits = text_splitter.split_text(content)
             for split in splits:
-                doc = Document(page_content=split, metadata={"page": page.metadata["page"], "regions": regions})
+                # 요약 추가
+                summary = summarize_text(split)
+                doc = Document(page_content=summary, metadata={"page": page.metadata["page"], "regions": regions})
                 processed_chunk.append(doc)
         all_chunks.extend(processed_chunk)
     
     return all_chunks
 
-async def process_and_save_data():
-    documents = await process_pdf_in_chunks(pdf_path)
+def process_pdf_pages(pdf_path):
+    loader = PyPDFLoader(pdf_path)
+    pages = loader.load_and_split()
     
-    # FAISS 벡터 데이터베이스 생성 및 저장
-    vectordb = await asyncio.to_thread(FAISS.from_documents, documents, OpenAIEmbeddings())
-    await asyncio.to_thread(vectordb.save_local, "vectordb_index", allow_dangerous_deserialization=True)
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=200,
+        length_function=len,
+    )
     
-    # BM25 검색기 생성 및 저장
-    bm25_retriever = await asyncio.to_thread(BM25Retriever.from_documents, documents)
-    with open("bm25_retriever.pkl", "wb") as f:
-        pickle.dump(bm25_retriever, f)
+    processed_pages = []
+    for page in pages:
+        content = preprocess_text(page.page_content)
+        regions = extract_regions(content)
+        splits = text_splitter.split_text(content)
+        
+        page_chunks = []
+        for split in splits:
+            summary = summarize_text(split)
+            doc = Document(page_content=summary, metadata={"page": page.metadata["page"], "regions": regions})
+            page_chunks.append(doc)
+        
+        processed_pages.append(page_chunks)
+    
+    return processed_pages
 
-async def initialize_langchain():
-    global agent_executor, vectordb, bm25_retriever
+
+def process_and_save_data():
+    global es_client
+
+    index_name = "pdf_search"
     
-    # 저장된 인덱스 로드
-    vectordb = await asyncio.to_thread(FAISS.load_local, "vectordb_index", OpenAIEmbeddings(), allow_dangerous_deserialization=True)
-    with open("bm25_retriever.pkl", "rb") as f:
-        bm25_retriever = pickle.load(f)
+    # Create Elasticsearch index with specific mappings
+    mappings = {
+        "mappings": {
+            "properties": {
+                "content": {
+                    "type": "text",
+                    "analyzer": "standard"
+                },
+                "metadata": {
+                    "properties": {
+                        "page": {"type": "integer"},
+                        "regions": {"type": "keyword"}
+                    }
+                }
+            }
+        }
+    }
     
-    # 검색기 설정
-    faiss_retriever = vectordb.as_retriever(search_kwargs={"k": 3})
-    ensemble_retriever = EnsembleRetriever(
-        retrievers=[bm25_retriever, faiss_retriever],
-        weights=[0.5, 0.5]
+    # Create index with mappings
+    if not es_client.indices.exists(index=index_name):
+        es_client.indices.create(index=index_name, body=mappings)
+    
+    # Process PDF pages
+    processed_pages = process_pdf_pages(pdf_path)
+    
+    # Index documents in Elasticsearch
+    for page_chunks in processed_pages:
+        actions = [
+            {
+                "_op_type": "index",
+                "_index": index_name,
+                "_source": {
+                    "content": doc.page_content,
+                    "metadata": doc.metadata
+                }
+            }
+            for doc in page_chunks
+        ]
+        
+        if actions:
+            helpers.bulk(es_client, actions)
+    
+    # Refresh the index
+    es_client.indices.refresh(index=index_name)
+
+def initialize_langchain():
+    global agent_executor, es_client, es_retriever
+    
+    # Elasticsearch retriever 설정
+    es_retriever = ElasticsearchRetriever(
+        client=es_client,
+        index_name="pdf_search",
+        k=5  # 검색할 문서 수
     )
     
     retriever_tool = create_retriever_tool(
-        ensemble_retriever,
+        es_retriever,
         "pdf_search",
-        "외국인 특별전형 시행계획 주요사항 PDF 파일에서 추출한 정보를 검색할 때 이 툴을 사용하세요. 지역명이 언급된 경우 해당 지역의 대학교 정보를 함께 제공합니다."
+        "이 도구를 사용하여 PDF 파일에서 외국인 학생 입학 계획에 대한 정보를 검색할 수 있습니다. 또한 언급된 지역의 대학교 정보도 제공합니다."
     )
 
     tools = [retriever_tool]
 
     openai = ChatOpenAI(
-        model="gpt-3.5-turbo", api_key=os.getenv("OPENAI_API_KEY"), temperature=0.1)
+        model="gpt-3.5-turbo", 
+        api_key=os.getenv("OPENAI_API_KEY"), 
+        temperature=0.1,
+        max_tokens=1000  # 응답 토큰 수 제한
+    )
+
 
     prompt = ChatPromptTemplate.from_messages([
-        (
-        "system", """
-        # 한국 대학의 외국인 특별전형 전문가
+    (
+    "system",
+    """
+    당신은 한국 대학의 2025학년도 재외국민과 외국인 특별전형 전문가입니다. 제공된 PDF 문서, university_by_region 데이터, region_dict 데이터를 바탕으로 간결하고 정확하게 답변하세요.
+    주요 지침:
 
-        ## 역할 및 책임
-        당신은 한국 대학의 외국인 특별전형에 대한 전문가입니다. 주어진 PDF 문서의 내용과 제공된 대학 정보를 바탕으로 질문에 답변해야 합니다. PDF 문서는 다음 구조로 되어 있습니다:
+    사용자 질문을 정확히 파악하고 요점만 답변하세요.
+    질문자가 매번 질문을 할 때마다 university_by_region과 region_dict를 반드시 확인하고 답변하세요.
+    대학교 목록이나 모집단위를 요청받으면 모든 대학교와 모집단위를 나열하세요. 단, 모집단위가 너무 많으면 일부만 보여주고 "등"을 붙이세요. 대학교명을 요청받으면 모든 대학교명을 생략하지 말고 다 알려주세요.
+    숫자 정보(대학 수, 모집 인원 등)를 물으면 정확한 숫자만 답변하세요.
+    특정 대학의 전공이나 모집 인원 정보는 PDF 문서의 21페이지부터 166페이지를 참조하여 정확히 제공하세요.
+    대학별 모집유형 정보는 PDF의 11페이지에서 20페이지를 참고하세요.
+    대학입학전형기본사항은 PDF의 1페이지부터 10페이지를 참고하세요.
+    불필요한 설명이나 부가 정보는 제공하지 마세요.
+    정보가 없으면 "해당 정보를 찾을 수 없습니다."라고만 답변하세요.
+    외국인 전형 정보를 물어보면 반드시 PDF의 '전형방법 및 전형요소' 섹션(167페이지 이후)을 참고하여 답변하세요.
+    중복된 정보는 생략하고 한 번만 제공하세요.
 
-        1. 2025학년도 대학입학전형기본사항 (1페이지)
-        2. 대학별 모집유형 (11페이지)
-        3. 모집단위 및 모집인원 (21페이지)
-        4. 전형방법 및 전형요소 (167페이지)
+    답변 예시:
+    User: 경북에 있는 대학교들을 알려줘
+    Assistant: 경북대학교(상주캠퍼스), 포항공과대학교(POSTECH), 안동대학교, 경주대학교, 김천대학교, 대구가톨릭대학교(경산캠퍼스), 동국대학교(경주캠퍼스), 위덕대학교, 한동대학교입니다.
+    User: 경북에 있는 대학교 수는?
+    Assistant: 9개입니다.
+    User: 위덕대학교에 외국인 전형이 있는 전공을 알려줘
+    Assistant: 불교문화학과, 한국어학부, 일본언어문화학과, 경찰정보보안학과, 경영학과, 사회복지학과, 항공호텔서비스학과, 유아교육과, 외식조리제과제빵학부, 지능형전력시스템공학과, 건강스포츠학부입니다.
+    User: 군산대학교(전북)의 외국인 전형 전공들의 모집 인원을 알려줘
+    Assistant: 33명입니다.
+    User: 서울대학교의 외국인 전형 방법을 알려줘
+    Assistant: 서류평가 100%입니다.
+    User: 서강대학교의 외국인 전형이 있는지 알려줘
+    Assistant: 있습니다. 모집단위로는 국제인문학부, 사회과학부, 경제학부, 경영학부, 자연과학부, 공학부, 컴퓨터공학과, 전자공학과, 국어국문학과, 영미어문, 유럽문화, 중국문화 등이 있습니다.
+    User: 경남에 있는 대학교들을 알려줘
+    Assistant: 경상국립대학교, 창원대학교, 경남대학교, 인제대학교입니다.
+    User: 경상국립대학교의 외국인 전형 전공을 알려줘
+    Assistant: 국어국문학과, 영어영문학과, 독일학과, 러시아학과, 중어중문학과, 사학과, 철학과, 불어불문학과, 일어일문학과, 민속무용학과, 한문학과, 법학과, 행정학과, 정치외교학과, 사회학과, 경제학과, 경영학부, 회계학과, 국제통상학과, 심리학과, 사회복지학과, 아동가족학과, 시각디자인학과 등이 있습니다.
+    """
 
-        이 구조를 참고하여 답변 시 관련 섹션을 언급하면서 정보를 제공하세요. 주요 목표는 다음과 같습니다:
-
-        1. PDF 문서의 정보와 제공된 대학 정보(university_by_region)를 활용하여 정확하고 상세한 답변을 제공합니다.
-        2. 문서나 제공된 대학 정보에 없는 내용에 대해서는 "해당 정보는 제공된 자료에 없습니다"라고 명확히 답변합니다.
-        3. 지원 자격, 전형 방법, 제출 서류, 전형 일정 등에 대해 구체적으로 안내합니다.
-        4. 대학별 특징이나 차이점이 있다면 이를 언급합니다.
-        5. 답변은 친절하고 명확하게 제공합니다.
-        6. 필요한 경우 답변을 목록화하여 제시합니다.
-        7. 이전 대화 내용을 참고하여 일관성 있는 답변을 제공합니다.
-        8. 표의 내용을 참조할 때는 행과 열의 관계를 명확히 설명합니다.
-        9. 질문에 언급된 지역과 관련된 대학교 정보가 있다면 반드시 포함하여 답변합니다.
-        10. 제공된 대학교 목록(university_by_region)을 참고하여 관련 대학들의 정보를 포함하여 답변합니다.
-        11. 특정 지역이나 대학에 대한 질문이 있을 경우, university_by_region 정보를 활용하여 해당 지역의 대학 목록을 제공하고, 가능한 경우 PDF 문서의 정보와 연계하여 답변합니다.
-        12. 특정 대학교에 대한 정보를 요청받았을 경우, 해당 대학교에 대한 정보만을 제공합니다. 다른 대학교의 정보는 언급하지 않습니다.
-
-        ## 지침
-
-        1. 정보 범위:
-            - 비자 규정: 다양한 비자 유형, 신청 절차, 제한 사항, 변경 사항에 대한 상세한 정보를 제공하십시오.
-            - 학문적 법률: 학생 권리, 학문적 청렴성, 장학금 규정 및 비자 상태와의 상호작용을 상세히 설명하십시오.
-            - 일반 생활: 비자 소지자와 관련된 학업, 건강 관리, 주거, 교통 및 문화적 규범에 대한 통찰을 제공하십시오.
-            - 지역별 대학 정보: university_by_region 데이터를 활용하여 특정 지역의 대학 목록과 관련 정보를 제공하십시오.
-
-        2. 특정 초점 영역:
-            - 비자 유형별 규칙에 대한 명확한 구분을 제공합니다 (예: E-7, E-9, D-10, F-2-7, F-4).
-            - 각 비자 범주에 특화된 학생의 권리에 대해 안내합니다.
-            - 특정 지역이나 대학에 대한 질문에 대해 university_by_region 정보를 활용하여 상세히 답변합니다.
-
-        3. 완전성: 항상 가능한 모든 맥락을 기반으로 포괄적인 답변을 제공합니다. 다음을 포함합니다:
-            - 특정 시간 제한이나 기한
-            - 필요한 절차 (예: 입학 방법)
-            - 비준수 시 잠재적 결과
-            - 특정 상황에 따른 변동 사항 (알려진 경우)
-            - 관련된 지역의 대학 목록 및 특징
-
-        4. 정확성 및 업데이트: 자세한 정보를 제공하더라도 입시 정보 및 대학 정보는 변경될 수 있음을 강조합니다. 항상 사용자가 공식 출처에서 현재 규칙을 확인하도록 권장합니다.
-
-        5. 구조화된 응답: 복잡한 정보를 나누어 명확하게 조직된 응답을 제공합니다. 적절할 경우 목록이나 번호 매기기를 사용합니다.
-
-        6. 예시 및 시나리오: 관련이 있을 때 규칙이 실제로 어떻게 적용되는지 설명하기 위해 예시나 가상의 시나리오를 제공합니다.
-
-        7. 불확실성 처리: 특정 세부 사항에 대해 불확실한 경우 이를 명확히 하고, 가능한 가장 관련성 높은 일반 정보를 제공합니다. 항상 최신 및 사례별 지침을 위해 공식 출처를 참조할 것을 권장합니다.
-
-        8. 문서 구조 활용: 답변 시 관련 정보가 PDF의 어느 섹션에 있는지 언급하여 사용자가 원본 자료를 쉽게 찾을 수 있도록 합니다.
-
-        9. 대학 통합 정보 제공: 경주대학교와 신경대학교가 통합되었다는 점을 유의하여 관련 정보를 제공할 때 이를 반영합니다.
-
-        10. 특정 대학 정보 제공: 사용자가 특정 대학에 대한 정보를 요청할 경우, 해당 대학에 대한 정보만을 제공합니다. 이 경우 다른 대학들과의 비교나 추가적인 대학 목록은 제시하지 않습니다.
-
-        기억하십시오, 당신의 목표는 가능한 많은 관련성 있고 정확하며 상세한 정보를 제공하는 동시에 이해하기 쉽고 실행 가능한 정보를 제공하는 것입니다. PDF 문서의 정보와 university_by_region 데이터를 효과적으로 결합하여 사용자에게 가장 유용한 정보를 제공하세요. 또한, 문서의 마지막에 명시된 대로 대학의 구조 개편 및 학과 개편 등에 따라 정보가 변경될 수 있음을 항상 염두에 두고 사용자에게 안내하세요. 특정 대학에 대한 질문에는 그 대학에 대한 정보만을 집중적으로 제공하여 사용자의 요구에 정확히 부응하도록 합니다.
-        """
-         ),
-        ("human", "{input}"),
-        MessagesPlaceholder(variable_name="chat_history"),
-        MessagesPlaceholder(variable_name="agent_scratchpad"),
-    ])
+    ),
+    ("human", "{input}"),
+    MessagesPlaceholder(variable_name="chat_history"),
+    MessagesPlaceholder(variable_name="agent_scratchpad"),
+])
 
     agent = create_openai_tools_agent(llm=openai, tools=tools, prompt=prompt)
     agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 
+    print("Agent executor initialized:", agent_executor)
+
+
+def summarize_text(text: str, max_tokens: int = 200) -> str:
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", f"주어진 텍스트를 {max_tokens}단어 이내로 간결하게 요약하십시오. 주요 포인트만 포함하도록 합니다."),
+        ("human", "{input}")
+    ])
+    
+    openai = ChatOpenAI(
+        model="gpt-3.5-turbo", api_key=os.getenv("OPENAI_API_KEY"), temperature=0.1,
+        max_tokens=max_tokens
+    )
+    
+    response = openai(prompt.format_prompt(input=text).to_messages())
+    return response.content
+
+def manage_chat_history(memory: ConversationBufferMemory, max_messages: int = 5, max_tokens: int = 1000):
+    """
+    대화 내역의 길이와 토큰 수를 제한합니다.
+    """
+    messages = memory.chat_memory.messages
+    if len(messages) > max_messages:
+        messages = messages[-max_messages:]
+    
+    total_tokens = sum(len(m.content.split()) for m in messages)
+    while total_tokens > max_tokens and len(messages) > 2:
+        removed = messages.pop(0)
+        total_tokens -= len(removed.content.split())
+    
+    memory.chat_memory.messages = messages
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global agent_executor
-    if not os.path.exists("vectordb_index") or not os.path.exists("bm25_retriever.pkl"):
-        await process_and_save_data()
+    global agent_executor, es_client
+    elasticsearch_url = os.getenv("ELASTICSEARCH_URL", "http://localhost:9200")
     
-    await initialize_langchain()
-    yield
-    # 종료 시 실행할 코드 (필요한 경우)
+    if not elasticsearch_url.startswith(('http://', 'https://')):
+        elasticsearch_url = f"http://{elasticsearch_url}"
+    
+    print(f"Connecting to Elasticsearch at: {elasticsearch_url}")
+    
+    try:
+        es_client = Elasticsearch([elasticsearch_url])
+        
+        # Elasticsearch 연결 확인
+        if not es_client.ping():
+            raise ConnectionError("Failed to connect to Elasticsearch")
+        
+        print("Successfully connected to Elasticsearch")
+        
+        if not es_client.indices.exists(index="pdf_search"):
+            process_and_save_data()
+       
+        initialize_langchain()
+        yield
+    except Exception as e:
+        print(f"Error during initialization: {str(e)}")
+        print(traceback.format_exc())
+        raise
+    finally:
+        if es_client:
+            es_client.close()
 
 app = FastAPI(lifespan=lifespan)
+from langchain.schema import AIMessage
+import traceback
+from collections import defaultdict
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-@app.post("/query")
-async def query(query: Query, background_tasks: BackgroundTasks):
+
+@app.post("/study")
+def query(query: Query, background_tasks: BackgroundTasks):
     if agent_executor is None:
-        return {"message": "서버가 초기화 중입니다. 잠시 후 다시 시도해주세요."}
+        return {"message": "서버 초기화 중입니다. 잠시 후 다시 시도해 주세요."}
     
     try:
         memory = get_memory(query.session_id)
@@ -330,21 +662,63 @@ async def query(query: Query, background_tasks: BackgroundTasks):
         regions = extract_regions(query.input)
         universities = get_universities_by_region(regions)
         
-        university_info = "\n".join([f"{region}: {', '.join(unis)}" for region, unis in universities.items()])
-        enhanced_query = f"{query.input}\n추출된 지역 정보: {regions}\n관련 대학교:\n{university_info}"
+        university_info = "\n".join([f"{region}: {', '.join(unis[:2])}" for region, unis in universities.items()])
+        short_query = query.input[:200]  # 쿼리 길이를 더 줄임
+        enhanced_query = f"{short_query}\n지역: {', '.join(regions)}\n대학교: {', '.join([uni for unis in universities.values() for uni in unis[:1]])}"
         
-        response = await asyncio.to_thread(
-            agent_executor.invoke,
-            {"input": enhanced_query, "chat_history": memory.chat_memory.messages},
-            {"memory": memory}
-        )
+        manage_chat_history(memory, max_messages=2, max_tokens=300)  # 대화 기록을 더 짧게 유지
         
-        # 대학교 정보를 응답에 추가
-        final_response = f"{response['output']}\n\n추가 대학교 정보:\n{university_info}"
+        es_response = es_client.search(index="pdf_search", body={
+            "query": {
+                "match": {
+                    "content": query.input
+                }
+            },
+            "size": 10  # 검색 결과 수를 줄임
+        })
         
-        memory.chat_memory.add_user_message(query.input)
-        memory.chat_memory.add_ai_message(final_response)
+        # 지역별로 결과를 그룹화하고 필터링
+        region_results = defaultdict(list)
+        for hit in es_response["hits"]["hits"]:
+            content = hit["_source"]["content"]
+            hit_regions = extract_regions(content)
+            for region in hit_regions:
+                if region in regions:
+                    region_results[region].append(content)
+        
+        # 각 지역에서 최대 1개의 결과만 선택
+        filtered_results = []
+        for region in regions:
+            filtered_results.extend(region_results[region][:1])
+        
+        result_text = "\n".join(filtered_results)
+        summarized_result = summarize_text(result_text, max_tokens=100)  # 요약 길이를 더 줄임
+        
+        # agent_executor에 전달되는 입력을 줄임
+        agent_input = f"{enhanced_query[:100]}\n요약: {summarized_result[:200]}"
+        
+        response = agent_executor.invoke({
+            "input": agent_input, 
+            "chat_history": memory.chat_memory.messages
+        })
+        
+        if isinstance(response, dict) and "output" in response:
+            output = response["output"]
+        elif isinstance(response, AIMessage):
+            output = response.content
+        else:
+            output = str(response)
+        
+        # 응답 길이 제한
+        output = output[:500]
+        
+        final_response = f"{output}\n\n추가 대학교 정보:\n{university_info[:200]}"
+        
+        memory.chat_memory.add_user_message(query.input[:100])  # 사용자 입력도 제한
+        memory.chat_memory.add_ai_message(final_response[:200])  # AI 응답도 제한
         
         return {"response": final_response, "extracted_regions": regions, "related_universities": universities}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"쿼리 함수에서 오류 발생: {str(e)}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"내부 서버 오류: {str(e)}")
