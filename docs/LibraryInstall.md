@@ -58,8 +58,7 @@ pip install googlesearch-python
 
 pip install konlpy
 
-
-
+pip install elasticsearch langchain-community
 
 
 
