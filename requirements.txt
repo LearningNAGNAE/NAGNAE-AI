@@ -45,3 +45,4 @@ yarl
 yfinance
 BeautifulSoup
 google-api-python-client
+peft

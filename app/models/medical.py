@@ -7,29 +7,82 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from langchain_community.retrievers import BM25Retriever
 from langchain.retrievers import EnsembleRetriever
-from typing import List
+from typing import List, Dict, Any
 from googleapiclient.discovery import build
 from langchain.schema import BaseRetriever, Document
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+import torch
+
+class GemmaModel:
+    def __init__(self, model_path):
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        print(f"Using device: {self.device}")
+
+        self.tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
+        
+        quantization_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_compute_dtype=torch.float16
+        )
+        
+        self.model = AutoModelForCausalLM.from_pretrained(
+            model_path, 
+            quantization_config=quantization_config, 
+            local_files_only=True,
+            device_map="auto",
+            torch_dtype=torch.float16
+        )
+
+    def generate_text(self, question: str, max_length: int = 128, temperature: float = 0.1) -> str:
+        prompt = f"Human: {question}\nAssistant:"
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.model.device)
+        
+        with torch.no_grad():
+            outputs = self.model.generate(
+                **inputs,
+                max_new_tokens=max_length,
+                num_return_sequences=1,
+                do_sample=True,
+                temperature=temperature,
+                top_k=50,
+                top_p=0.95,
+                repetition_penalty=1.2,
+                no_repeat_ngram_size=3,
+                eos_token_id=self.tokenizer.eos_token_id,
+            )
+        
+        generated_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+        # Remove the input prompt from the generated text
+        response = generated_text.split("Assistant:")[-1].strip()
+        return response
 
 class GoogleSearchRetriever(BaseRetriever):
-
     def _search(self, query: str, **kwargs) -> List[Document]:
         service = build("customsearch", "v1", developerKey=os.getenv("GOOGLE_API_KEY"))
         res = service.cse().list(q=query, cx=os.getenv("GOOGLE_CSE_ID"), num=5, dateRestrict="m6", fields="items(title,link,snippet)", **kwargs).execute()
         documents = []
-
+        
         for item in res.get('items', []):
             doc = Document(
                 page_content=item['snippet'],
                 metadata={'source': item['link'], 'title': item['title']}
             )
             documents.append(doc)
-    
+        
         return documents
 
     def get_relevant_documents(self, query: str) -> List[Document]:
         return self._search(query)
 
+    def invoke(self, input: Dict[str, Any], config: Dict[str, Any] = None, **kwargs) -> List[Document]:
+        if isinstance(input, dict) and "question" in input:
+            query = input["question"]
+        elif isinstance(input, str):
+            query = input
+        else:
+            raise ValueError("Input must be a dictionary with a 'question' key or a string")
+        
+        return self._search(query, **kwargs)
 class MedicalAssistant:
     def __init__(self):
         self.llm = ChatOpenAI(
@@ -39,7 +92,7 @@ class MedicalAssistant:
         )
         self.vector_store = self.__initialize_faiss_index()
         self.ensemble_retriever = self.__setup_ensemble_retriever()
-        # self.google_retriever = GoogleSearchRetriever()
+        self.gemma_model = GemmaModel('./app/models/medical/fine_tuning/medical_fine_tuned_gemma')
 
     def __initialize_faiss_index(self):
         medical_faiss_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "models", "medical", "medical_faiss")
@@ -131,8 +184,9 @@ class MedicalAssistant:
         RESPONSE_LANGUAGE: {language}
         CONTEXT: {context}
         QUESTION: {question}
+        GEMMA_RESPONSE: {gemma_response}
 
-        Please provide a detailed answer to the above question in the specified RESPONSE_LANGUAGE.
+        Please provide a detailed and comprehensive answer to the above question in the specified RESPONSE_LANGUAGE, including specific visa information when relevant. Incorporate insights from the GEMMA_RESPONSE if applicable. Organize your response clearly and include all pertinent details.
         """
         human_message_prompt = HumanMessagePromptTemplate.from_template(human_template)
 
@@ -141,13 +195,17 @@ class MedicalAssistant:
             human_message_prompt
         ])
 
+    def generate_text_with_gemma(self, question: str) -> str:
+        return self.gemma_model.generate_text(question)
+
     def __create_retrieval_chain(self):
         chat_prompt = self.__create_chat_prompt()
         return (
             {
-                "context": lambda x: self.ensemble_retriever.get_relevant_documents(x["question"]),
+                "context": lambda x: self.ensemble_retriever.invoke(x["question"]),
                 "question": RunnablePassthrough(),
-                "language": lambda x: self.__identify_query_language(x["question"])
+                "language": lambda x: self.__identify_query_language(x["question"]),
+                "gemma_response": lambda x: self.generate_text_with_gemma(x["question"])
             }
             | chat_prompt
             | self.llm
@@ -164,25 +222,17 @@ class MedicalAssistant:
                 "question": query,
                 "answer": error_message,
                 "detected_language": language,
-                "google_search_results": []
+                "gemma_response": error_message
             }
+
+        gemma2_response = self.generate_text_with_gemma(query)
 
         retrieval_chain = self.__create_retrieval_chain()
         response = retrieval_chain.invoke({"question": query, "language": language})
 
-        # Google Custom Search API 결과 가져오기
-        # google_search_results = self.google_retriever.get_relevant_documents(query)
-
         return {
             "question": query,
             "answer": response,
-            "detected_language": language
-            # "detected_language": language,
-            # "google_search_results": [
-            #     {
-            #         "title": doc.metadata.get('title', ''),
-            #         "link": doc.metadata.get('source', ''),
-            #         "snippet": doc.page_content
-            #     } for doc in google_search_results
-            # ]
+            "detected_language": language,
+            "gemma2_response": gemma2_response
         }
