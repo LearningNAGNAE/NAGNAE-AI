@@ -22,14 +22,16 @@ from contextlib import asynccontextmanager
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from elasticsearch import helpers  # bulk 작업을 위해 필요합니다
 from elasticsearch import Elasticsearch  # 이 줄을 추가합니다
+from langchain.chains import SequentialChain, LLMChain
+from langchain.prompts import PromptTemplate
 
 load_dotenv()
-
-
 
 agent_executor = None
 es_client = None
 es_retriever = None
+embeddings = OpenAIEmbeddings()
+
 
 app = FastAPI()
 
@@ -261,7 +263,7 @@ university_by_region = {
         ["남부대학교", "Nambu University", "南部大学校", "南部大学"],
         ["송원대학교", "Songwon University", "松原大学校", "松原大学"]
     ],
-"대전": [
+    "대전": [
         ["충남대학교", "Chungnam National University", "忠南大学校", "忠南大学"],
         ["한국과학기술원(KAIST)", "Korea Advanced Institute of Science and Technology (KAIST)", "韓国科学技術院（KAIST）", "韩国科学技术院（KAIST）"],
         ["한밭대학교", "Hanbat National University", "韓吧大学校", "韩吧大学"],
@@ -375,7 +377,7 @@ def extract_regions(text: str) -> List[str]:
     extracted_regions = []
     for noun in nouns:
         for region, aliases in region_dict.items():
-            if noun in aliases:
+            if noun in aliases[0]:
                 extracted_regions.append(region)
                 break
     return extracted_regions
@@ -396,33 +398,6 @@ def preprocess_text(text):
         text = text.replace(region, f"[REGION]{region}[/REGION]")
     
     return text.strip()
-
-def process_pdf_in_chunks(pdf_path, chunk_size=10):
-    loader = PyPDFLoader(pdf_path)
-    pages = loader.load_and_split()
-    
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=200,
-        length_function=len,
-    )
-    
-    all_chunks = []
-    for i in range(0, len(pages), chunk_size):
-        chunk = pages[i:i+chunk_size]
-        processed_chunk = []
-        for page in chunk:
-            content = preprocess_text(page.page_content)
-            regions = extract_regions(content)
-            splits = text_splitter.split_text(content)
-            for split in splits:
-                # 요약 추가
-                summary = summarize_text(split)
-                doc = Document(page_content=summary, metadata={"page": page.metadata["page"], "regions": regions})
-                processed_chunk.append(doc)
-        all_chunks.extend(processed_chunk)
-    
-    return all_chunks
 
 def process_pdf_pages(pdf_path):
     loader = PyPDFLoader(pdf_path)
@@ -456,13 +431,16 @@ def process_and_save_data():
 
     index_name = "pdf_search"
     
-    # Create Elasticsearch index with specific mappings
     mappings = {
         "mappings": {
             "properties": {
                 "content": {
                     "type": "text",
                     "analyzer": "standard"
+                },
+                "content_vector": {
+                    "type": "dense_vector",
+                    "dims": 1536  # OpenAI의 text-embedding-ada-002 모델 사용 시
                 },
                 "metadata": {
                     "properties": {
@@ -474,41 +452,72 @@ def process_and_save_data():
         }
     }
     
-    # Create index with mappings
     if not es_client.indices.exists(index=index_name):
         es_client.indices.create(index=index_name, body=mappings)
     
-    # Process PDF pages
     processed_pages = process_pdf_pages(pdf_path)
     
-    # Index documents in Elasticsearch
     for page_chunks in processed_pages:
-        actions = [
-            {
+        actions = []
+        for doc in page_chunks:
+            embedding = embeddings.embed_query(doc.page_content)
+            actions.append({
                 "_op_type": "index",
                 "_index": index_name,
                 "_source": {
                     "content": doc.page_content,
+                    "content_vector": embedding,
                     "metadata": doc.metadata
                 }
-            }
-            for doc in page_chunks
-        ]
-        
+            })
         if actions:
             helpers.bulk(es_client, actions)
     
-    # Refresh the index
     es_client.indices.refresh(index=index_name)
+
+def hybrid_search(query: str, top_k: int = 5):
+    query_vector = embeddings.embed_query(query)
+    
+    script_score = {
+        "script_score": {
+            "query": {"match_all": {}},
+            "script": {
+                "source": "cosineSimilarity(params.query_vector, 'content_vector') + 1.0",
+                "params": {"query_vector": query_vector}
+            }
+        }
+    }
+    
+    hybrid_query = {
+        "bool": {
+            "should": [
+                {"match": {"content": query}},
+                script_score
+            ]
+        }
+    }
+    
+    try:
+        response = es_client.search(
+            index="pdf_search",
+            body={
+                "query": hybrid_query,
+                "size": top_k
+            }
+        )
+        return response["hits"]["hits"]
+    except Exception as e:
+        print(f"Elasticsearch 검색 중 오류 발생: {str(e)}")
+        # 오류 발생 시 빈 리스트 반환
+        return []
 
 def initialize_langchain():
     global agent_executor, es_client, es_retriever
     
-    # Elasticsearch retriever 설정
     es_retriever = ElasticsearchRetriever(
         client=es_client,
         index_name="pdf_search",
-        k=5  # 검색할 문서 수
+        k=5
     )
     
     retriever_tool = create_retriever_tool(
@@ -523,9 +532,8 @@ def initialize_langchain():
         model="gpt-3.5-turbo", 
         api_key=os.getenv("OPENAI_API_KEY"), 
         temperature=0.1,
-        max_tokens=1000  # 응답 토큰 수 제한
+        max_tokens=1000
     )
-
 
     prompt = ChatPromptTemplate.from_messages([
     (
@@ -564,18 +572,37 @@ def initialize_langchain():
     User: 경상국립대학교의 외국인 전형 전공을 알려줘
     Assistant: 국어국문학과, 영어영문학과, 독일학과, 러시아학과, 중어중문학과, 사학과, 철학과, 불어불문학과, 일어일문학과, 민속무용학과, 한문학과, 법학과, 행정학과, 정치외교학과, 사회학과, 경제학과, 경영학부, 회계학과, 국제통상학과, 심리학과, 사회복지학과, 아동가족학과, 시각디자인학과 등이 있습니다.
     """
-
     ),
     ("human", "{input}"),
     MessagesPlaceholder(variable_name="chat_history"),
     MessagesPlaceholder(variable_name="agent_scratchpad"),
-])
+    ])
 
     agent = create_openai_tools_agent(llm=openai, tools=tools, prompt=prompt)
     agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 
-    print("Agent executor initialized:", agent_executor)
+    extract_prompt = PromptTemplate(
+        input_variables=["query"],
+        template="다음 질문에서 중요한 키워드와 의도를 추출하세요: {query}"
+    )
 
+    response_prompt = PromptTemplate(
+        input_variables=["extracted_info", "agent_response"],
+        template="추출된 정보: {extracted_info}\n\n에이전트 응답: {agent_response}\n\n위 정보를 바탕으로 최종 응답을 생성하세요."
+    )
+
+    extract_chain = LLMChain(llm=openai, prompt=extract_prompt, output_key="extracted_info")
+    response_chain = LLMChain(llm=openai, prompt=response_prompt, output_key="final_response")
+
+    overall_chain = SequentialChain(
+        chains=[extract_chain, response_chain],
+        input_variables=["query", "agent_response"],
+        output_variables=["extracted_info", "final_response"],
+        verbose=True
+    )
+
+    print("Agent executor and pipeline initialized")
+    return agent_executor, overall_chain
 
 def summarize_text(text: str, max_tokens: int = 200) -> str:
     prompt = ChatPromptTemplate.from_messages([
@@ -592,9 +619,6 @@ def summarize_text(text: str, max_tokens: int = 200) -> str:
     return response.content
 
 def manage_chat_history(memory: ConversationBufferMemory, max_messages: int = 5, max_tokens: int = 1000):
-    """
-    대화 내역의 길이와 토큰 수를 제한합니다.
-    """
     messages = memory.chat_memory.messages
     if len(messages) > max_messages:
         messages = messages[-max_messages:]
@@ -619,7 +643,6 @@ async def lifespan(app: FastAPI):
     try:
         es_client = Elasticsearch([elasticsearch_url])
         
-        # Elasticsearch 연결 확인
         if not es_client.ping():
             raise ConnectionError("Failed to connect to Elasticsearch")
         
@@ -653,6 +676,7 @@ app.add_middleware(
 
 @app.post("/study")
 def query(query: Query, background_tasks: BackgroundTasks):
+    global agent_executor
     if agent_executor is None:
         return {"message": "서버 초기화 중입니다. 잠시 후 다시 시도해 주세요."}
     
@@ -662,62 +686,64 @@ def query(query: Query, background_tasks: BackgroundTasks):
         regions = extract_regions(query.input)
         universities = get_universities_by_region(regions)
         
-        university_info = "\n".join([f"{region}: {', '.join(unis[:2])}" for region, unis in universities.items()])
-        short_query = query.input[:200]  # 쿼리 길이를 더 줄임
-        enhanced_query = f"{short_query}\n지역: {', '.join(regions)}\n대학교: {', '.join([uni for unis in universities.values() for uni in unis[:1]])}"
+        university_info = "\n".join([f"{region}: {', '.join([uni[0] for uni in unis[:2]])}" for region, unis in universities.items()])
+        short_query = query.input[:200]
+        enhanced_query = f"{short_query}\n지역: {', '.join(regions)}\n대학교: {', '.join([uni[0] for unis in universities.values() for uni in unis[:1]])}"
         
-        manage_chat_history(memory, max_messages=2, max_tokens=300)  # 대화 기록을 더 짧게 유지
+        manage_chat_history(memory, max_messages=2, max_tokens=300)
         
-        es_response = es_client.search(index="pdf_search", body={
-            "query": {
-                "match": {
-                    "content": query.input
-                }
-            },
-            "size": 10  # 검색 결과 수를 줄임
-        })
-        
-        # 지역별로 결과를 그룹화하고 필터링
-        region_results = defaultdict(list)
-        for hit in es_response["hits"]["hits"]:
-            content = hit["_source"]["content"]
-            hit_regions = extract_regions(content)
-            for region in hit_regions:
-                if region in regions:
-                    region_results[region].append(content)
-        
-        # 각 지역에서 최대 1개의 결과만 선택
+        search_results = hybrid_search(query.input, top_k=10)
+    
         filtered_results = []
-        for region in regions:
-            filtered_results.extend(region_results[region][:1])
-        
-        result_text = "\n".join(filtered_results)
-        summarized_result = summarize_text(result_text, max_tokens=100)  # 요약 길이를 더 줄임
-        
-        # agent_executor에 전달되는 입력을 줄임
+
+        if search_results:  # 검색 결과가 있을 경우에만 처리
+            for hit in search_results:
+                content = hit["_source"]["content"]
+                hit_regions = extract_regions(content)
+                if any(region in regions for region in hit_regions):
+                    filtered_results.append(content)
+            
+            if filtered_results:
+                result_text = "\n".join(filtered_results[:5])  # 상위 5개 결과만 사용
+                summarized_result = summarize_text(result_text, max_tokens=100)
+            else:
+                summarized_result = "관련 정보를 찾을 수 없습니다."
+        else:
+            summarized_result = "검색 결과가 없습니다."
+    
         agent_input = f"{enhanced_query[:100]}\n요약: {summarized_result[:200]}"
         
-        response = agent_executor.invoke({
+        agent_executor, overall_chain = initialize_langchain()
+        
+        agent_response = agent_executor.invoke({
             "input": agent_input, 
             "chat_history": memory.chat_memory.messages
         })
         
-        if isinstance(response, dict) and "output" in response:
-            output = response["output"]
-        elif isinstance(response, AIMessage):
-            output = response.content
+        if isinstance(agent_response, dict) and "output" in agent_response:
+            agent_output = agent_response["output"]
+        elif isinstance(agent_response, AIMessage):
+            agent_output = agent_response.content
         else:
-            output = str(response)
+            agent_output = str(agent_response)
+        
+        # 파이프라인 실행
+        pipeline_response = overall_chain({
+            "query": query.input,
+            "agent_response": agent_output
+        })
+        
+        final_response = pipeline_response["final_response"]
         
         # 응답 길이 제한
-        output = output[:500]
+        final_response = final_response[:500]
         
-        final_response = f"{output}\n\n추가 대학교 정보:\n{university_info[:200]}"
+        final_response_with_info = f"{final_response}\n\n추가 대학교 정보:\n{university_info[:200]}"
         
-        memory.chat_memory.add_user_message(query.input[:100])  # 사용자 입력도 제한
-        memory.chat_memory.add_ai_message(final_response[:200])  # AI 응답도 제한
+        memory.chat_memory.add_user_message(query.input[:100])
+        memory.chat_memory.add_ai_message(final_response_with_info[:200])
         
-        return {"response": final_response, "extracted_regions": regions, "related_universities": universities}
+        return {"response": final_response_with_info, "extracted_regions": regions, "related_universities": universities}
     except Exception as e:
         print(f"쿼리 함수에서 오류 발생: {str(e)}")
         print(traceback.format_exc())
