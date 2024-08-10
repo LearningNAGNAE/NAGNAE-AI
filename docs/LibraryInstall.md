@@ -60,7 +60,7 @@ pip install konlpy
 
 pip install elasticsearch langchain-community
 
-
+pip install fasttext-wheel
 
 
 
