@@ -231,17 +231,21 @@ def search_jobs(query: str) -> str:
 
         # 위치 필터링
         if entities["LOCATION"]:
+            # 첫 번째 위치 키워드를 기본 위치로 설정
+            default_location = entities["LOCATION"][0].lower()
+            
             location_match = any(
                 loc.lower() in job_info['location'].lower() or 
                 any(part.lower() in job_info['location'].lower() for part in loc.split()) 
                 for loc in entities["LOCATION"]
             )
+            
             if not location_match:
                 match = False
         else:
-            # 사용자가 위치를 명시하지 않은 경우 '서울'을 기본값으로 사용
-            if 'Hwaseong' not in job_info['location']:
-                match = False
+            # 위치가 식별되지 않은 경우, 기본값으로 아무 필터링도 하지 않음
+            match = True
+
 
         # 급여 필터링
         if entities["MONEY"]:
