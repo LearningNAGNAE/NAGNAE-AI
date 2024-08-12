@@ -67,6 +67,10 @@ def jobploy_crawler(query,pages=5):
 
                 # 모든 배지 요소를 가져옴
                 badge_elements = job.find_elements(By.CSS_SELECTOR, ".badge.text-dark.bg-secondary-150.rounded-pill")
+
+                # 배지 정보 프린트로 확인
+                for i, badge in enumerate(badge_elements):
+                    print(f"Badge {i}: {badge.text}")
                 
                 # 배지 정보 추출
                 location = badge_elements[0].text if len(badge_elements) >= 1 else "지역 정보 없음"
@@ -84,6 +88,10 @@ def jobploy_crawler(query,pages=5):
                     "salary": salary,
                     "closing_date": closing_date
                 })
+                # results에 담긴 내용을 확인하기 위해 출력
+                print("Current results:")
+                for result in results:
+                    print(result)
 
     finally:
         driver.quit()

@@ -36,7 +36,7 @@ app.add_middleware(
     allow_methods=["*"],  # 허용할 HTTP 메서드 목록
     allow_headers=["*"],  # 허용할 HTTP 헤더 목록
 )
-templates = Jinja2Templates(directory="templates") #html 파일내 동적 콘텐츠 삽입 할 수 있게 해줌(렌더링).
+templates = Jinja2Templates(directory="templates")  # html 파일내 동적 콘텐츠 삽입 할 수 있게 해줌(렌더링).
 
 nlp = spacy.load("ko_core_news_sm")
 
@@ -50,6 +50,16 @@ def detect_language(text):
     return lang
 
 # 엔터티 추출 함수
+# 현재 스크립트의 디렉토리 경로를 얻습니다
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
+# job_location.json 파일 경로를 생성합니다
+json_path = os.path.join(current_dir, 'job_location.json')
+
+# job_location.json 파일 로드
+with open(json_path, 'r', encoding='utf-8') as f:
+    job_locations = json.load(f)
+
 def extract_entities(query):
     doc = nlp(query)
     entities = {
@@ -57,60 +67,29 @@ def extract_entities(query):
         "MONEY": [],
         "OCCUPATION": []
     }
+    
+    # spaCy의 엔티티 인식 결과 처리
     for ent in doc.ents:
         if ent.label_ in entities:
             entities[ent.label_].append(ent.text)
     
-    location_keywords = {
-        "서울": "서울특별시", "경기": "경기도", "인천": "인천광역시", "부산": "부산광역시", 
-        "대구": "대구광역시", "광주": "광주광역시", "대전": "대전광역시", "울산": "울산광역시", 
-        "세종": "세종특별자치시", "강원": "강원도", "충북": "충청북도", "충남": "충청남도", 
-        "전북": "전라북도", "전남": "전라남도", "경북": "경상북도", "경남": "경상남도", 
-        "제주": "제주특별자치도"
-    }
-    
-    major_areas = {
-        "수원": "수원시", "성남": "성남시", "안양": "안양시", "안산": "안산시", "용인": "용인시", 
-        "부천": "부천시", "광명": "광명시", "평택": "평택시", "과천": "과천시", "오산": "오산시", 
-        "시흥": "시흥시", "군포": "군포시", "의왕": "의왕시", "하남": "하남시", "이천": "이천시", 
-        "안성": "안성시", "김포": "김포시", "화성": "화성시", "광주": "광주시", "여주": "여주시", 
-        "고양": "고양시", "의정부": "의정부시", "파주": "파주시", "양주": "양주시", "구리": "구리시", 
-        "남양주": "남양주시", "포천": "포천시", "동두천": "동두천시", "가평": "가평군", "양평": "양평군", 
-        "연천": "연천군", "청주": "청주시", "충주": "충주시", "제천": "제천시", "보은": "보은군", 
-        "옥천": "옥천군", "영동": "영동군", "증평": "증평군", "진천": "진천군", "괴산": "괴산군", 
-        "음성": "음성군", "단양": "단양군", "천안": "천안시", "공주": "공주시", "보령": "보령시", 
-        "아산": "아산시", "서산": "서산시", "논산": "논산시", "계룡": "계룡시", "당진": "당진시", 
-        "금산": "금산군", "부여": "부여군", "서천": "서천군", "청양": "청양군", "홍성": "홍성군", 
-        "예산": "예산군", "태안": "태안군", "전주": "전주시", "군산": "군산시", "익산": "익산시", 
-        "정읍": "정읍시", "남원": "남원시", "김제": "김제시", "완주": "완주군", "진안": "진안군", 
-        "무주": "무주군", "장수": "장수군", "임실": "임실군", "순창": "순창군", "고창": "고창군", 
-        "부안": "부안군", "목포": "목포시", "여수": "여수시", "순천": "순천시", "나주": "나주시", 
-        "광양": "광양시", "담양": "담양군", "곡성": "곡성군", "구례": "구례군", "고흥": "고흥군", 
-        "보성": "보성군", "화순": "화순군", "장흥": "장흥군", "강진": "강진군", "해남": "해남군", 
-        "영암": "영암군", "무안": "무안군", "함평": "함평군", "영광": "영광군", "장성": "장성군", 
-        "완도": "완도군", "진도": "진도군", "신안": "신안군", "포항": "포항시", "경주": "경주시", 
-        "김천": "김천시", "안동": "안동시", "구미": "구미시", "영주": "영주시", "영천": "영천시", 
-        "상주": "상주시", "문경": "문경시", "경산": "경산시", "군위": "군위군", "의성": "의성군", 
-        "청송": "청송군", "영양": "영양군", "영덕": "영덕군", "청도": "청도군", "고령": "고령군", 
-        "성주": "성주군", "칠곡": "칠곡군", "예천": "예천군", "봉화": "봉화군", "울진": "울진군", 
-        "울릉": "울릉군", "창원": "창원시", "진주": "진주시", "통영": "통영시", "사천": "사천시", 
-        "김해": "김해시", "밀양": "밀양시", "거제": "거제시", "양산": "양산시", "의령": "의령군", 
-        "함안": "함안군", "창녕": "창녕군", "고성": "고성군", "남해": "남해군", "하동": "하동군", 
-        "산청": "산청군", "함양": "함양군", "거창": "거창군", "합천": "합천군", "제주": "제주시", 
-        "서귀포": "서귀포시"
-    }
-    
     words = query.split()
     for word in words:
-        if word in location_keywords:
-            entities["LOCATION"].append(location_keywords[word])
-        elif word.endswith(("시", "군", "구")):
-            entities["LOCATION"].append(word)
-        elif word in major_areas:
-            entities["LOCATION"].append(word + major_areas[word])
-    
-    if "kitchen" in query.lower():
-        entities["OCCUPATION"].append("kitchen")
+        # 지역명 처리
+        for location, data in job_locations.items():
+            # aliases 확인
+            if word in data['aliases']:
+                entities["LOCATION"].append(location)
+                break
+            
+            # areas 확인
+            for area in data['areas']:
+                if word == area['ko'] or word == area['en']:
+                    entities["LOCATION"].append(f"{location} {area['ko']}")
+                    break
+            else:
+                continue
+            break
 
     return entities
 
@@ -136,8 +115,6 @@ def jobploy_crawler(lang, pages=3):
 
     results = []
 
-    #languages = ['ko', 'en', 'vi', 'mn', 'uz']
-    
     try:
         for page in range(1, pages + 1):
             url = f"https://www.jobploy.kr/{lang}/recruit?page={page}"
@@ -169,6 +146,7 @@ def jobploy_crawler(lang, pages=3):
 
                 title = title_element.text
                 pay = pay_element.text
+                
                 results.append({
                     "title": title,
                     "link": link_element,
@@ -201,14 +179,23 @@ def load_data_from_file(lang):
 def create_vectorstore(data):
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     texts = text_splitter.split_documents([
-        Document(page_content=json.dumps(item, ensure_ascii=False)) 
+        Document(
+            page_content=json.dumps(item, ensure_ascii=False),
+            metadata={"location": item.get("location", "")}  # 메타데이터에 location 추가
+        ) 
         for item in data
     ])
     embeddings = OpenAIEmbeddings()
-    return FAISS.from_texts([text.page_content for text in texts], embeddings)
+    return FAISS.from_texts([text.page_content for text in texts], embeddings, metadatas=[text.metadata for text in texts])
 
 # 글로벌 변수로 벡터 스토어 딕셔너리 선언
 vectorstores = {}
+
+# Query processing function to detect language and extract entities
+def process_query(query: str):
+    lang = detect_language(query)
+    entities = extract_entities(query)
+    return lang, entities
 
 @tool
 def search_jobs(query: str) -> str:
@@ -222,30 +209,27 @@ def search_jobs(query: str) -> str:
         vectorstores[lang] = create_vectorstore(data)
 
     entities = extract_entities(query)
+
+    # 위치 필터링을 위한 람다 함수 정의
+    location_filter = None
+    if entities["LOCATION"]:
+        # 위치 엔터티가 있는 경우에만 필터를 적용
+        location_filter = lambda d: any(
+            loc.lower() in d.get('location', '').lower()
+            for loc in entities["LOCATION"]
+        )
+
+    # 유사도 검색을 필터와 함께 실행
     docs = vectorstores[lang].similarity_search(query, k=10)
+    
     filtered_results = []
 
     for doc in docs:
         job_info = json.loads(doc.page_content)
+        if location_filter and not location_filter(job_info):
+            continue
+
         match = True  # 조건이 모두 충족되는지 확인하는 플래그
-
-        # 위치 필터링
-        if entities["LOCATION"]:
-            # 첫 번째 위치 키워드를 기본 위치로 설정
-            default_location = entities["LOCATION"][0].lower()
-            
-            location_match = any(
-                loc.lower() in job_info['location'].lower() or 
-                any(part.lower() in job_info['location'].lower() for part in loc.split()) 
-                for loc in entities["LOCATION"]
-            )
-            
-            if not location_match:
-                match = False
-        else:
-            # 위치가 식별되지 않은 경우, 기본값으로 아무 필터링도 하지 않음
-            match = True
-
 
         # 급여 필터링
         if entities["MONEY"]:
@@ -255,7 +239,7 @@ def search_jobs(query: str) -> str:
                 required_salary = int(required_salary_str)
                 
                 # 직무의 급여 정보 추출 및 정수로 변환
-                pay_elements = job_info['pay'].split()
+                pay_elements = job_info.get('pay', '').split()
                 if len(pay_elements) >= 3:
                     job_salary_str = pay_elements[2].replace(',', '').replace('원', '').strip()
                     job_salary = int(job_salary_str)    
@@ -274,8 +258,8 @@ def search_jobs(query: str) -> str:
         # 직무 필터링
         if entities["OCCUPATION"] and match:
             occupation_match = any(
-                occ.lower() in job_info['title'].lower() or 
-                occ.lower() in job_info['task'].lower() 
+                occ.lower() in job_info.get('title', '').lower() or 
+                occ.lower() in job_info.get('task', '').lower() 
                 for occ in entities["OCCUPATION"]
             )
             if not occupation_match:
@@ -309,9 +293,6 @@ texts = text_splitter.split_documents([
     for item in crawled_data
 ])
 
-# embeddings = OpenAIEmbeddings()
-# vectorstore = FAISS.from_texts([text.page_content for text in texts], embeddings)
-
 tools = [search_jobs]
 
 MEMORY_KEY = "chat_history"
@@ -331,7 +312,7 @@ prompt = ChatPromptTemplate.from_messages(
             1. Analyze user queries by language type to extract relevant entities.
             2. Search the job database using the extracted information.
             3. Filter and prioritize job listings based on the user's requirements.
-            4. **If the query includes a LOCATION keyword, ensure that all relevant job listings for that location are retrieved and included in the response.**  # 추가된 부분
+            4. If the query includes a Location keyword, ensure that all relevant job listings for that location are retrieved and included in the response. I will include all relevant job listings from that location and will not provide information about other locations.
             5. Provide a comprehensive summary of the search results.
             6. Offer detailed information about each relevant job listing.
             7. If the keyword or numerical value does not match the user's query, do not provide any other data.
@@ -357,6 +338,41 @@ prompt = ChatPromptTemplate.from_messages(
             "assistant",
             "Certainly! I'd be happy to help you search for job listings based on your query. Please provide me with your specific request, and I'll use the search_jobs tool to find relevant information for you. What kind of job or criteria are you looking for?"
         ),
+        # Few-shot Example 1
+        (
+            "user",
+            "I'm looking for a kitchen job in Seoul with a salary of at least 3,000,000 KRW."
+        ),
+        (
+            "assistant",
+            """
+            Thank you for your query. I'll search for kitchen job listings in Seoul with a salary of at least 3,000,000 KRW. I'll provide a summary of the results and detailed information about relevant job listings.
+            """
+        ),
+        # Few-shot Example 2
+        (
+            "user",
+            "Can you tell me about kitchen jobs in Hwaseong with an annual salary of more than 3,000,000 KRW?"
+        ),
+        (
+            "assistant",
+            """
+            Thank you for your query. I'll search for jobs with an annual salary of more than 30,000,000 KRW in Hwaseong. I'll provide a summary of the results and detailed information about relevant job listings.
+            """
+        ),
+        # Few-shot Example 3
+        (
+            "user",
+            "경기도 화성에서 월급 3백만원 이상인 일자리 알려줘"
+        ),
+        (
+            "assistant",
+            """
+            질문 주셔서 감사합니다. 경기도 화성에서 월급 3,000,000 원 이상의 일자리를 검색해 드리겠습니다. 결과를 요약해서 제공하고, 관련된 구체적인 구인 정보도 함께 안내해 드리겠습니다.
+            """
+        ),
+
+        # User's query input
         (
             "user",
             "{input}"
