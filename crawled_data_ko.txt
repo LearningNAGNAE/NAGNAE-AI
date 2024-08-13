@@ -1,812 +1,812 @@
 [
   {
-    "title": "톰슨 기장 모집합니다.(경력10년이상)",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043820",
+    "title": "기계작동 및 포장업무(오래 일하실 분 구합니다)",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044105",
     "closing_date": "마감 D-29",
-    "location": "서울특별시 금천구",
-    "pay": "월급 : 3,500,000 원",
-    "task": "기계, 설비 조작",
-    "language": "ko"
-  },
-  {
-    "title": "주방보조 모집합니다",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043819",
-    "closing_date": "마감 D-3",
-    "location": "부산광역시 해운대구",
-    "pay": "월급 : 2,000,000 원",
-    "task": "조리사",
-    "language": "ko"
-  },
-  {
-    "title": "영천 IC근처 영풍대말식당 홀서빙원(정규직) 모집합니다.(경산 인접)",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043818",
-    "closing_date": "마감 D-29",
-    "location": "경상북도 영천시",
-    "pay": "월급 : 2,780,000 원",
-    "task": "서빙/홀",
-    "language": "ko"
-  },
-  {
-    "title": "고무사출성형조작원",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043817",
-    "closing_date": "마감 D-10",
-    "location": "경상북도 칠곡군",
-    "pay": "시급 : 9,860 원",
-    "task": "기계, 설비 조작",
-    "language": "ko"
-  },
-  {
-    "title": "생산직 사원 모집 (우레탄접착제)-기숙사 거주 가능",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043816",
-    "closing_date": "마감 D-14",
-    "location": "충청남도 예산군",
-    "pay": "연봉 : 33,000,000 원",
-    "task": "기계, 설비 조작",
-    "language": "ko"
-  },
-  {
-    "title": "스프링클러 소화배관 제작 사원모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043815",
-    "closing_date": "마감 D-29",
-    "location": "충청남도 당진시",
+    "location": "경상북도 성주군",
     "pay": "시급 : 9,860 원",
     "task": "기타",
     "language": "ko"
   },
   {
-    "title": "지게차 및 납품기사 모집합니다.",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043814",
-    "closing_date": "마감 D-11",
+    "title": "[연4,000이상/포스코협력사/주간 및 주야2교대/상여/통근/기숙사] 설비기기 운영 생산사원 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044104",
+    "closing_date": "마감 D-13",
+    "location": "대구광역시 달성군",
+    "pay": "시급 : 10,000 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "요양원 급식 조리사를 구합니다.",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044103",
+    "closing_date": "마감 D-16",
+    "location": "경기도 수원시",
+    "pay": "월급 : 2,300,000 원",
+    "task": "조리사",
+    "language": "ko"
+  },
+  {
+    "title": "[워라밸/주간/상여/좌식/단순/통근] 자동차 소형부품 포장검수원 채용",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044102",
+    "closing_date": "마감 D-13",
+    "location": "대구광역시 달성군",
+    "pay": "시급 : 9,860 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "쇼핑몰 택배 포장 / 물류관리",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044101",
+    "closing_date": "마감 D-29",
+    "location": "충청북도 청주시",
+    "pay": "월급 : 3,500,000 원",
+    "task": "매장직원",
+    "language": "ko"
+  },
+  {
+    "title": "요양원 요양보호사를 구합니다.",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044100",
+    "closing_date": "마감 D-29",
+    "location": "경기도 수원시",
+    "pay": "월급 : 2,300,000 원",
+    "task": "간병인, 보호사",
+    "language": "ko"
+  },
+  {
+    "title": "장비조작원 생산직 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044099",
+    "closing_date": "마감 D-29",
+    "location": "울산광역시 울주군",
+    "pay": "시급 : 9,880 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "어묵, 게맛살 공정 생산직 단기계약직 모집(3개월)",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044098",
+    "closing_date": "마감 D-29",
+    "location": "부산광역시 강서구",
+    "pay": "시급 : 9,860 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "(주)영진양행 생산직 사원모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044097",
+    "closing_date": "마감 D-29",
+    "location": "경기도 광주시",
+    "pay": "연봉 : 24,728,880 원",
+    "task": "기타",
+    "language": "ko"
+  },
+  {
+    "title": "농장 단순관리 종사원",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044096",
+    "closing_date": "마감 D-5",
+    "location": "제주특별자치도 제주시",
+    "pay": "월급 : 2,060,740 원",
+    "task": "농업",
+    "language": "ko"
+  },
+  {
+    "title": "주방보조구합니다.",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044095",
+    "closing_date": "마감 D-13",
+    "location": "인천광역시 중구",
+    "pay": "월급 : 3,200,000 원",
+    "task": "서빙/홀",
+    "language": "ko"
+  },
+  {
+    "title": "시설채소 재배 농업단순노무자 구인",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044094",
+    "closing_date": "마감 D-59",
+    "location": "경기도 여주시",
+    "pay": "시급 : 9,860 원",
+    "task": "농업",
+    "language": "ko"
+  },
+  {
+    "title": "(주)드림월드 공개채용 (용접공)",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044093",
+    "closing_date": "마감 D-30",
+    "location": "경기도 광주시",
+    "pay": "연봉 : 46,000,000 원",
+    "task": "용접",
+    "language": "ko"
+  },
+  {
+    "title": "태림산업(주) 자동차 부품 제조업 가공파트 현장 조장(부블럭장) 모집 (주야근무 가능자)",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044092",
+    "closing_date": "마감 D-29",
+    "location": "경상남도 창원시",
+    "pay": "시급 : 9,860 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "당사에서 근무할 정규직 사원모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044091",
+    "closing_date": "마감 D-29",
+    "location": "경기도 안산시",
+    "pay": "월급 : 2,500,000 원",
+    "task": "청소/미화",
+    "language": "ko"
+  },
+  {
+    "title": "그라비아인쇄실에서 일하실 분 구인합니다",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044090",
+    "closing_date": "마감 D-17",
+    "location": "경기도 광주시",
+    "pay": "월급 : 2,500,000 원",
+    "task": "기타",
+    "language": "ko"
+  },
+  {
+    "title": "보령시 청소면 생산직 사원 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044089",
+    "closing_date": "마감 D-29",
+    "location": "충청남도 보령시",
+    "pay": "월급 : 2,500,000 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "경남 사천 비토섬 '아르비토' 주말근무 바리스타 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044088",
+    "closing_date": "마감 D-29",
+    "location": "경상남도 사천시",
+    "pay": "시급 : 10,000 원",
+    "task": "바리스타",
+    "language": "ko"
+  },
+  {
+    "title": "◆ 대진이엔지(주)- 전기 포설,결선원 모집 [동구일자리지원센터 채용대행]◆",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044087",
+    "closing_date": "마감 D-29",
+    "location": "울산광역시 동구",
+    "pay": "시급 : 10,500 원",
+    "task": "기타",
+    "language": "ko"
+  },
+  {
+    "title": "(주)전한 강강술래 역삼점 정규직 채용",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044086",
+    "closing_date": "마감 D-17",
+    "location": "서울특별시 강남구",
+    "pay": "월급 : 2,700,000 원",
+    "task": "주방보조",
+    "language": "ko"
+  },
+  {
+    "title": "◆ 대진이엔지(주)- 전기 용접원 모집 [동구일자리지원센터 채용대행]◆",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044085",
+    "closing_date": "마감 D-29",
+    "location": "울산광역시 동구",
+    "pay": "시급 : 10,500 원",
+    "task": "용접",
+    "language": "ko"
+  },
+  {
+    "title": "성실하고 근면한분 모십니다",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044084",
+    "closing_date": "마감 D-29",
+    "location": "경기도 화성시",
+    "pay": "월급 : 3,500,000 원",
+    "task": "식료품 제조",
+    "language": "ko"
+  },
+  {
+    "title": "마스크 생산직 채용",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044083",
+    "closing_date": "마감 D-29",
+    "location": "강원특별자치도 양구군",
+    "pay": "월급 : 2,070,000 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "생산직 직원 채용",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044082",
+    "closing_date": "마감 D-29",
     "location": "경상북도 칠곡군",
+    "pay": "시급 : 9,860 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "절단절곡원 초보 및 경력자 구함",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044081",
+    "closing_date": "마감 D-29",
+    "location": "경기도 구리시",
+    "pay": "월급 : 3,000,000 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "화학제품 생산 제조직 신입 및 경력사원 채용 (정규직)",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044080",
+    "closing_date": "마감 D-29",
+    "location": "충청남도 예산군",
+    "pay": "연봉 : 36,500,000 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "CNC 선반조작원 (초보자 가능, ) 생산직",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044079",
+    "closing_date": "마감 D-29",
+    "location": "경기도 화성시",
+    "pay": "시급 : 10,500 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "생산직원 모집 - 제품 단순 결선 업무",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044078",
+    "closing_date": "마감 D-19",
+    "location": "경기도 김포시",
+    "pay": "연봉 : 33,000,000 원",
+    "task": "전기, 전자제품 제조",
+    "language": "ko"
+  },
+  {
+    "title": "그라비아 인쇄 모집합니다.",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044077",
+    "closing_date": "마감 D-29",
+    "location": "경기도 안성시",
+    "pay": "월급 : 2,366,400 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "비철금속제품 생산직 구인",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044076",
+    "closing_date": "마감 D-29",
+    "location": "충청남도 천안시",
+    "pay": "시급 : 12,000 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "버섯종균센터 직원구인",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044075",
+    "closing_date": "마감 D-29",
+    "location": "전라남도 장성군",
+    "pay": "월급 : 2,200,000 원",
+    "task": "농업",
+    "language": "ko"
+  },
+  {
+    "title": "골판지 상자 단순 생산직 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044074",
+    "closing_date": "마감 D-29",
+    "location": "경기도 김포시",
+    "pay": "월급 : 2,060,740 원",
+    "task": "기타",
+    "language": "ko"
+  },
+  {
+    "title": "(주)지에스켐 - 생산직 사원모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044073",
+    "closing_date": "마감 D-29",
+    "location": "충청북도 진천군",
+    "pay": "시급 : 10,108 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "안전관리자 채용",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044072",
+    "closing_date": "마감 D-12",
+    "location": "경기도 안성시",
+    "pay": "연봉 : 47,000,000 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "중포장(비닐) 가공 해주실 분 모집합니다 (경력자 우대)",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044071",
+    "closing_date": "마감 D-29",
+    "location": "경기도 양주시",
+    "pay": "연봉 : 32,000,000 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "식품생산직 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044070",
+    "closing_date": "마감 D-29",
+    "location": "충청북도 청주시",
+    "pay": "연봉 : 40,000,000 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "CNC선반, 머시닝센터(MCT) 조작원 신입 및 경력 구직자 구인",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044069",
+    "closing_date": "마감 D-29",
+    "location": "경상남도 창원시",
+    "pay": "시급 : 9,860 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "현장 레이저 절단 기사 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044068",
+    "closing_date": "마감 D-29",
+    "location": "광주광역시 광산구",
+    "pay": "시급 : 9,860 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "절곡사원 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044067",
+    "closing_date": "마감 D-13",
+    "location": "광주광역시 광산구",
+    "pay": "월급 : 2,400,000 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "정육생산직 사원 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044066",
+    "closing_date": "마감 D-29",
+    "location": "경기도 시흥시",
+    "pay": "월급 : 2,571,000 원",
+    "task": "식료품 제조",
+    "language": "ko"
+  },
+  {
+    "title": "생산직 근로자 채용의 건",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044065",
+    "closing_date": "마감 D-29",
+    "location": "충청북도 진천군",
     "pay": "월급 : 3,000,000 원",
     "task": "기타",
     "language": "ko"
   },
   {
-    "title": "생산직 사원모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043813",
+    "title": "CNC 선반 경력직 채용 공고",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044064",
+    "closing_date": "마감 D-47",
+    "location": "경상남도 진주시",
+    "pay": "시급 : 10,000 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "양식원구함",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044063",
     "closing_date": "마감 D-29",
-    "location": "충청남도 당진시",
+    "location": "제주특별자치도 서귀포시",
+    "pay": "시급 : 9,860 원",
+    "task": "양식",
+    "language": "ko"
+  },
+  {
+    "title": "지피코 생산직 구인",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044062",
+    "closing_date": "마감 D-29",
+    "location": "경기도 안성시",
     "pay": "시급 : 9,860 원",
     "task": "기타",
     "language": "ko"
   },
   {
-    "title": "주방보조 및 홀서빙 구합니다",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043812",
+    "title": "자동차부품 사출, 조립(생산사원모집)",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044061",
     "closing_date": "마감 D-29",
-    "location": "서울특별시 중구",
-    "pay": "월급 : 3,300,000 원",
-    "task": "주방보조",
+    "location": "경상북도 경산시",
+    "pay": "시급 : 9,860 원",
+    "task": "기계, 설비 조작",
     "language": "ko"
   },
   {
-    "title": "포장직원 구함(조선업)",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043811",
+    "title": "도금 작업 관련 단순 종사원",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044060",
     "closing_date": "마감 D-29",
-    "location": "경상북도 포항시",
-    "pay": "월급 : 3,500,000 원",
-    "task": "기타",
-    "language": "ko"
-  },
-  {
-    "title": "레이저가공기 조작원",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043810",
-    "closing_date": "마감 D-13",
     "location": "경기도 안산시",
-    "pay": "월급 : 3,350,000 원",
-    "task": "기계, 설비 조작",
-    "language": "ko"
-  },
-  {
-    "title": "윤화돈까스 홀 매니저 모집합니다(월 370만원)",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043809",
-    "closing_date": "마감 D-29",
-    "location": "서울특별시 강남구",
-    "pay": "월급 : 3,700,000 원",
-    "task": "서빙/홀",
-    "language": "ko"
-  },
-  {
-    "title": "양식원 구합니다",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043808",
-    "closing_date": "마감 D-29",
-    "location": "전라남도 영광군",
-    "pay": "월급 : 2,100,000 원",
-    "task": "양식",
-    "language": "ko"
-  },
-  {
-    "title": "제조 단순 종사원",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043807",
-    "closing_date": "마감 D-56",
-    "location": "경기도 김포시",
-    "pay": "월급 : 2,300,000 원",
+    "pay": "월급 : 2,500,000 원",
     "task": "기타",
     "language": "ko"
   },
   {
-    "title": "절곡기 조작원 구합니다..",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043806",
-    "closing_date": "마감 D-56",
-    "location": "경기도 김포시",
-    "pay": "월급 : 3,500,000 원",
-    "task": "기계, 설비 조작",
-    "language": "ko"
-  },
-  {
-    "title": "생산직 모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043805",
-    "closing_date": "마감 D-19",
-    "location": "울산광역시 울주군",
-    "pay": "월급 : 3,200,000 원",
-    "task": "용접",
-    "language": "ko"
-  },
-  {
-    "title": "플라스틱 사출 관리자모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043804",
-    "closing_date": "마감 D-57",
-    "location": "부산광역시 강서구",
-    "pay": "월급 : 5,000,000 원",
-    "task": "기계, 설비 조작",
-    "language": "ko"
-  },
-  {
-    "title": "생산직",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043803",
+    "title": "송풍기 및 산업기계조립 (기능직 채용) 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044059",
     "closing_date": "마감 D-29",
-    "location": "충청남도 예산군",
+    "location": "경기도 평택시",
+    "pay": "시급 : 9,860 원",
+    "task": "기계,자동차,조선소 생산직",
+    "language": "ko"
+  },
+  {
+    "title": "CNC선반 / MCT / 정밀 연삭 가공 생산직 채용",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044058",
+    "closing_date": "마감 D-32",
+    "location": "인천광역시 남구",
+    "pay": "시급 : 9,860 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "운반대차 조립및 설치자 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044057",
+    "closing_date": "마감 D-29",
+    "location": "경기도 안성시",
     "pay": "연봉 : 35,000,000 원",
     "task": "기타",
     "language": "ko"
   },
   {
-    "title": "[nest hotel] Culinary 신입 및 경력 파트너 채용",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043802",
-    "closing_date": "마감 D-29",
-    "location": "인천광역시 중구",
-    "pay": "연봉 : 27,000,000 원",
-    "task": "조리사",
-    "language": "ko"
-  },
-  {
-    "title": "플라스틱사출기술자 구인",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043801",
-    "closing_date": "마감 D-18",
-    "location": "인천광역시 남동구",
-    "pay": "연봉 : 50,000,000 원",
-    "task": "기계, 설비 조작",
-    "language": "ko"
-  },
-  {
-    "title": "콩나물 공장 근무하실 분",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043800",
-    "closing_date": "마감 D-29",
-    "location": "서울특별시 서초구",
-    "pay": "시급 : 9,860 원",
-    "task": "농업",
-    "language": "ko"
-  },
-  {
-    "title": "주방조리장님구합니다",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043799",
-    "closing_date": "마감 D-48",
-    "location": "부산광역시 기장군",
-    "pay": "월급 : 3,000,000 원",
-    "task": "서빙/홀",
-    "language": "ko"
-  },
-  {
-    "title": "[제일산업] 액체, 분체 도장사 모집(정규직)",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043798",
-    "closing_date": "마감 D-29",
-    "location": "인천광역시 남동구",
-    "pay": "연봉 : 53,000,000 원",
-    "task": "기계, 설비 조작",
-    "language": "ko"
-  },
-  {
-    "title": "(화성시 기안동) 물리치료사, 작업치료사 구인",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043797",
-    "closing_date": "마감 D-29",
-    "location": "경기도 화성시",
-    "pay": "월급 : 2,150,000 원",
-    "task": "기타",
-    "language": "ko"
-  },
-  {
-    "title": "돼지 뒷고기 전문공장 제품손질 및 포장하실 분 모집합니다.",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043796",
-    "closing_date": "마감 D-10",
-    "location": "대구광역시 달성군",
-    "pay": "월급 : 2,700,000 원",
-    "task": "식료품 제조",
-    "language": "ko"
-  },
-  {
-    "title": "사무직 구합니다",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043795",
-    "closing_date": "마감 D-29",
-    "location": "인천광역시 강화군",
-    "pay": "월급 : 2,200,000 원",
-    "task": "회계, 경리",
-    "language": "ko"
-  },
-  {
-    "title": "제조 단순 종사원",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043794",
-    "closing_date": "마감 D-29",
-    "location": "경기도 하남시",
-    "pay": "연봉 : 30,000,000 원",
-    "task": "기계, 설비 조작",
-    "language": "ko"
-  },
-  {
-    "title": "도장제품관련 생산직 사원모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043793",
-    "closing_date": "마감 D-29",
-    "location": "인천광역시 남동구",
-    "pay": "시급 : 10,000 원",
-    "task": "기계,자동차,조선소 생산직",
-    "language": "ko"
-  },
-  {
-    "title": "자동차 정비 공업사 인재 채용",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043792",
-    "closing_date": "마감 D-4",
-    "location": "경기도 김포시",
-    "pay": "월급 : 2,900,000 원",
-    "task": "정비/수리",
-    "language": "ko"
-  },
-  {
-    "title": "조립/포장/도장/생산/프레스/용접",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043791",
-    "closing_date": "마감 D-18",
-    "location": "충청북도 진천군",
+    "title": "성실한 머시닝센터(MCT) 요원 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044056",
+    "closing_date": "마감 D-47",
+    "location": "경상남도 창원시",
     "pay": "시급 : 12,000 원",
     "task": "기계, 설비 조작",
     "language": "ko"
   },
   {
-    "title": "건설현장 단순노무 작업자 모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043790",
-    "closing_date": "마감 D-18",
-    "location": "경기도 안산시",
-    "pay": "월급 : 2,700,000 원",
-    "task": "기계,자동차,조선소 생산직",
-    "language": "ko"
-  },
-  {
-    "title": "두부 생산직 사원 모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043789",
-    "closing_date": "마감 D-29",
-    "location": "경상북도 문경시",
-    "pay": "월급 : 2,500,000 원",
-    "task": "기계, 설비 조작",
-    "language": "ko"
-  },
-  {
-    "title": "딸기 농장 하우스 노무자 모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043788",
-    "closing_date": "마감 D-29",
-    "location": "충청남도 논산시",
-    "pay": "시급 : 9,860 원",
-    "task": "농업",
-    "language": "ko"
-  },
-  {
-    "title": "주방보조 구인합니다",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043787",
-    "closing_date": "마감 D-3",
-    "location": "부산광역시 연제구",
-    "pay": "월급 : 1,800,000 원",
-    "task": "주방보조",
-    "language": "ko"
-  },
-  {
-    "title": "프레스조작원 구인(성별무관)",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043786",
+    "title": "조형,합형생산직 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044055",
     "closing_date": "마감 D-59",
-    "location": "경기도 김포시",
-    "pay": "월급 : 2,500,000 원",
-    "task": "기계, 설비 조작",
-    "language": "ko"
-  },
-  {
-    "title": "영상기기 생산 조립 사원모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043785",
-    "closing_date": "마감 D-29",
-    "location": "경기도 화성시",
-    "pay": "월급 : 2,500,000 원",
-    "task": "기타",
-    "language": "ko"
-  },
-  {
-    "title": "사업 확장에 따른 납품운전 및 제품 포장 사원모집합니다.",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043784",
-    "closing_date": "마감 D-29",
-    "location": "경기도 화성시",
-    "pay": "월급 : 4,000,000 원",
-    "task": "화물/중장비/특수차",
-    "language": "ko"
-  },
-  {
-    "title": "(주)케이엔에스 - 인쇄기기 설비조작보조 생산직 사원 모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043783",
-    "closing_date": "마감 D-18",
-    "location": "전라북도 익산시",
-    "pay": "월급 : 2,700,000 원",
-    "task": "기계, 설비 조작",
-    "language": "ko"
-  },
-  {
-    "title": "종이 지관 제조원 모집.",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043782",
-    "closing_date": "마감 D-3",
-    "location": "경상북도 구미시",
-    "pay": "연봉 : 28,000,000 원",
-    "task": "기계, 설비 조작",
-    "language": "ko"
-  },
-  {
-    "title": "품질,생산관리",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043781",
-    "closing_date": "마감 D-13",
-    "location": "경기도 평택시",
-    "pay": "연봉 : 40,000,000 원",
-    "task": "생산, 품질관리",
-    "language": "ko"
-  },
-  {
-    "title": "생산직(제조)- 모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043780",
-    "closing_date": "마감 D-17",
-    "location": "경기도 화성시",
-    "pay": "시급 : 10,030 원",
-    "task": "기계, 설비 조작",
-    "language": "ko"
-  },
-  {
-    "title": "단순사상원 모집합니다.(사상, 연마, 적재, 보류)",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043779",
-    "closing_date": "마감 D-29",
-    "location": "경상남도 거제시",
-    "pay": "시급 : 9,860 원",
-    "task": "기타",
-    "language": "ko"
-  },
-  {
-    "title": "생산직 직원 구인",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043778",
-    "closing_date": "마감 D-59",
-    "location": "경기도 화성시",
-    "pay": "월급 : 2,060,740 원",
-    "task": "기타",
-    "language": "ko"
-  },
-  {
-    "title": "정인산업(주) TIG 용접사 구인",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043777",
-    "closing_date": "마감 D-29",
-    "location": "경상남도 거제시",
-    "pay": "시급 : 17,000 원",
-    "task": "용접",
-    "language": "ko"
-  },
-  {
-    "title": "단순생산",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043776",
-    "closing_date": "마감 D-13",
-    "location": "부산광역시 기장군",
-    "pay": "시급 : 9,900 원",
-    "task": "기타",
-    "language": "ko"
-  },
-  {
-    "title": "생산직(가구제조원0 사원 모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043775",
-    "closing_date": "마감 D-29",
-    "location": "경기도 김포시",
-    "pay": "월급 : 3,000,000 원",
-    "task": "기타",
-    "language": "ko"
-  },
-  {
-    "title": "공장 단순 보조원 모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043774",
-    "closing_date": "마감 D-18",
-    "location": "광주광역시 북구",
-    "pay": "월급 : 2,500,000 원",
-    "task": "기계, 설비 조작",
-    "language": "ko"
-  },
-  {
-    "title": "(주)케이엔에스 - 드라이 라미네이팅기 설비조작보조 생산직 사원 모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043773",
-    "closing_date": "마감 D-18",
-    "location": "전라북도 익산시",
-    "pay": "월급 : 2,700,000 원",
-    "task": "기타",
-    "language": "ko"
-  },
-  {
-    "title": "시공팀 직원 채용",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043772",
-    "closing_date": "마감 D-29",
-    "location": "경상남도 밀양시",
-    "pay": "월급 : 2,500,000 원",
-    "task": "건설/토목 현장노무",
-    "language": "ko"
-  },
-  {
-    "title": "화장품 원료제조 생산직 구합니다",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043771",
-    "closing_date": "마감 D-29",
-    "location": "경기도 파주시",
-    "pay": "연봉 : 45,000,000 원",
-    "task": "기타",
-    "language": "ko"
-  },
-  {
-    "title": "문손잡이 조립 단순 생산직 모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043770",
-    "closing_date": "마감 D-13",
-    "location": "대구광역시 달성군",
-    "pay": "시급 : 9,860 원",
-    "task": "기타",
-    "language": "ko"
-  },
-  {
-    "title": "스폰지 가공, 제조 관련 단순노무 생산직",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043769",
-    "closing_date": "마감 D-13",
-    "location": "경기도 평택시",
-    "pay": "월급 : 2,200,000 원",
-    "task": "플라스틱, 고무 제품 제조",
-    "language": "ko"
-  },
-  {
-    "title": "(주)지스타허브 음성공장 신입 및 경력 생산직 사원 모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043768",
-    "closing_date": "마감 D-29",
-    "location": "충청북도 음성군",
-    "pay": "시급 : 9,860 원",
-    "task": "기계,자동차,조선소 생산직",
-    "language": "ko"
-  },
-  {
-    "title": "Co2 용접공 모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043767",
-    "closing_date": "마감 D-29",
-    "location": "경기도 안성시",
-    "pay": "월급 : 2,800,000 원",
-    "task": "용접",
-    "language": "ko"
-  },
-  {
-    "title": "생산직 근로자 모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043766",
-    "closing_date": "마감 D-29",
-    "location": "경기도 여주시",
-    "pay": "월급 : 2,600,000 원",
-    "task": "기타",
-    "language": "ko"
-  },
-  {
-    "title": "비철금속 제품 단순 생산직 구인",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043765",
-    "closing_date": "마감 D-59",
-    "location": "경기도 파주시",
-    "pay": "월급 : 2,060,740 원",
-    "task": "기타",
-    "language": "ko"
-  },
-  {
-    "title": "씰리코리아 입출고 사원 모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043764",
-    "closing_date": "마감 D-29",
-    "location": "경기도 여주시",
-    "pay": "연봉 : 34,000,000 원",
-    "task": "창고 관리",
-    "language": "ko"
-  },
-  {
-    "title": "용접반 생산직 사원모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043763",
-    "closing_date": "마감 D-49",
-    "location": "경기도 김포시",
-    "pay": "월급 : 2,800,000 원",
-    "task": "기타",
-    "language": "ko"
-  },
-  {
-    "title": "★생산직(제품 검사 및 생산)직원을 채용합니다★",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043762",
-    "closing_date": "마감 D-48",
-    "location": "세종특별자치시 세종시",
-    "pay": "시급 : 9,860 원",
-    "task": "기계, 설비 조작",
-    "language": "ko"
-  },
-  {
-    "title": "두리두리(2공장) 생산직 모집합니다.",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043761",
-    "closing_date": "마감 D-29",
-    "location": "충청남도 논산시",
-    "pay": "시급 : 9,860 원",
-    "task": "식료품 제조",
-    "language": "ko"
-  },
-  {
-    "title": "자동차 고무 부품 가공 생산직 사원 모집(장안)",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043760",
-    "closing_date": "마감 D-29",
-    "location": "부산광역시 기장군",
-    "pay": "시급 : 9,860 원",
-    "task": "플라스틱, 고무 제품 제조",
-    "language": "ko"
-  },
-  {
-    "title": "성실한 분을 찾습니다.(농장 특수야채 재배업무)",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043759",
-    "closing_date": "마감 D-6",
-    "location": "경기도 이천시",
-    "pay": "시급 : 9,860 원",
-    "task": "농업",
-    "language": "ko"
-  },
-  {
-    "title": "생산직 모집 안내",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043758",
-    "closing_date": "마감 D-13",
-    "location": "경기도 이천시",
-    "pay": "연봉 : 30,000,000 원",
-    "task": "건설/토목 현장노무",
-    "language": "ko"
-  },
-  {
-    "title": "자동차 기어 생산직원 모집합니다.",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043757",
-    "closing_date": "마감 D-29",
-    "location": "경상남도 사천시",
+    "location": "경상북도 경산시",
     "pay": "시급 : 12,000 원",
-    "task": "기계, 설비 조작",
+    "task": "기계,자동차,조선소 생산직",
     "language": "ko"
   },
   {
-    "title": "2024년 하반기 레이저기계 캐드/캠(CAM)관련 보조 사무직 모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043756",
-    "closing_date": "마감 D-29",
-    "location": "경상남도 김해시",
-    "pay": "연봉 : 30,000,000 원",
-    "task": "CAD, 3D 설계",
-    "language": "ko"
-  },
-  {
-    "title": "단순노무 생산직 구인",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043755",
-    "closing_date": "마감 D-29",
-    "location": "경기도 양주시",
-    "pay": "월급 : 2,300,000 원",
-    "task": "기타",
-    "language": "ko"
-  },
-  {
-    "title": "생산관리및 압출기 배합기 조작생산원",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043754",
+    "title": "제품생산 및 포장직 모집_화학제품생산직(기계조작)",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044054",
     "closing_date": "마감 D-29",
     "location": "경기도 화성시",
-    "pay": "연봉 : 40,000,000 원",
+    "pay": "월급 : 2,100,000 원",
     "task": "기계, 설비 조작",
     "language": "ko"
   },
   {
-    "title": "자동차 부품 생산직(기계조작) 모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043753",
-    "closing_date": "마감 D-48",
-    "location": "대구광역시 달성군",
+    "title": "염색공장 원단개폭원 (1명) 모집 합니다.",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044053",
+    "closing_date": "마감 D-17",
+    "location": "대구광역시 서구",
     "pay": "시급 : 9,860 원",
     "task": "기계, 설비 조작",
     "language": "ko"
   },
   {
-    "title": "단순 노무직 모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043752",
+    "title": "[경력] CNC, 범용 선반 사원 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044052",
     "closing_date": "마감 D-29",
-    "location": "경기도 양주시",
-    "pay": "월급 : 2,200,000 원",
-    "task": "기타",
-    "language": "ko"
-  },
-  {
-    "title": "생산직 사원 모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043751",
-    "closing_date": "마감 D-29",
-    "location": "대구광역시 달서구",
-    "pay": "시급 : 11,000 원",
-    "task": "기계,자동차,조선소 생산직",
-    "language": "ko"
-  },
-  {
-    "title": "부품 조립 사원(생산직) 모집 합니다.",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043750",
-    "closing_date": "마감 D-17",
-    "location": "경상남도 진주시",
-    "pay": "일급 : 78,880 원",
-    "task": "기계,자동차,조선소 생산직",
-    "language": "ko"
-  },
-  {
-    "title": "분체도장기사구함",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043749",
-    "closing_date": "마감 D-13",
     "location": "경기도 김포시",
-    "pay": "월급 : 3,500,000 원",
-    "task": "기계,자동차,조선소 생산직",
-    "language": "ko"
-  },
-  {
-    "title": "닭고기 절단(커팅)기 사원 모집(토요일 오전근무 08:30~12:30)",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043748",
-    "closing_date": "마감 D-14",
-    "location": "부산광역시 사상구",
-    "pay": "월급 : 2,450,000 원",
+    "pay": "월급 : 3,800,000 원",
     "task": "기계, 설비 조작",
     "language": "ko"
   },
   {
-    "title": "용접사 부족으로 구인",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043747",
-    "closing_date": "마감 D-29",
-    "location": "경기도 화성시",
-    "pay": "연봉 : 30,000,000 원",
-    "task": "용접",
-    "language": "ko"
-  },
-  {
-    "title": "프레스 생산직 모집합니다.",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043746",
-    "closing_date": "마감 D-17",
-    "location": "경상남도 진주시",
-    "pay": "일급 : 78,880 원",
-    "task": "기계, 설비 조작",
-    "language": "ko"
-  },
-  {
-    "title": "산업용 로봇 용접원 모집 합니다.",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043745",
-    "closing_date": "마감 D-17",
-    "location": "경상남도 진주시",
-    "pay": "일급 : 78,880 원",
-    "task": "용접",
-    "language": "ko"
-  },
-  {
-    "title": "CO2 용접사원 모집합니다.",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043744",
-    "closing_date": "마감 D-17",
-    "location": "경상남도 진주시",
-    "pay": "일급 : 79,000 원",
-    "task": "용접",
-    "language": "ko"
-  },
-  {
-    "title": "근면성실한 양돈인을 모집합니다.",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043743",
-    "closing_date": "마감 D-29",
-    "location": "전라남도 영암군",
-    "pay": "월급 : 3,000,000 원",
+    "title": "양돈농가 구인",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044051",
+    "closing_date": "마감 D-47",
+    "location": "경상북도 영천시",
+    "pay": "월급 : 2,500,000 원",
     "task": "축산",
     "language": "ko"
   },
   {
-    "title": "(주)이레테크 도장, 사출 생산 현장 인원 모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043742",
-    "closing_date": "마감 D-48",
-    "location": "울산광역시 울주군",
-    "pay": "시급 : 9,860 원",
-    "task": "기타",
-    "language": "ko"
-  },
-  {
-    "title": "돈육가공 생산 직원을 모집합니다.(발골,정형, 단순포장)",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043741",
+    "title": "연안자망 어로작업 (자망)",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044050",
     "closing_date": "마감 D-29",
-    "location": "충청남도 천안시",
-    "pay": "월급 : 3,500,000 원",
-    "task": "식료품 제조",
-    "language": "ko"
-  },
-  {
-    "title": "선원 모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043740",
-    "closing_date": "마감 D-29",
-    "location": "경상북도 경주시",
+    "location": "전라남도 여수시",
     "pay": "시급 : 9,860 원",
     "task": "어업",
     "language": "ko"
   },
   {
-    "title": "알루미늄주물(사형) 주조원(경력 및 신입) 모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043739",
+    "title": "소담푸드 생산,기계조작원모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044049",
     "closing_date": "마감 D-29",
-    "location": "경상남도 함안군",
-    "pay": "연봉 : 60,000,000 원",
+    "location": "경상북도 칠곡군",
+    "pay": "시급 : 9,860 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "항공부품 사상 단순노무직",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044048",
+    "closing_date": "마감 D-29",
+    "location": "부산광역시 강서구",
+    "pay": "월급 : 2,500,000 원",
+    "task": "기타",
+    "language": "ko"
+  },
+  {
+    "title": "사업시설 확장으로 생산직(직관쇼트기조작원)사원을 모집합니다.",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044047",
+    "closing_date": "마감 D-16",
+    "location": "전라북도 군산시",
+    "pay": "월급 : 2,800,000 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "블로우성형기술자 및 생산직 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044046",
+    "closing_date": "마감 D-29",
+    "location": "경기도 평택시",
+    "pay": "연봉 : 50,000,000 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "알곤용접기사 모집합니다",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044045",
+    "closing_date": "마감 D-17",
+    "location": "광주광역시 북구",
+    "pay": "월급 : 3,000,000 원",
+    "task": "용접",
+    "language": "ko"
+  },
+  {
+    "title": "일광잉크페인트 (잉크제조) 생산부 사원 구인",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044044",
+    "closing_date": "마감 D-17",
+    "location": "경기도 화성시",
+    "pay": "연봉 : 36,400,000 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "NCT laser 프로그램 전개자 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044043",
+    "closing_date": "마감 D-29",
+    "location": "경기도 화성시",
+    "pay": "연봉 : 40,000,000 원",
     "task": "기계,자동차,조선소 생산직",
     "language": "ko"
   },
   {
-    "title": "스마트팜 재배원 구인",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043738",
-    "closing_date": "마감 D-18",
-    "location": "충청남도 보령시",
-    "pay": "월급 : 2,405,840 원",
-    "task": "농업",
+    "title": "(주)은하수산 생산직 사원 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044042",
+    "closing_date": "마감 D-29",
+    "location": "부산광역시 강서구",
+    "pay": "시급 : 9,990 원",
+    "task": "식료품 제조",
     "language": "ko"
   },
   {
-    "title": "양돈농장 근무자 모집합니다",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043737",
-    "closing_date": "마감 D-29",
-    "location": "경상북도 김천시",
-    "pay": "월급 : 2,405,840 원",
-    "task": "축산",
-    "language": "ko"
-  },
-  {
-    "title": "조선소 그라인더공 채용 (사상공, 블라스팅공)",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043736",
-    "closing_date": "마감 D-29",
-    "location": "울산광역시 동구",
-    "pay": "시급 : 9,860 원",
-    "task": "기계, 설비 조작",
-    "language": "ko"
-  },
-  {
-    "title": "목제품 생산직 모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043735",
-    "closing_date": "마감 D-29",
-    "location": "충청북도 청주시",
-    "pay": "시급 : 9,860 원",
+    "title": "생산직 직원모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044041",
+    "closing_date": "마감 D-9",
+    "location": "인천광역시 남동구",
+    "pay": "월급 : 2,600,000 원",
     "task": "기타",
     "language": "ko"
   },
   {
-    "title": "조리보조, 홀서빙원 모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043734",
+    "title": "주방보조원 구인",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044040",
     "closing_date": "마감 D-29",
-    "location": "경상남도 거제시",
-    "pay": "시급 : 9,860 원",
+    "location": "경기도 이천시",
+    "pay": "월급 : 3,000,000 원",
     "task": "주방보조",
     "language": "ko"
   },
   {
-    "title": "[태림판지] 골판지 생산팀 모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043733",
-    "closing_date": "마감 D-18",
-    "location": "경기도 평택시",
-    "pay": "시급 : 11,060 원",
+    "title": "단순 작업(붓터치, 제품정리) 직원 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044039",
+    "closing_date": "마감 D-29",
+    "location": "경상남도 함안군",
+    "pay": "시급 : 9,860 원",
+    "task": "기타",
+    "language": "ko"
+  },
+  {
+    "title": "말관리사 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044038",
+    "closing_date": "마감 D-59",
+    "location": "경기도 화성시",
+    "pay": "월급 : 3,000,000 원",
+    "task": "축산",
+    "language": "ko"
+  },
+  {
+    "title": "금속가공 기계조작원 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044037",
+    "closing_date": "마감 D-29",
+    "location": "충청남도 천안시",
+    "pay": "시급 : 9,900 원",
     "task": "기계, 설비 조작",
     "language": "ko"
   },
   {
-    "title": "의자&amp;등.좌판 생산직 사원 모집",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043732",
+    "title": "재활용(열분해유 생산) 관리자 구인",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044036",
     "closing_date": "마감 D-29",
+    "location": "전라남도 함평군",
+    "pay": "월급 : 3,000,000 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "생산직 채용합니다.",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044035",
+    "closing_date": "마감 D-17",
     "location": "경기도 김포시",
-    "pay": "월급 : 2,800,000 원",
+    "pay": "월급 : 2,100,000 원",
     "task": "기타",
     "language": "ko"
   },
   {
-    "title": "구인 - 생산직",
-    "link": "https://www.jobploy.kr/ko/recruit/RS0000043731",
+    "title": "시설버섯재배 생산직 모집/농업단순노무자 [정규직]",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044034",
     "closing_date": "마감 D-29",
-    "location": "경기도 김포시",
+    "location": "경상북도 청도군",
+    "pay": "시급 : 9,860 원",
+    "task": "농업",
+    "language": "ko"
+  },
+  {
+    "title": "생산직 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044033",
+    "closing_date": "마감 D-1",
+    "location": "충청남도 당진시",
+    "pay": "월급 : 2,300,000 원",
+    "task": "건설/토목 현장노무",
+    "language": "ko"
+  },
+  {
+    "title": "한부모부자가족복지시설 선재누리 (계약직)영양사 채용",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044032",
+    "closing_date": "마감 D-29",
+    "location": "서울특별시 성동구",
+    "pay": "월급 : 2,287,800 원",
+    "task": "영양사",
+    "language": "ko"
+  },
+  {
+    "title": "[채용대행] 품질관리 공정검사(사무직) 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044031",
+    "closing_date": "마감 D-17",
+    "location": "인천광역시 남동구",
     "pay": "월급 : 2,500,000 원",
+    "task": "생산, 품질관리",
+    "language": "ko"
+  },
+  {
+    "title": "아노다이징(표면처리) 생산직 근로자 구인",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044030",
+    "closing_date": "마감 D-29",
+    "location": "인천광역시 남동구",
+    "pay": "시급 : 9,860 원",
     "task": "기타",
+    "language": "ko"
+  },
+  {
+    "title": "1톤차량 배송",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044029",
+    "closing_date": "마감 D-29",
+    "location": "서울특별시 동작구",
+    "pay": "월급 : 3,500,000 원",
+    "task": "화물/중장비/특수차",
+    "language": "ko"
+  },
+  {
+    "title": "대부주식회사 인천공장 육가공 단순작업 생산정규직 직원모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044028",
+    "closing_date": "마감 D-29",
+    "location": "인천광역시 서구",
+    "pay": "연봉 : 30,000,000 원",
+    "task": "식료품 제조",
+    "language": "ko"
+  },
+  {
+    "title": "현대미포조선 협력사 인원 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044027",
+    "closing_date": "마감 D-29",
+    "location": "울산광역시 동구",
+    "pay": "시급 : 9,860 원",
+    "task": "배관",
+    "language": "ko"
+  },
+  {
+    "title": "성실 근면한 근로자",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044026",
+    "closing_date": "마감 D-29",
+    "location": "충청남도 당진시",
+    "pay": "시급 : 9,860 원",
+    "task": "용접",
+    "language": "ko"
+  },
+  {
+    "title": "가족처럼 성실하게 일할수있는 직원을 구합니다",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044025",
+    "closing_date": "마감 D-5",
+    "location": "경기도 남양주시",
+    "pay": "월급 : 3,500,000 원",
+    "task": "주방보조",
+    "language": "ko"
+  },
+  {
+    "title": "절단공정 수개선사 구인",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044024",
+    "closing_date": "마감 D-13",
+    "location": "전라남도 영암군",
+    "pay": "시급 : 11,000 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "폐기물 수거원 추가 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044023",
+    "closing_date": "마감 D-59",
+    "location": "경기도 평택시",
+    "pay": "시급 : 9,860 원",
+    "task": "청소/미화",
+    "language": "ko"
+  },
+  {
+    "title": "생산직사원 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044022",
+    "closing_date": "마감 D-47",
+    "location": "광주광역시 광산구",
+    "pay": "시급 : 9,860 원",
+    "task": "플라스틱, 고무 제품 제조",
+    "language": "ko"
+  },
+  {
+    "title": "주조보조 주형보조 초보",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044021",
+    "closing_date": "마감 D-16",
+    "location": "부산광역시 사상구",
+    "pay": "월급 : 3,000,000 원",
+    "task": "기타",
+    "language": "ko"
+  },
+  {
+    "title": "톱기계 특수강(금형강)절단 각가공업체 생산직모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044020",
+    "closing_date": "마감 D-13",
+    "location": "경기도 안양시",
+    "pay": "월급 : 2,500,000 원",
+    "task": "기계, 설비 조작",
+    "language": "ko"
+  },
+  {
+    "title": "생산 관련 단준종사원 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044019",
+    "closing_date": "마감 D-59",
+    "location": "전라북도 익산시",
+    "pay": "시급 : 9,860 원",
+    "task": "기타",
+    "language": "ko"
+  },
+  {
+    "title": "공장생산직 인원 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044018",
+    "closing_date": "마감 D-29",
+    "location": "경기도 화성시",
+    "pay": "연봉 : 28,000,000 원",
+    "task": "기계,자동차,조선소 생산직",
+    "language": "ko"
+  },
+  {
+    "title": "취부,용접 인원 모집",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044017",
+    "closing_date": "마감 D-29",
+    "location": "전라남도 영암군",
+    "pay": "일급 : 120,000 원",
+    "task": "용접",
+    "language": "ko"
+  },
+  {
+    "title": "프레스기 및 절단기 조작원",
+    "link": "https://www.jobploy.kr/ko/recruit/RS0000044016",
+    "closing_date": "마감 D-29",
+    "location": "전라남도 영암군",
+    "pay": "시급 : 9,860 원",
+    "task": "기계, 설비 조작",
     "language": "ko"
   }
 ]
