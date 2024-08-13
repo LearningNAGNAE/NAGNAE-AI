@@ -16,8 +16,38 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 import torch
-# 메모리 사용량 최적화
-torch.cuda.empty_cache()
+from llama_index.core.postprocessor import SentenceTransformerRerank
+from llama_index.core import QueryBundle
+from llama_index.core.schema import NodeWithScore, TextNode
+from fastapi import Depends
+from sqlalchemy.orm import Session
+from fastapi import Depends, HTTPException
+from fastapi.responses import JSONResponse
+from sqlalchemy.orm import Session
+from pydantic import BaseModel
+from typing import Optional
+import sys
+import os
+app_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(app_dir)
+from ...database.db import get_db
+from ...database import crud, models
+from fastapi import Request
+from pydantic import ValidationError
+
+class ChatRequest(BaseModel):
+    question: str
+    userNo: int
+    categoryNo: int
+    session_id: str
+    is_new_session: Optional[bool] = False
+    
+class ChatResponse(BaseModel):
+    question: str
+    answer: str
+    chatHisNo: int
+    chatHisSeq: int
+    detected_language: str
 
 # 환경 변수 로드 및 FastAPI 애플리케이션 생성
 load_dotenv()
@@ -42,33 +72,38 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # CUDA 사용 가능 여부 확인
-device = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"Using device: {device}")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+logger.info(f"Using device: {device}")
 
 # Fine-tuned Gemma-2b 모델 및 토크나이저 로드
-quantization_config = BitsAndBytesConfig(load_in_4bit=True)
-model_path = './app/models/law_and_visa/fine_tuned_gemma'  # Fine-tuned 모델이 저장된 경로
-tokenizer_gemma = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
-model_gemma = AutoModelForCausalLM.from_pretrained(
-    model_path, 
-    quantization_config=quantization_config, 
-    local_files_only=True,
-    device_map="auto",  # 이 옵션을 유지하여 자동으로 적절한 디바이스에 모델을 로드합니다.
-    torch_dtype=torch.float16 if device == "cuda" else torch.float32  # GPU에서는 float16 사용
-)
+def load_model_and_tokenizer():
+    quantization_config = BitsAndBytesConfig(load_in_4bit=True)
+    model_path = './app/models/law_and_visa/fine_tuned_gemma'
+    tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
+    model = AutoModelForCausalLM.from_pretrained(
+        model_path, 
+        quantization_config=quantization_config, 
+        local_files_only=True,
+        device_map="auto",
+        torch_dtype=torch.float16 if device.type == "cuda" else torch.float32
+    )
+    return tokenizer, model
 
-
+tokenizer_gemma, model_gemma = load_model_and_tokenizer()
 
 # FAISS 인덱스 로드 및 설정
-embeddings = OpenAIEmbeddings()
-index_name = "faiss_index_law_and_visa_page"
-current_dir = os.path.dirname(os.path.abspath(__file__))
-index_path = os.path.join(current_dir, index_name)
+def load_faiss_index():
+    embeddings = OpenAIEmbeddings()
+    index_name = "faiss_index_law_and_visa_page"
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    index_path = os.path.join(current_dir, index_name)
 
-if not os.path.exists(index_path):
-    raise HTTPException(status_code=500, detail=f"FAISS index not found: {index_path}")
+    if not os.path.exists(index_path):
+        raise HTTPException(status_code=500, detail=f"FAISS index not found: {index_path}")
 
-vector_store = FAISS.load_local(index_path, embeddings, allow_dangerous_deserialization=True)
+    return FAISS.load_local(index_path, embeddings, allow_dangerous_deserialization=True)
+
+vector_store = load_faiss_index()
 faiss_retriever = vector_store.as_retriever(search_kwargs={"k": 2})
 
 # BM25 및 FAISS 검색기 설정
@@ -140,11 +175,11 @@ system_message_prompt = SystemMessagePromptTemplate.from_template(system_prompt)
 
 human_template = """
 Question: {question}
-Language: {language}
+RESPONSE_LANGUAGE: {language}
 Context: {context_summary}
-Gemma's input: {gemma_response}
+Additional Information: {additional_info}
 
-Please provide a detailed and comprehensive answer to the above question in the specified RESPONSE_LANGUAGE, including specific visa information when relevant. Incorporate insights from the GEMMA_RESPONSE if applicable. Organize your response clearly and include all pertinent details.
+Please provide a detailed and comprehensive answer to the above question in the specified RESPONSE_LANGUAGE, including specific visa information when relevant. Incorporate insights from the Additional Information if applicable. Organize your response clearly and include all pertinent details. Do not include any HTML tags or formatting in your response. Do not mention or refer to any AI models or sources in your response.
 """
 human_message_prompt = HumanMessagePromptTemplate.from_template(human_template)
 
@@ -153,25 +188,47 @@ chat_prompt = ChatPromptTemplate.from_messages([
     human_message_prompt,
 ])
 
+# -------- Rerank -----------
+postprocessor = SentenceTransformerRerank(
+    model="cross-encoder/ms-marco-MiniLM-L-2-v2", top_n=3
+)
+
 # 검색 체인 구성
 def get_context(question: str):
+    # 앙상블 검색기를 사용하여 질문과 관련된 문서들을 검색
+    # 이 검색기는 BM25와 FAISS를 조합한 하이브리드 방식을 사용
     docs = ensemble_retriever.get_relevant_documents(question)
-    context = "\n".join(doc.page_content for doc in docs)
+
+    # 질문을 QueryBundle 객체로 변환
+    # QueryBundle은 LlamaIndex에서 사용되는 쿼리 표현 방식
+    query_bundle = QueryBundle(query_str=question)
+    
+    # 검색된 각 문서를 NodeWithScore 객체로 변환
+    # 초기에는 모든 노드에 동일한 점수 1.0을 할당
+    nodes = [NodeWithScore(node=TextNode(text=doc.page_content), score=1.0) for doc in docs]
+    
+    # SentenceTransformerRerank를 사용하여 노드들의 순위를 재조정
+    # 이 과정에서 질문과의 관련성에 따라 노드들의 점수가 조정됨
+    reranked_nodes = postprocessor.postprocess_nodes(nodes, query_bundle=query_bundle)
+
+    # 재순위가 매겨진 노드들의 텍스트를 하나의 문자열로 결합
+    context = "\n".join(node.node.text for node in reranked_nodes)
     return process_context(context)
 
+
 # Gemma-2b로 텍스트 생성 함수
+@torch.no_grad()
 def generate_text_with_gemma(question: str) -> str:
-    prompt = f"Summarize briefly: {question}"
+    prompt = f"Provide concise, relevant information for: {question}"
     input_ids = tokenizer_gemma(prompt, return_tensors="pt").to(model_gemma.device)
-    with torch.no_grad():
-        outputs = model_gemma.generate(
-            **input_ids, 
-            max_length=128,  # 더 짧게 줄임
-            num_return_sequences=1,
-            temperature=0.7,
-            top_k=50,
-            top_p=0.95,
-        )
+    outputs = model_gemma.generate(
+        **input_ids, 
+        max_length=128,
+        num_return_sequences=1,
+        temperature=0.7,
+        top_k=50,
+        top_p=0.95,
+    )
     return tokenizer_gemma.decode(outputs[0], skip_special_tokens=True)
 
 def summarize_context(context: dict) -> str:
@@ -187,7 +244,7 @@ retrieval_chain = (
         "context_summary": lambda x: summarize_context(get_context(x["question"])),
         "question": lambda x: x["question"],
         "language": lambda x: x["language"],
-        "gemma_response": lambda x: generate_text_with_gemma(x["question"])
+        "additional_info": lambda x: generate_text_with_gemma(x["question"])
     }
     | chat_prompt
     | chat
@@ -241,28 +298,51 @@ def process_context(context: str) -> dict:
     return info
 
 # 채팅 엔드포인트
-@app.post("/law")
-async def chat_endpoint(query: Query):
+@app.post("/law", response_model=ChatResponse)
+async def chat_endpoint(chat_request: ChatRequest, request: Request, db: Session = Depends(get_db)):
     try:
-        question = query.question
-        session_id = query.session_id
-        logger.info(f"Received question: {question}")
-
+        logger.debug(f"Received chat request: {chat_request}")
+        
+        question = chat_request.question
+        userNo = chat_request.userNo
+        categoryNo = chat_request.categoryNo
+        session_id = chat_request.session_id
+        is_new_session = chat_request.is_new_session
+        
+        logger.debug(f"Processing request for userNo: {userNo}, categoryNo: {categoryNo}, session_id: {session_id}, is_new_session: {is_new_session}")
+        
+        # 챗봇 로직 처리
         language = detect_language(question)
+        logger.debug(f"Detected language: {language}")
         
         response = await chain_with_history.ainvoke(
             {"question": question, "language": language},
-            config={"configurable": {"session_id": session_id}},
+            config={"configurable": {"session_id": session_id, "userNo": userNo}}
         )
-
-        return {
-            "question": question,
-            "answer": response,
-        }
+        logger.debug(f"Generated response: {response}")
+        
+        # 대화 내용 저장
+        chat_history = crud.create_chat_history(db, userNo, categoryNo, question, response, is_new_session)
+        logger.debug(f"Chat history created: {chat_history}")
+        
+        # JSON 응답 생성
+        chat_response = ChatResponse(
+            question=question,
+            answer=response,
+            chatHisNo=chat_history.CHAT_HIS_NO,
+            chatHisSeq=chat_history.CHAT_HIS_SEQ,
+            detected_language=language 
+        )
+        
+        logger.debug(f"Returning chat response: {chat_response}")
+        return JSONResponse(content=chat_response.dict())
     except Exception as e:
         logger.error(f"Error processing request: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal Server Error")
-
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Internal Server Error: {str(e)}"}
+        )
+    
 # Run the application
 if __name__ == "__main__":
     import uvicorn
