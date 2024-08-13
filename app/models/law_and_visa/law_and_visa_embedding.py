@@ -4,8 +4,7 @@ import re
 import time
 from dotenv import load_dotenv
 import openai
-from pymilvus import connections, FieldSchema, CollectionSchema, DataType, Collection, utility
-from selenium import webdriver
+from pymilvus import FieldSchema, CollectionSchema, DataType, Collection, utility
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
@@ -14,7 +13,7 @@ from langchain_openai import OpenAIEmbeddings
 import faiss
 import numpy as np
 from typing import List, Dict, Any
-from app.models.law_and_visa.law_and_visa_util import setup_driver, wait_for_element, wait_for_element_safely
+from app.models.law_and_visa.law_and_visa_util import wait_for_element
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 # 환경 변수 로드
@@ -22,10 +21,6 @@ load_dotenv()
 
 # OpenAI API 키 설정
 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-# Milvus 연결 설정
-def setup_milvus():
-    connections.connect("default", host="localhost", port="19530")
 
 # 컬렉션 생성
 def create_collection(collection_name, dim):
