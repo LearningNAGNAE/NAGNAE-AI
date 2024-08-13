@@ -315,7 +315,11 @@ prompt = ChatPromptTemplate.from_messages(
             4. If the query includes a Location keyword, ensure that all relevant job listings for that location are retrieved and included in the response. I will include all relevant job listings from that location and will not provide information about other locations.
             5. Provide a comprehensive summary of the search results.
             6. Offer detailed information about each relevant job listing.
-            7. If the keyword or numerical value does not match the user's query, do not provide any other data.
+            7. Filter job listings based on the type of salary information requested by the user:
+                - If the user asks for "monthly salary," only include jobs with monthly salary information (labeled as "Salary").
+                - If the user asks for "annual salary," only include jobs with annual salary information (labeled as "Annual Salary").
+                - If the user asks for "hourly wage," only include jobs with hourly wage information (labeled as "Hourly").
+            8. If the keyword or numerical value does not match the user's query, do not provide any other data.
 
             Include the following information for each job listing:
             - Title
