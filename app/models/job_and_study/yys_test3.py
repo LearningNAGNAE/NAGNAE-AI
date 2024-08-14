@@ -29,54 +29,11 @@ from collections import defaultdict
 import requests, json, spacy, fasttext, traceback
 from langchain.schema.runnable import RunnableConfig
 from datetime import datetime
-from langchain_core.runnables import RunnableSequence
+from elasticsearch import AsyncElasticsearch
 
 load_dotenv()
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    global agent_executor, es_client
-    elasticsearch_url = os.getenv("ELASTICSEARCH_URL", "http://localhost:9200")
-    
-    if not elasticsearch_url.startswith(('http://', 'https://')):
-        elasticsearch_url = f"http://{elasticsearch_url}"
-    
-    # print(f"Connecting to Elasticsearch at: {elasticsearch_url}")
-    
-    try:
-        es_client = Elasticsearch([elasticsearch_url])
-        
-        if not es_client.ping():
-            raise ConnectionError("Failed to connect to Elasticsearch")
-        
-        # print("Successfully connected to Elasticsearch")
-
-        # OpenAPI 데이터 처리 및 저장 확인
-        if not es_client.indices.exists(index="openapi_data") or not es_client.indices.exists(index="pdf_search"):
-            process_and_save_data()
-
-        
-        # 여기서 기본 언어를 'ko'(한국어)로 지정합니다.
-        yield
-
-    except Exception as e:
-        # print(f"Error during initialization: {str(e)}")
-        # print(traceback.format_exc())
-        raise
-    finally:
-        if es_client:
-            es_client.close()
-            
-app = FastAPI(lifespan=lifespan)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
+agent_executor = None
 es_client = None
 es_retriever = None
 embeddings = OpenAIEmbeddings()
@@ -89,6 +46,8 @@ app = FastAPI()
 class Query(BaseModel):
     input: str
     session_id: str
+
+
 
 pdf_path = r"C:\Users\hi02\dev\NAGNAE\NAGNAE-AI\pdf\2025학년도 재외국민과 외국인 특별전형 시행계획 주요사항.pdf"
 
@@ -115,10 +74,11 @@ session_memories = {}
 # Initialize KoNLPy
 kkma = Kkma()
 
+
 elasticsearch_prompt = PromptTemplate(
     input_variables=["query"],
     template="""
-    당신은 한국 대학의 대한 정보를 검색하는 시스템입니다.
+    당신은 한국 대학의 재외국민과 외국인 특별전형에 대한 정보를 검색하는 시스템입니다.
     다음 질문에 관련된 정보를 찾아주세요:
 
     질문: {query}
@@ -128,42 +88,17 @@ elasticsearch_prompt = PromptTemplate(
     2. 모집 인원, 지원 자격, 전형 방법 등의 구체적인 정보를 포함하는 문서를 우선적으로 찾으세요.
     3. PDF 문서의 페이지 번호나 섹션 정보도 함께 찾아주세요.
     4. 최신 정보를 우선적으로 찾되, 과거 정보도 참고할 수 있도록 해주세요.
+    5. 데이터출처를 명확히 밝혀주세요.
 
     이 지침을 바탕으로 관련성 높은 검색 결과를 제공해주세요.
     """
 )
 
-# ChatOpenAI 인스턴스 생성
-openai = ChatOpenAI(
-    model="gpt-3.5-turbo", api_key=os.getenv("OPENAI_API_KEY"), temperature=0.1, max_tokens=10000)
-
-
-chatgpt_prompt = PromptTemplate(
-    input_variables=["query"],
-    template="""
-    당신은 한국 대학에 대한 정보를 찾는 전문가입니다.
-    사용자로부터 다음과 같은 질문을 받았습니다:
-
-    질문: {query}
-
-    답변을 작성할 때 고려해야 할 사항:
-    1. 질문에 명확하고 구체적인 답변을 제공합니다.
-    2. 대학명, 지역명, 전형명 등의 키워드를 포함시킵니다.
-    3. 최신 정보를 제공하고, 과거 정보도 참고할 수 있습니다.
-    4. 필요한 경우, 관련 링크나 추가 정보를 제공할 수 있습니다.
-
-    가능한 한 명확하고 도움이 되는 답변을 제공해주세요.
-    """
-)
-
-# LLM 정의
-llm = ChatOpenAI()
-
-# RunnableSequence 사용하여 파이프라인 정의
-agent_executor = RunnableSequence([chatgpt_prompt, llm])
 
 def fetch_openapi_data(url: str):
     response = requests.get(url)
+    print(response.json());
+    print("fds패치데이터")
     return response.json()
 
 def fetch_major_seq_numbers(api_key, per_page=30000):
@@ -177,20 +112,112 @@ def fetch_major_details(api_key, major_seq):
     response = requests.get(url)
     return response.json()
 
-def embed_and_store_openapi_data(data: dict):
-    text = json.dumps(data)
-    vector = embeddings.embed_query(text)
+async def embed_and_store_openapi_data1(data: dict):
+    content_list = data.get('dataSearch', {}).get('content', [])
     
-    document = {
-        "content": text,
-        "content_vector": vector,
-        "metadata": {
-            "source": "openapi",
-            "timestamp": datetime.datetime.now().isoformat()
+    for item1 in content_list:
+        # Convert the item to a JSON string
+        text = json.dumps(item1)
+        
+        # Generate embedding for the text
+        vector = embeddings.embed_query(text)
+        
+        # Create a document with structured data and embedding
+        document = {
+            "content": item1,  # Store the original structured data
+            "content_vector": vector,
+            "metadata": {
+                "source": "openapi",
+                "timestamp": datetime.datetime.now().isoformat(),
+                "campusName": item1.get("campusName"),
+                "schoolName": item1.get("schoolName"),
+                "schoolType": item1.get("schoolType"),
+                "region": item1.get("region"),
+                "estType": item1.get("estType")
+            }
         }
-    }
     
-    es_client.index(index="openapi_data", body=document)
+    try:
+        result = await es_client.index(index="openapi_data1", body=document)
+        print(f"Document indexed: {result['result']}")
+    except Exception as e:
+        print(f"Error indexing document: {str(e)}")
+
+async def embed_and_store_openapi_data2(data: dict):
+    content_list = data.get('dataSearch', {}).get('content', [])
+    
+    for item2 in content_list:
+        # Convert the item to a JSON string
+        text = json.dumps(item2)
+        
+        # Generate embedding for the text
+        vector = embeddings.embed_query(text)
+        
+        # Create a document with structured data and embedding
+        document = {
+            "content": item2,  # Store the original structured data
+            "content_vector": vector,
+            "metadata": {
+                "source": "openapi",
+                "timestamp": datetime.datetime.now().isoformat(),
+                "lClass": item2.get("lClass"),
+                "facilName": item2.get("facilName"),
+                "majorSeq": item2.get("majorSeq"),
+                "mClass": item2.get("mClass")
+            }
+        }
+    
+    try:
+        result = await es_client.index(index="openapi_data2", body=document)
+        print(f"Document indexed: {result['result']}")
+    except Exception as e:
+        print(f"Error indexing document: {str(e)}")
+
+async def embed_and_store_openapi_data3(data: dict):
+    content_list = data.get('dataSearch', {}).get('content', [])
+    
+    for item in content_list:
+        # Convert the item to a JSON string
+        text = json.dumps(item)
+        
+        # Generate embedding for the text
+        vector = embeddings.embed_query(text)
+        
+        # Create a document with structured data and embedding
+        document = {
+            "content": text,
+            "content_vector": vector,
+            "metadata": {
+                "source": "openapi",
+                "timestamp": datetime.now().isoformat(),
+                "major": item.get("major"),
+                "salary": item.get("salary"),
+                "employment": item.get("employment"),
+                "department": item.get("department"),
+                "summary": item.get("summary"),
+                "relate_subject": item.get("relate_subject"),
+                "career_act": item.get("career_act"),
+                "job": item.get("job"),
+                "qualifications": item.get("qualifications"),
+                "interest": item.get("interest"),
+                "property": item.get("property"),
+                "enter_field": item.get("enter_field"),
+                "main_subject": item.get("main_subject"),
+                "university": item.get("university"),
+                "chartData": item.get("chartData"),
+                "GenCD": item.get("GenCD"),
+                "SchClass": item.get("SchClass"),
+                "lstMiddleAptd": item.get("lstMiddleAptd"),
+                "lstHighAptd": item.get("lstHighAptd"),
+                "lstVals": item.get("lstVals")
+            }
+        }
+    
+        try:
+            result = await es_client.index(index="openapi_data3", body=document)
+            print(f"Document indexed: {result['result']}")
+        except Exception as e:
+            print(f"Error indexing document: {str(e)}")
 
 def detect_language_fasttext(text):
     predictions = model.predict(text, k=1)  # 가장 가능성 높은 언어 1개 반환
@@ -198,6 +225,66 @@ def detect_language_fasttext(text):
     # print(f"언어 감지 메소드 : {text}")
     return predictions[0][0].replace('__label__', '')
 
+async def multi_index_search(query: str, es_client, embeddings, k: int = 5) -> List[Dict]:
+    es_prompt = elasticsearch_prompt.format(query=query)
+    query_vector = embeddings.embed_query(es_prompt)
+    
+    # 모든 관련 인덱스 포함
+    index_names = ["openapi_data1", "openapi_data2", "openapi_data3"]
+    
+    # 각 인덱스에 대한 가중치 설정
+    index_weights = {
+        "openapi_data1": 0.4,
+        "openapi_data2": 0.3,
+        "openapi_data3": 0.3
+    }
+    
+    script_score_query = {
+        "script_score": {
+            "query": {
+                "bool": {
+                    "should": [
+                        {"match": {"content": {"query": query, "boost": 1.0}}},
+                        {"match": {"content": {"query": es_prompt, "boost": 0.5}}}
+                    ]
+                }
+            },
+            "script": {
+                "source": """
+                    double score = _score;
+                    if (params.index_weights.containsKey(doc['_index'].value)) {
+                        score *= params.index_weights[doc['_index'].value];
+                    }
+                    return score + cosineSimilarity(params.query_vector, 'content_vector') * 10.0;
+                """,
+                "params": {
+                    "query_vector": query_vector,
+                    "index_weights": index_weights
+                }
+            }
+        }
+    }
+    
+    existing_indices = [index for index in index_names if await es_client.indices.exists(index=index)]
+    
+    print(existing_indices, 'fdsfdsfsf');
+
+    if not existing_indices:
+        print("No existing indices found");
+        return []
+    
+    try:
+        results = await es_client.search(
+            index=existing_indices,
+            body={"query": script_score_query, "size": k}
+        )
+        
+        return [{"content": hit["_source"]["content"], "score": hit["_score"], "index": hit["_index"]} for hit in results["hits"]["hits"]]
+    
+    except Exception as e:
+        print(f"Error during Elasticsearch search: {str(e)}");
+        return []
+    
 def perform_ner(text: str):
     doc = nlp(text)
     entities = [(ent.text, ent.label_) for ent in doc.ents]
@@ -270,20 +357,6 @@ def preprocess_text(text):
     
     return text.strip()
 
-# 챗 히스토리
-def manage_chat_history(memory: ConversationBufferMemory, max_messages: int = 2, max_tokens: int = 200):
-    messages = memory.chat_memory.messages
-    if len(messages) > max_messages:
-        messages = messages[-max_messages:]
-    
-    total_tokens = sum(len(m.content.split()) for m in messages)
-    while total_tokens > max_tokens and len(messages) > 2:
-        removed = messages.pop(0)
-        total_tokens -= len(removed.content.split())
-    
-    memory.chat_memory.messages = messages
-
-# pdf파일의 내용을 다시 정리 및 변환
 def process_pdf_pages(pdf_path):
     loader = PyPDFLoader(pdf_path)
     pages = loader.load_and_split()
@@ -299,9 +372,9 @@ def process_pdf_pages(pdf_path):
     for section, info in sections.items():
         section_pages = pages[info["start"]-1:info["end"]]
         for page in section_pages:
-            content = preprocess_text(page)
+            content = preprocess_text(page.page_content)
             regions = extract_regions(content)
-            doc = Document(metadata={
+            doc = Document(page_content=content, metadata={
                 "page": page.metadata["page"], 
                 "regions": regions,
                 "section": section,
@@ -311,14 +384,20 @@ def process_pdf_pages(pdf_path):
     
     return processed_pages
 
-# pdf 및 openapi데이터들을 임베딩 및 벡터db에 저장
-def process_and_save_data():
+async def process_and_save_data():
     global es_client
 
     # print("Starting data processing and saving...")
     
     # OpenAPI 데이터 처리
-    openapi_index = "openapi_data"
+    openapi_index = ["openapi_data1", "openapi_data2", "openapi_data3"]
+
+
+    if not es_client.indices.exists(index=openapi_index):
+        print(f"Creating index: {openapi_index}")
+        es_client.indices.create(index=openapi_index, body=openapi_mappings)
+    else:
+        print(f"Index {openapi_index} already exists")
 
     openapi_mappings = {
         "mappings": {
@@ -339,25 +418,37 @@ def process_and_save_data():
         es_client.indices.create(index=openapi_index, body=openapi_mappings)
     
     api_key = "666d4a31ff13fb263681a0a245cf0cb6"
-
+    print(api_key);
     # 1. 대학 목록 API
     university_url = f"https://www.career.go.kr/cnet/openapi/getOpenApi?apiKey={api_key}&svcType=api&svcCode=SCHOOL&contentType=json&gubun=univ_list&thisPage=1&perPage=20000"
-    university_data = fetch_openapi_data(university_url)
-    embed_and_store_openapi_data(university_data)
+    university_data = await fetch_openapi_data(university_url)
+    print(university_data);
+    await embed_and_store_openapi_data1(university_data)
+    print(f"University data sample: {json.dumps(university_data[:2], indent=2)}")
+
 
     # 2. 전공 목록 API
     major_url = f"https://www.career.go.kr/cnet/openapi/getOpenApi?apiKey={api_key}&svcType=api&svcCode=MAJOR&contentType=json&gubun=univ_list&thisPage=1&perPage=30000"
-    major_data = fetch_openapi_data(major_url)
-    embed_and_store_openapi_data(major_data)
+    major_data = await fetch_openapi_data(major_url)
+    await embed_and_store_openapi_data2(major_data)
+    print(f"Major data sample: {json.dumps(major_data[:2], indent=2)}")
 
     # 3. 전공 상세 정보 API
-    major_seq_numbers = fetch_major_seq_numbers(api_key)
+    major_seq_numbers = await fetch_major_seq_numbers(api_key)
     for major_seq in major_seq_numbers:
-        major_details = fetch_major_details(api_key, major_seq)
-        embed_and_store_openapi_data(major_details)
+        major_details = await fetch_major_details(api_key, major_seq)
+        await embed_and_store_openapi_data3(major_details)
         # print(f"Processed and stored data for majorSeq: {major_seq}")
 
+    # 저장 후 인덱스 새로고침
     es_client.indices.refresh(index=openapi_index)
+
+    print("Sample of university data:")
+    print(json.dumps(university_data[:2], indent=2))  # 처음 2개 항목만 출력
+
+    # 저장된 문서 수 확인
+    count = es_client.count(index=openapi_index)
+    print(f"Documents in {openapi_index}: {count['count']}")
 
     # PDF 처리 (기존 코드)
     index_name = "pdf_search"
@@ -402,62 +493,138 @@ def process_and_save_data():
     
     es_client.indices.refresh(index=index_name)
 
-# 벡터db에 저장된 데이터를 하이브리드 서치 및 elasticsearch(Vector Search, Semantic Search) 포함
-def multi_index_search(query: str, es_client, embeddings, index_names: List[str], k: int = 5) -> List[str]:
-    
+async def initialize_langchain(language='ko'):
+    global agent_executor
 
-    # Elasticsearch 프롬프트 적용
-    es_prompt = elasticsearch_prompt.format(query=query)
-    
-    # 프롬프트를 임베딩하여 쿼리 벡터 생성
-    query_vector = embeddings.embed_query(es_prompt)
-    
-    script_score_query = {
-        "script_score": {
-            "query": {
-                "bool": {
-                    "must": [
-                        {"match": {"content": query}},
-                        {"match": {"content": es_prompt}}
-                    ]
-                }
-            },
-            "script": {
-                "source": "cosineSimilarity(params.query_vector, 'content_vector') + 1.0",
-                "params": {"query_vector": query_vector}
-            }
-        }
-    }
-    
-    # 존재하는 인덱스만 필터링
-    existing_indices = [index for index in index_names if es_client.indices.exists(index=index)]
-    
-    if not existing_indices:
-        print("No existing indices found")
-        return []
-    
-    results = es_client.search(
-        index=existing_indices,
-        body={
-            "query": script_score_query,
-            "size": k
-        }
+    class FunctionRetriever(BaseRetriever):
+        async def aget_relevant_documents(self, query: str) -> List[Document]:
+            results = await multi_index_search(query, es_client, embeddings, k=5)
+            return [Document(page_content=result['content'], metadata={'source': result['index']}) for result in results]
+
+        def get_relevant_documents(self, query: str) -> List[Document]:
+            return asyncio.run(self.aget_relevant_documents(query))
+
+    retriever = FunctionRetriever()
+
+    retriever_tool = create_retriever_tool(
+        retriever,
+        "combined_search",
+        "이 도구는 PDF 파일과 OpenAPI 데이터에서 대학 입학 전형 기본 사항, 대학별 모집 유형, 모집 단위 및 모집 인원, 전형 방법 및 전형 요소, 대학교명, 대략적인 대학 위치, 전공 정보 등의 구체적인 정보를 검색하는 데 사용됩니다."
     )
+
+    tools = [retriever_tool]
+
+    openai = ChatOpenAI(
+        model="gpt-3.5-turbo", 
+        api_key=os.getenv("OPENAI_API_KEY"), 
+        temperature=0.1,
+        max_tokens=1000
+    )
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "당신은 한국 대학의 재외국민과 외국인 특별전형 전문가입니다..."),
+        ("human", "{input}"),
+        MessagesPlaceholder(variable_name="chat_history"),
+        MessagesPlaceholder(variable_name="agent_scratchpad"),
+    ])
+
+    agent = create_openai_tools_agent(llm=openai, tools=tools, prompt=prompt)
+    agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+
+    return agent_executor
+
+def manage_chat_history(memory: ConversationBufferMemory, max_messages: int = 2, max_tokens: int = 200):
+    messages = memory.chat_memory.messages
+    if len(messages) > max_messages:
+        messages = messages[-max_messages:]
     
-    return [hit["_source"]["content"] for hit in results["hits"]["hits"]]
-
-
-
-
-
-# def create_agent():
+    total_tokens = sum(len(m.content.split()) for m in messages)
+    while total_tokens > max_tokens and len(messages) > 2:
+        removed = messages.pop(0)
+        total_tokens -= len(removed.content.split())
     
+    memory.chat_memory.messages = messages
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global agent_executor, es_client
+    print("Lifespan function started")
+    elasticsearch_url = os.getenv("ELASTICSEARCH_URL", "http://localhost:9200")
+    
+    if not elasticsearch_url.startswith(('http://', 'https://')):
+        elasticsearch_url = f"http://{elasticsearch_url}"
+    
+    try:
+        es_client = AsyncElasticsearch([elasticsearch_url])
+        
+        if not es_client.ping():
+            raise ConnectionError("Failed to connect to Elasticsearch")
 
-# agent_executor = create_agent()
+
+        if not es_client.indices.exists(index="openapi_data") or not es_client.indices.exists(index="pdf_search"):
+            print("Indices do not exist. Running process_and_save_data()")
+            await process_and_save_data()
+        else:
+            print("Indices already exist")
+
+        print("Initializing langchain")
+        agent_executor = await initialize_langchain('ko')
+        print("Langchain initialized")
+        yield
+
+    except Exception as e:
+        print(f"Error during initialization: {str(e)}")
+        print(traceback.format_exc())
+        raise
+    finally:
+        if es_client:
+            es_client.close()
+
+app = FastAPI(lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
+@app.post("/study")
+async def query(query: Query):
+    global agent_executor
+    if agent_executor is None:
+        return {"message": "서버 초기화 중입니다. 잠시 후 다시 시도해 주세요."}
+    
+    try:
+        print(f"Received query: {query.input}")
+        search_results = await multi_index_search(query.input, es_client, embeddings, k=5)
+        print(f"Search results: {search_results}")
+        
+        context = "\n".join([result['content'] for result in search_results])
+        print(f"Context: {context[:100]}...")  # 처음 100자만 출력
+        
+        response = await agent_executor.ainvoke({
+            "input": f"{query.input}\n\n컨텍스트: {context}",
+            "chat_history": []
+        })
+        print(f"Agent response: {response}")
 
-# @app.post("/study")
-# async def query(query: Query):
+        if isinstance(response, dict) and "output" in response:
+            final_response = response["output"]
+        else:
+            final_response = str(response)
+
+        return {"response": final_response}
+    
+    except Exception as e:
+        print(f"Error in /study endpoint: {str(e)}")
+        print(traceback.format_exc())
+        error_message = f"내부 서버 오류: {str(e)}"
+        raise HTTPException(status_code=500, detail=error_message)
+    
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000, debug=True)
