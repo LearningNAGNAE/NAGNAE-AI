@@ -1,44 +1,38 @@
+import os
+import json
 from fastapi import FastAPI, Request, Form
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.templating import Jinja2Templates
-from langchain.agents import tool
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain.agents.format_scratchpad.openai_tools import format_to_openai_tool_messages
-from langchain.agents.output_parsers.openai_tools import OpenAIToolsAgentOutputParser
-from langchain.agents import AgentExecutor
-from langchain_core.messages import AIMessage, HumanMessage
 from langchain_community.vectorstores import FAISS
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain.text_splitter import CharacterTextSplitter
+from langchain.docstore.document import Document
+from langchain.agents import AgentExecutor
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.tools import Tool
+from pydantic import BaseModel
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from langchain_core.documents import Document
-import json
-import os
-import spacy
 from dotenv import load_dotenv
-from langid import classify
-from fastapi.middleware.cors import CORSMiddleware
 
+# 중복 라이브러리 오류를 방지
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
+
 load_dotenv()
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 허용할 Origin 목록
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],  # 허용할 HTTP 메서드 목록
-    allow_headers=["*"],  # 허용할 HTTP 헤더 목록
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-templates = Jinja2Templates(directory="templates")  # html 파일내 동적 콘텐츠 삽입 할 수 있게 해줌(렌더링).
-
-nlp = spacy.load("ko_core_news_sm")
 
 llm = ChatOpenAI(
     model="gpt-3.5-turbo", api_key=os.getenv("OPENAI_API_KEY"), temperature=0.1
@@ -46,69 +40,17 @@ llm = ChatOpenAI(
 
 # 언어 감지 함수
 def detect_language(text):
-    lang, _ = classify(text)
+    lang = "ko"  # 기본적으로 한국어로 설정
     return lang
 
-# 엔터티 추출 함수
-# 현재 스크립트의 디렉토리 경로를 얻습니다
-current_dir = os.path.dirname(os.path.abspath(__file__))
-
-# job_location.json 파일 경로를 생성합니다
-json_path = os.path.join(current_dir, 'job_location.json')
-
-# job_location.json 파일 로드
-with open(json_path, 'r', encoding='utf-8') as f:
-    job_locations = json.load(f)
-
-def extract_entities(query):
-    doc = nlp(query)
-    entities = {
-        "LOCATION": [],
-        "MONEY": [],
-        "OCCUPATION": []
-    }
-    
-    # spaCy의 엔티티 인식 결과 처리
-    for ent in doc.ents:
-        if ent.label_ in entities:
-            entities[ent.label_].append(ent.text)
-    
-    words = query.split()
-    for word in words:
-        # 지역명 처리
-        for location, data in job_locations.items():
-            # aliases 확인
-            if word in data['aliases']:
-                entities["LOCATION"].append(location)
-                break
-            
-            # areas 확인
-            for area in data['areas']:
-                if word == area['ko'] or word == area['en']:
-                    entities["LOCATION"].append(f"{location} {area['ko']}")
-                    break
-            else:
-                continue
-            break
-
-    return entities
-
+# JobPloy 크롤러
 def jobploy_crawler(lang, pages=3):
-    if isinstance(pages, dict):
-        pages = 3
-    elif not isinstance(pages, int):
-        try:
-            pages = int(pages)
-        except ValueError:
-            pages = 3
-
     chrome_driver_path = r"C:\chromedriver\chromedriver.exe"
 
     chrome_options = Options()
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--window-size=1920x1080")
-    # chrome_options.add_argument("--headless")
 
     service = Service(chrome_driver_path)
     driver = webdriver.Chrome(service=service, options=chrome_options)
@@ -174,14 +116,14 @@ def load_data_from_file(lang):
             return json.load(file)
     except FileNotFoundError:
         return None
-    
+
 # 벡터 스토어 생성 함수
 def create_vectorstore(data):
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     texts = text_splitter.split_documents([
         Document(
             page_content=json.dumps(item, ensure_ascii=False),
-            metadata={"location": item.get("location", "")}  # 메타데이터에 location 추가
+            metadata={"location": item.get("location", "")}
         ) 
         for item in data
     ])
@@ -191,15 +133,21 @@ def create_vectorstore(data):
 # 글로벌 변수로 벡터 스토어 딕셔너리 선언
 vectorstores = {}
 
-# Query processing function to detect language and extract entities
-def process_query(query: str):
-    lang = detect_language(query)
-    entities = extract_entities(query)
-    return lang, entities
+# 각 검색 함수에 필요한 매개변수 스키마 정의
+class LocationQuery(BaseModel):
+    query: str
+    location: str
 
-@tool
-def search_jobs(query: str) -> str:
-    """Search for job listings based on the given query."""
+class SalaryQuery(BaseModel):
+    query: str
+    min_salary: int
+
+class OccupationQuery(BaseModel):
+    query: str
+    occupation: str
+
+# 특정 위치에 대한 검색 처리 함수
+def search_jobs_by_location(query: str, location: str, top_k: int = 10) -> str:
     lang = detect_language(query)
     if lang not in vectorstores:
         data = load_data_from_file(lang)
@@ -208,92 +156,110 @@ def search_jobs(query: str) -> str:
             save_data_to_file(data, lang)
         vectorstores[lang] = create_vectorstore(data)
 
-    entities = extract_entities(query)
+    docs = vectorstores[lang].similarity_search(query, k=top_k)
 
-    # 위치 필터링을 위한 람다 함수 정의
-    location_filter = None
-    if entities["LOCATION"]:
-        # 위치 엔터티가 있는 경우에만 필터를 적용
-        location_filter = lambda d: any(
-            loc.lower() in d.get('location', '').lower()
-            for loc in entities["LOCATION"]
-        )
-
-    # 유사도 검색을 필터와 함께 실행
-    docs = vectorstores[lang].similarity_search(query, k=10)
-    
-    filtered_results = []
-
-    for doc in docs:
-        job_info = json.loads(doc.page_content)
-        if location_filter and not location_filter(job_info):
-            continue
-
-        match = True  # 조건이 모두 충족되는지 확인하는 플래그
-
-        # 급여 필터링
-        if entities["MONEY"]:
-            try:
-                # 사용자가 입력한 급여 정보 추출 및 정수로 변환
-                required_salary_str = entities["MONEY"][0].replace(',', '').replace('원', '').strip()
-                required_salary = int(required_salary_str)
-                
-                # 직무의 급여 정보 추출 및 정수로 변환
-                pay_elements = job_info.get('pay', '').split()
-                if len(pay_elements) >= 3:
-                    job_salary_str = pay_elements[2].replace(',', '').replace('원', '').strip()
-                    job_salary = int(job_salary_str)    
-                    
-                    # 직무의 급여가 요구 급여보다 낮으면 필터링
-                    if job_salary < required_salary:
-                        continue
-                else:
-                    # 급여 정보가 부족한 경우 필터링
-                    continue
-                    
-            except ValueError:
-                # 급여 정보가 올바르지 않거나 변환 실패 시 필터링
-                continue
-
-        # 직무 필터링
-        if entities["OCCUPATION"] and match:
-            occupation_match = any(
-                occ.lower() in job_info.get('title', '').lower() or 
-                occ.lower() in job_info.get('task', '').lower() 
-                for occ in entities["OCCUPATION"]
-            )
-            if not occupation_match:
-                match = False
-
-        if match:
-            filtered_results.append(job_info)
+    filtered_results = [
+        json.loads(doc.page_content)
+        for doc in docs
+        if location.lower() in json.loads(doc.page_content).get('location', '').lower()
+    ]
 
     if not filtered_results:
-        return "No job listings found for the specified criteria."
+        return "No job listings found for the specified location."
 
     return json.dumps({
         "search_summary": {
             "total_jobs_found": len(filtered_results)
         },
-        "job_listings": filtered_results,
-        "additional_info": f"These are the job listings that match your query."
+        "job_listings": filtered_results
+    }, ensure_ascii=False, indent=2)
+
+# 특정 급여 기준에 대한 검색 처리 함수
+def search_jobs_by_salary(query: str, min_salary: int, top_k: int = 10) -> str:
+    lang = detect_language(query)
+    if lang not in vectorstores:
+        data = load_data_from_file(lang)
+        if data is None:
+            data = jobploy_crawler(lang)
+            save_data_to_file(data, lang)
+        vectorstores[lang] = create_vectorstore(data)
+
+    docs = vectorstores[lang].similarity_search(query, k=top_k)
+
+    filtered_results = []
+    for doc in docs:
+        job_info = json.loads(doc.page_content)
+        try:
+            pay_elements = job_info.get('pay', '').split()
+            if len(pay_elements) >= 3:
+                job_salary_str = pay_elements[2].replace(',', '').replace('원', '').strip()
+                job_salary = int(job_salary_str)
+                if job_salary >= min_salary:
+                    filtered_results.append(job_info)
+        except ValueError:
+            continue
+
+    if not filtered_results:
+        return "No job listings found for the specified salary."
+
+    return json.dumps({
+        "search_summary": {
+            "total_jobs_found": len(filtered_results)
+        },
+        "job_listings": filtered_results
+    }, ensure_ascii=False, indent=2)
+
+# 특정 직무에 대한 검색 처리 함수
+def search_jobs_by_occupation(query: str, occupation: str, top_k: int = 10) -> str:
+    lang = detect_language(query)
+    if lang not in vectorstores:
+        data = load_data_from_file(lang)
+        if data is None:
+            data = jobploy_crawler(lang)
+            save_data_to_file(data, lang)
+        vectorstores[lang] = create_vectorstore(data)
+
+    docs = vectorstores[lang].similarity_search(query, k=top_k)
+
+    filtered_results = [
+        json.loads(doc.page_content)
+        for doc in docs
+        if occupation.lower() in (json.loads(doc.page_content).get('title', '').lower() +
+                                  json.loads(doc.page_content).get('task', '').lower())
+    ]
+
+    if not filtered_results:
+        return "No job listings found for the specified occupation."
+
+    return json.dumps({
+        "search_summary": {
+            "total_jobs_found": len(filtered_results)
+        },
+        "job_listings": filtered_results
     }, ensure_ascii=False, indent=2)
 
 
-# 크롤링 데이터 가져오기 및 파일로 저장
-default_lang = 'ko'  # 기본 언어를 한국어로 설정
-crawled_data = jobploy_crawler(lang=default_lang, pages=3)
-
-# 크롤링 데이터를 텍스트 파일로 저장
-save_data_to_file(crawled_data, f"crawled_data_{default_lang}.txt")
-
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-texts = text_splitter.split_documents([
-    Document(page_content=json.dumps(item, ensure_ascii=False)) 
-    for item in crawled_data
-])
-
-tools = [search_jobs]
+# 도구들을 올바른 형식으로 정의
+tools = [
+    Tool(
+        name="search_jobs_by_location",
+        func=search_jobs_by_location,
+        description="Search for jobs in a specific location.",
+        args_schema=LocationQuery,
+    ),
+    Tool(
+        name="search_jobs_by_salary",
+        func=search_jobs_by_salary,
+        description="Search for jobs with a minimum salary.",
+        args_schema=SalaryQuery,
+    ),
+    Tool(
+        name="search_jobs_by_occupation",
+        func=search_jobs_by_occupation,
+        description="Search for jobs in a specific occupation.",
+        args_schema=OccupationQuery,
+    ),
+]
 
 MEMORY_KEY = "chat_history"
 prompt = ChatPromptTemplate.from_messages(
@@ -392,42 +358,30 @@ prompt = ChatPromptTemplate.from_messages(
 
 llm_with_tools = llm.bind_tools(tools)
 
-agent = (
-    {
-        "input": lambda x: x["input"],
-        "agent_scratchpad": lambda x: format_to_openai_tool_messages(
-            x["intermediate_steps"]
-        ),
-        "chat_history": lambda x: x["chat_history"],
-    }
-    | prompt
-    | llm_with_tools
-    | OpenAIToolsAgentOutputParser()
-)
-
-agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+agent_executor = AgentExecutor(agent=llm_with_tools, tools=tools, verbose=True)
 
 @app.post("/search_jobs")
-async def search_jobs_endpoint(request: Request, query: str = Form(...)):
+async def search_jobs_endpoint(request: Request, query: str = Form(...), location: str = None, min_salary: int = None, occupation: str = None):
     chat_history = []
 
-    detected_lang = detect_language(query)
-    if detected_lang not in vectorstores:
-        data = load_data_from_file(detected_lang)
-        if data is None:
-            data = jobploy_crawler(detected_lang)
-            save_data_to_file(data, detected_lang)
-        vectorstores[detected_lang] = create_vectorstore(data)
+    # 도구 선택에 따라 분기 처리
+    if location:
+        result = tools[0].func(query=query, location=location)
+    elif min_salary:
+        result = tools[1].func(query=query, min_salary=min_salary)
+    elif occupation:
+        result = tools[2].func(query=query, occupation=occupation)
+    else:
+        result = "Please specify a filter (location, salary, or occupation)."
 
-    result = agent_executor.invoke({"input": query, "chat_history": chat_history})
     chat_history.extend(
         [
             {"role": "user", "content": query},
-            {"role": "assistant", "content": result["output"]},
+            {"role": "assistant", "content": result},
         ]
     )
 
-    return JSONResponse(content={"response": result["output"], "chat_history": chat_history})
+    return JSONResponse(content={"response": result, "chat_history": chat_history})
 
 if __name__ == "__main__":
     import uvicorn
