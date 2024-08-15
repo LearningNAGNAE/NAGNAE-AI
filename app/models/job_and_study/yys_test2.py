@@ -11,9 +11,20 @@ from langchain.tools.retriever import create_retriever_tool
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.memory import ConversationBufferMemory
 from langchain.schema import BaseRetriever, Document
-from typing import List
+from typing import List, Union
+from langchain.output_parsers import PydanticOutputParser
+from pydantic import BaseModel, Field
+from langchain.prompts import PromptTemplate
+from langchain.schema.runnable import RunnablePassthrough
+from langchain.schema.output_parser import StrOutputParser
 
 load_dotenv()
+
+# 엔티티를 정의하는 Pydantic 모델
+class Entities(BaseModel):
+    universities: List[str] = Field(description="List of university names")
+    majors: List[str] = Field(description="List of major names")
+    keywords: List[str] = Field(description="List of other relevant keywords")
 
 # 환경 변수 로드
 university_api_key = os.getenv("UNIVERSITY_API_KEY")
@@ -22,7 +33,7 @@ elasticsearch_url = os.getenv("ELASTICSEARCH_URL")
 pdf_path = r"C:\Users\hi02\dev\NAGNAE\NAGNAE-AI\pdf\2025학년도 재외국민과 외국인 특별전형 시행계획 주요사항.pdf"
 
 # 일관된 값을 위하여 Temperature 0.1로 설정 model은 gpt-4o로 설정
-openai = ChatOpenAI(model="gpt-3.5-turbo", api_key=gpt_api_key, temperature=0.1)
+openai = ChatOpenAI(model="gpt-3.5-turbo", api_key=gpt_api_key, temperature=0)
 
 # Elasticsearch 클라이언트 설정
 es_client = Elasticsearch([elasticsearch_url])
@@ -81,6 +92,53 @@ def korean_language(text: str) -> str:
     koreans_language = response.content.strip().lower()
     # logger.info(f"Detected language: {detected_language}")
     return koreans_language
+
+# 엔티티 추출을 위한 함수
+def extract_entities(query: str) -> Entities:
+
+    try:
+        parser = PydanticOutputParser(pydantic_object=Entities)
+        
+        prompt = f"""
+        Extract relevant entities from the following query. The entities should include university names, major names, and other relevant keywords.
+
+        Query: {query}
+
+        {parser.get_format_instructions()}
+        """
+
+        messages = [
+            {"role": "system", "content": "You are an expert in extracting relevant entities from text."},
+            {"role": "user", "content": prompt}
+        ]
+
+        response = openai.invoke(messages)
+        return parser.parse(response.content)
+    except Exception as e:
+        print(f"엔티티 추출 중 오류 발생: {e}")
+        return Entities(universities=[], majors=[], keywords=[])
+
+# 쿼리 생성 함수
+def generate_elasticsearch_query(entities: Entities):
+    should_clauses = []
+
+    if entities.universities:
+        should_clauses.append({"terms": {"metadata.schoolName.keyword": entities.universities}})
+    
+    if entities.majors:
+        should_clauses.append({"terms": {"metadata.major.keyword": entities.majors}})
+    
+    if entities.keywords:
+        should_clauses.append({"match": {"text": " ".join(entities.keywords)}})
+
+    return {
+        "query": {
+            "bool": {
+                "should": should_clauses,
+                "minimum_should_match": 1
+            }
+        }
+    }
 
 # 임베딩 데이터를 나눠서 인데스저장
 def process_in_batches(data, process_func):
@@ -363,10 +421,21 @@ def update_pdf_data():
     pass
 
 # 멀티 서치를 하는 코드
-def multi_index_search(query, indices=['university_data', 'university_major', 'major_details', 'pdf_data'], top_k=100):
-    # 쿼리 텍스트를 벡터로 변환
-    query_vector = embedding.embed_query(query)
+# multi_index_search 함수 수정
+def multi_index_search(query, indices=['university_data', 'university_major', 'major_details', 'pdf_data'], top_k=10):
 
+    if isinstance(query, dict):
+        query = query.get('question', '')  # 딕셔너리에서 'question' 키의 값을 사용
+        
+    # 엔티티 추출
+    entities = extract_entities(query)
+    
+    # 쿼리 벡터 생성
+    query_vector = embedding.embed_query(query)
+    
+    # Elasticsearch 쿼리 생성
+    es_query = generate_elasticsearch_query(entities)
+    
     # 각 인덱스에 대한 가중치 설정
     index_weights = {
         'university_data': 0.4,
@@ -382,13 +451,7 @@ def multi_index_search(query, indices=['university_data', 'university_major', 'm
             "size": top_k,
             "query": {
                 "function_score": {
-                    "query": {
-                        "bool": {
-                            "must": [
-                                {"match": {"text": query}}
-                            ]
-                        }
-                    },
+                    "query": es_query["query"],
                     "functions": [
                         {
                             "script_score": {
@@ -409,7 +472,7 @@ def multi_index_search(query, indices=['university_data', 'university_major', 'm
     # 멀티 검색 실행
     results = es_client.msearch(body=multi_search_body)
 
-    # 결과 처리
+    # 결과 처리 (이전과 동일)
     processed_results = []
     for i, response in enumerate(results['responses']):
         if response['hits']['hits']:
@@ -428,69 +491,73 @@ def multi_index_search(query, indices=['university_data', 'university_major', 'm
 
 
 def initialize_agent():
-
     class FunctionRetriever(BaseRetriever):
-        def get_relevant_documents(self, query: str) -> List[Document]:
-            results = multi_index_search(query, indices=['university_data', 'university_major', 'major_details', 'pdf_data'], top_k=100)
-            return [Document(page_content=result['text'], metadata=result['metadata']) for result in results]
-
-
+        def get_relevant_documents(self, query: Union[str, dict]) -> List[Document]:
+            if isinstance(query, dict):
+                query = query.get('question', '')
+            results = multi_index_search(query, indices=['university_data', 'university_major', 'major_details', 'pdf_data'], top_k=10)  # top_k를 100에서 10으로 줄임
+            return [Document(page_content=result['text'][:500], metadata=result['metadata']) for result in results]  # 각 문서를 500자로 제한
+        
     retriever = FunctionRetriever()
-    retriever_tool = create_retriever_tool(
-        retriever,
-        "elasticsearch_search",
-        "This tool is used to search college admissions, major information, and more in Elasticsearch."
+
+    # 사용자 정의 프롬프트 템플릿 생성
+    prompt_template = """
+    You are a Korean university information expert. Your role is to provide accurate and detailed answers to questions about Korean universities using the provided tools.
+
+    Information Provision:
+    - Answer questions regarding university admission procedures, programs, majors, and related information.
+    - Focus your responses using the extracted entities (universities, majors, keywords).
+
+    Language and Translation:
+    - Translate the final response into {language}. Always ensure that the response is translated, and if it is not, make sure to translate it again.
+    - Provide only the translated response.
+
+    Structure and Clarity:
+    - Present your answers clearly and in an organized manner. Use bullet points or numbered lists if necessary.
+    - Include examples or scenarios to illustrate how the information applies.
+
+    Accuracy and Updates:
+    - Provide accurate information based on the latest data available from the tools.
+    - Advise the user to check official sources for the most current information.
+
+    Extracted Entities:
+    - Universities: {universities}
+    - Majors: {majors}
+    - Keywords: {keywords}
+
+    Use these entities to guide your search and response.
+
+    Context: {context}
+
+    Question: {question}
+
+    Answer:
+    """
+
+    prompt = PromptTemplate(
+        template=prompt_template,
+        input_variables=["context", "question", "language", "universities", "majors", "keywords"]
     )
 
-    tools = [retriever_tool]
+    def format_docs(docs):
+        return "\n\n".join(doc.page_content for doc in docs)
 
-    prompt = ChatPromptTemplate.from_messages([
-        (
-            "system", 
-            """
-            You are a Korean university information expert. Your role is to provide accurate and detailed answers to questions about universities in Korea using the provided tools.
+    qa_chain = (
+        {
+            "context": retriever | format_docs,
+            "question": lambda x: x["question"],
+            "language": lambda x: x["language"],
+            "universities": lambda x: ", ".join(x["universities"]),
+            "majors": lambda x: ", ".join(x["majors"]),
+            "keywords": lambda x: ", ".join(x["keywords"]),
+            "chat_history": lambda x: x.get("chat_history", [])
+        }
+        | prompt
+        | openai
+        | StrOutputParser()
+    )
 
-            Information Provision:
-
-            Answer questions regarding university admission procedures, programs, majors, and related information.
-            Language and Translation:
-
-            Translate the final response into ({language}).
-            Provide only the translated response.
-            Structure and Clarity:
-
-            Present answers clearly and organized. Use bullet points or numbered lists for details if needed.
-            Include examples or scenarios to illustrate how the information applies when relevant.
-            Accuracy and Updates:
-
-            Ensure the information provided is accurate and up-to-date based on the latest data from the tools.
-            Advise users to check official sources for the most current information.
-            Example Response:
-
-            University Admission Procedures:
-
-            Requirements: [List of required documents and procedures].
-            Deadlines: [Provide application submission deadlines].
-            Program Details:
-
-            Majors Available: [List of available majors and specializations].
-            Curriculum: [Brief overview of the curriculum for the chosen program].
-            Translation:
-
-            Translate the above details into the specified language and provide only this translated version.
-            Note: Provide only the translated response.
-            """
-        ),
-        ("human", "{input}"),
-        
-        MessagesPlaceholder(variable_name="chat_history"),
-        MessagesPlaceholder(variable_name="agent_scratchpad"),
-        ("system", "Detected language: {language}")
-    ])
-
-    agent = create_openai_tools_agent(openai, tools, prompt)
-    agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
-    return agent_executor
+    return qa_chain
 
 
 
@@ -513,33 +580,33 @@ def main():
 
 
     agent_executor = initialize_agent()
-
-    # 대화 기록을 저장할 리스트를 초기화합니다.
     chat_history = []
     
     while True:
         query = input("질문을 입력하세요 (종료하려면 'q' 입력): ")
-        language = detect_language(query)
-        korean_lang = korean_language(query)
-        print(language);
-        print(korean_lang);
-        print(f"검색 쿼리: {query}")
         if query.lower() == 'q':
             break
 
-        # 대화 기록을 업데이트하며 에이전트를 실행합니다.
+        language = detect_language(query)
+        korean_lang = korean_language(query)
+        entities = extract_entities(korean_lang)
+
+        print(f"검색 쿼리: {query}")
+        print(f"추출된 엔티티: {entities}")
+
         response = agent_executor.invoke({
-            "input": korean_lang,
+            "question": query,
             "chat_history": chat_history,
             "agent_scratchpad": [],
-            "language": language 
+            "language": language,
+            "universities": entities.universities,
+            "majors": entities.majors,
+            "keywords": entities.keywords
         })
 
-        # 응답 출력
-        print("응답:", response['output'])
-        # chat_history에 새로운 대화 추가
+        print("응답:", response)  # 'output' 키 접근 제거
         chat_history.append({"role": "user", "content": query})
-        chat_history.append({"role": "assistant", "content": response['output']})
+        chat_history.append({"role": "assistant", "content": response})
 
 
     
