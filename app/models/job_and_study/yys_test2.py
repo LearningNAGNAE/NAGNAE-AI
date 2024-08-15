@@ -1,5 +1,6 @@
 import requests
 import os, json
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from langchain.document_loaders import PyPDFLoader
 from elasticsearch import Elasticsearch
@@ -11,14 +12,37 @@ from langchain.tools.retriever import create_retriever_tool
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.memory import ConversationBufferMemory
 from langchain.schema import BaseRetriever, Document
-from typing import List, Union
+from typing import List, Union, Optional, Dict
+from langchain.callbacks.manager import CallbackManagerForRetrieverRun
 from langchain.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
 from langchain.prompts import PromptTemplate
 from langchain.schema.runnable import RunnablePassthrough
 from langchain.schema.output_parser import StrOutputParser
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+import uvicorn
 
 load_dotenv()
+
+
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+class Query(BaseModel):
+    input: str
+    session_id: str
+
+class Response(BaseModel):
+    answer: str
+
 
 # 엔티티를 정의하는 Pydantic 모델
 class Entities(BaseModel):
@@ -38,6 +62,9 @@ openai = ChatOpenAI(model="gpt-3.5-turbo", api_key=gpt_api_key, temperature=0)
 # Elasticsearch 클라이언트 설정
 es_client = Elasticsearch([elasticsearch_url])
 embedding = OpenAIEmbeddings()
+
+# 세션별 대화 기록을 저장할 딕셔너리
+session_histories: Dict[str, List] = {}
 
 # 배치 크기와 요청 간 대기 시간 설정
 BATCH_SIZE = 100
@@ -422,7 +449,7 @@ def update_pdf_data():
 
 # 멀티 서치를 하는 코드
 # multi_index_search 함수 수정
-def multi_index_search(query, indices=['university_data', 'university_major', 'major_details', 'pdf_data'], top_k=10):
+async def multi_index_search(query, indices=['university_data', 'university_major', 'major_details', 'pdf_data'], top_k=10):
 
     if isinstance(query, dict):
         query = query.get('question', '')  # 딕셔너리에서 'question' 키의 값을 사용
@@ -489,14 +516,16 @@ def multi_index_search(query, indices=['university_data', 'university_major', 'm
 
     return processed_results[:top_k]
 
-
 def initialize_agent():
     class FunctionRetriever(BaseRetriever):
-        def get_relevant_documents(self, query: Union[str, dict]) -> List[Document]:
+        async def _aget_relevant_documents(self, query: str, *, run_manager: Optional[CallbackManagerForRetrieverRun] = None) -> List[Document]:
             if isinstance(query, dict):
                 query = query.get('question', '')
-            results = multi_index_search(query, indices=['university_data', 'university_major', 'major_details', 'pdf_data'], top_k=10)  # top_k를 100에서 10으로 줄임
-            return [Document(page_content=result['text'][:500], metadata=result['metadata']) for result in results]  # 각 문서를 500자로 제한
+            results = await multi_index_search(query, indices=['university_data', 'university_major', 'major_details', 'pdf_data'], top_k=10)
+            return [Document(page_content=result['text'][:500], metadata=result['metadata']) for result in results]
+
+        async def get_relevant_documents(self, query: str) -> List[Document]:
+            return await self._aget_relevant_documents(query)
         
     retriever = FunctionRetriever()
 
@@ -559,55 +588,44 @@ def initialize_agent():
 
     return qa_chain
 
-
-
-def main():
-    # 임베딩 및 인덱스 생성을 하지 않할지 정하는 코드
+@app.post("/study", response_model=Response)
+async def query_agent(query: Query):
+    # 인덱스 초기화 확인 및 수행
     if not index_exists('university_data') or \
        not index_exists('university_major') or \
        not index_exists('major_details') or \
        not index_exists('pdf_data'):
         print("Initial setup required. Running full indexing process...")
-        embed_and_index_university_data()
-        embed_and_index_university_major()
-        embed_and_index_major_details()
-        embed_and_index_pdf_data()
+        await embed_and_index_university_data()
+        await embed_and_index_university_major()
+        await embed_and_index_major_details()
+        await embed_and_index_pdf_data()
         print("Initial indexing completed.")
-    else:
-        print("Updating existing indices...")
-        # update_indices()
-        print("Update completed.")
-
 
     agent_executor = initialize_agent()
-    chat_history = []
-    
-    while True:
-        query = input("질문을 입력하세요 (종료하려면 'q' 입력): ")
-        if query.lower() == 'q':
-            break
+    language = detect_language(query.input)
+    korean_lang = korean_language(query.input)
+    entities = extract_entities(korean_lang)
 
-        language = detect_language(query)
-        korean_lang = korean_language(query)
-        entities = extract_entities(korean_lang)
+    # 세션 기록 가져오기 또는 새로 생성
+    chat_history = session_histories.get(query.session_id, [])
 
-        print(f"검색 쿼리: {query}")
-        print(f"추출된 엔티티: {entities}")
+    response = await agent_executor.ainvoke({
+        "question": query.input,
+        "chat_history": chat_history,
+        "agent_scratchpad": [],
+        "language": language,
+        "universities": entities.universities,
+        "majors": entities.majors,
+        "keywords": entities.keywords
+    })
 
-        response = agent_executor.invoke({
-            "question": query,
-            "chat_history": chat_history,
-            "agent_scratchpad": [],
-            "language": language,
-            "universities": entities.universities,
-            "majors": entities.majors,
-            "keywords": entities.keywords
-        })
+    # 대화 기록 업데이트
+    chat_history.append({"role": "user", "content": query.input})
+    chat_history.append({"role": "assistant", "content": response})
+    session_histories[query.session_id] = chat_history
 
-        print("응답:", response)  # 'output' 키 접근 제거
-        chat_history.append({"role": "user", "content": query})
-        chat_history.append({"role": "assistant", "content": response})
-
+    return Response(answer=response)
 
     
     
@@ -623,4 +641,4 @@ def main():
     # print(chat_history)
 
 if __name__ == "__main__":
-    main()
+    uvicorn.run(app, host="0.0.0.0", port=8000)
