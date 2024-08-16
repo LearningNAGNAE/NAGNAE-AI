@@ -169,7 +169,7 @@ def initialize_agent():
 
     return qa_chain
 
-@app.post("/study", response_model=Response)
+@app.post("/academic", response_model=Response)
 async def query_agent(query: Query):
     # 인덱스 초기화 확인 및 수행
     if not index_exists('university_data') or \
