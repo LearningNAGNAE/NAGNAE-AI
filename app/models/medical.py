@@ -13,6 +13,12 @@ from langchain.schema import BaseRetriever, Document
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 import torch
 
+llm = ChatOpenAI(
+            model="gpt-3.5-turbo",
+            temperature=0, 
+            openai_api_key=os.getenv("OPENAI_API_KEY")
+        )
+
 class GemmaModel:
     def __init__(self, model_path):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -52,14 +58,51 @@ class GemmaModel:
             )
         
         generated_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-        # Remove the input prompt from the generated text
         response = generated_text.split("Assistant:")[-1].strip()
         return response
 
 class GoogleSearchRetriever(BaseRetriever):
+    def translate_and_extract_keywords(self, query: str) -> str:
+        
+        translation_prompt = f"Translate the following text to Korean: '{query}'"
+        translated_text = llm.predict(translation_prompt)
+
+        keyword_prompt = f"Extract up to 3 main keywords from this Korean text, separated by commas: '{translated_text}'"
+        keywords = llm.predict(keyword_prompt)
+
+        additional_keywords = [
+            "한국", "병원", "의료", "건강", "진료", "보험", "약국", "응급실",
+            "의사", "간호사", "치료", "검진", "예방", "질병", "증상",
+            "외국인", "영어", "통역", "진단", "수술", "처방", "입원"
+        ]
+        
+        # Select a subset of additional keywords based on the query
+        selected_keywords = self.smart_keyword_selection(keywords, additional_keywords)
+        
+        optimized_query = f"{keywords}, {', '.join(selected_keywords)}"
+        return optimized_query
+
+    def smart_keyword_selection(self, main_keywords: str, additional_keywords: List[str]) -> List[str]:
+        
+        selection_prompt = f"""
+        Given the main keywords: {main_keywords}
+        And the list of additional keywords: {', '.join(additional_keywords)}
+        Select up to 3 most relevant additional keywords. Return only the selected keywords as a comma-separated list.
+        """
+        
+        selected_keywords = llm.predict(selection_prompt).split(', ')
+        
+        if "한국" not in selected_keywords:
+            selected_keywords.append("한국")
+        
+        return selected_keywords[:3]
+
     def _search(self, query: str, **kwargs) -> List[Document]:
         service = build("customsearch", "v1", developerKey=os.getenv("GOOGLE_API_KEY"))
-        res = service.cse().list(q=query, cx=os.getenv("GOOGLE_CSE_ID"), num=5, dateRestrict="m6", fields="items(title,link,snippet)", **kwargs).execute()
+        optimized_query = self.translate_and_extract_keywords(query)
+        print(f"Optimized query: {optimized_query}")
+
+        res = service.cse().list(q=optimized_query, cx=os.getenv("GOOGLE_CSE_ID"), num=5, dateRestrict="m6", fields="items(title,link,snippet)", **kwargs).execute()
         documents = []
         
         for item in res.get('items', []):
@@ -85,11 +128,6 @@ class GoogleSearchRetriever(BaseRetriever):
         return self._search(query, **kwargs)
 class MedicalAssistant:
     def __init__(self):
-        self.llm = ChatOpenAI(
-            model="gpt-3.5-turbo",
-            temperature=0, 
-            openai_api_key=os.getenv("OPENAI_API_KEY")
-        )
         self.vector_store = self.__initialize_faiss_index()
         self.ensemble_retriever = self.__setup_ensemble_retriever()
         self.gemma_model = GemmaModel('./app/models/medical/fine_tuning/medical_fine_tuned_gemma')
@@ -106,7 +144,7 @@ class MedicalAssistant:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": human_prompt}
         ]
-        response = self.llm.invoke(messages)
+        response = llm.invoke(messages)
         detected_language = response.content.strip().lower()
         print(f"Detected language: {detected_language}")
         return detected_language
@@ -208,7 +246,7 @@ class MedicalAssistant:
                 "gemma_response": lambda x: self.generate_text_with_gemma(x["question"])
             }
             | chat_prompt
-            | self.llm
+            | llm
             | StrOutputParser()
         )
 
