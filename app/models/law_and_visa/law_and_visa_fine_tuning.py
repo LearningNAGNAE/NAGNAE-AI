@@ -57,7 +57,7 @@ def load_model_and_tokenizer(model_name):
 # 4. LoRA 설정 및 적용
 def apply_lora(model):
     lora_config = LoraConfig(
-        r=8,
+        r=32,
         lora_alpha=32,
         target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
         lora_dropout=0.05,
@@ -76,13 +76,13 @@ def preprocess_function(examples, tokenizer):
 def get_training_args(output_dir):
     return TrainingArguments(
         output_dir=output_dir,
-        num_train_epochs=3,
-        per_device_train_batch_size=1,
-        gradient_accumulation_steps=4,
+        num_train_epochs=100,
+        per_device_train_batch_size=2,  # 배치 사이즈 조정
+        gradient_accumulation_steps=8,
         save_steps=500,
         save_total_limit=2,
         logging_steps=100,
-        learning_rate=5e-6,
+        learning_rate=1e-5,
         weight_decay=0.01,
         fp16=True,
         gradient_checkpointing=False,
@@ -119,7 +119,7 @@ def main():
     print("데이터 준비 완료")
 
     # 모델 및 토크나이저 로드
-    model_name = "google/gemma-2-2b"
+    model_name = "qwen/qwen2-1.5b"  # 모델 이름 업데이트
     model, tokenizer = load_model_and_tokenizer(model_name)
     print("모델 및 토크나이저 로드 완료")
 
@@ -160,14 +160,20 @@ def main():
     trainer.train()
     print("학습 완료")
 
+    # 훈련 후 메모리 해제
+    torch.cuda.empty_cache()
+
     # 모델 저장
-    model_save_path = './app/models/law_and_visa/fine_tuned_gemma'
+    model_save_path = './app/models/law_and_visa/fine_tuned_qwen2_1_5b'
     model.save_pretrained(model_save_path)
     tokenizer.save_pretrained(model_save_path)
     print(f"파인튜닝이 완료되었습니다. 모델이 '{model_save_path}' 디렉토리에 저장되었습니다.")
 
     # 모델 평가
     evaluate_model(model, test_df, tokenizer)
+
+    # 평가 후 메모리 해제
+    torch.cuda.empty_cache()
 
 if __name__ == "__main__":
     main()
