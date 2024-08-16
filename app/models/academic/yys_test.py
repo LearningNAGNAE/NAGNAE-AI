@@ -22,6 +22,7 @@ from langchain.schema.output_parser import StrOutputParser
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import uvicorn
+from sentence_transformers import CrossEncoder
 
 load_dotenv()
 
@@ -55,6 +56,9 @@ university_api_key = os.getenv("UNIVERSITY_API_KEY")
 gpt_api_key = os.getenv("OPENAI_API_KEY")
 elasticsearch_url = os.getenv("ELASTICSEARCH_URL")
 pdf_path = r"C:\Users\hi02\dev\NAGNAE\NAGNAE-AI\pdf\2025학년도 재외국민과 외국인 특별전형 시행계획 주요사항.pdf"
+
+# CrossEncoder 모델 초기화
+cross_encoder = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-2-v2')
 
 # 일관된 값을 위하여 Temperature 0.1로 설정 model은 gpt-4o로 설정
 openai = ChatOpenAI(model="gpt-3.5-turbo", api_key=gpt_api_key, temperature=0)
@@ -448,22 +452,14 @@ def update_pdf_data():
     pass
 
 # 멀티 서치를 하는 코드
-# multi_index_search 함수 수정
 async def multi_index_search(query, indices=['university_data', 'university_major', 'major_details', 'pdf_data'], top_k=10):
-
     if isinstance(query, dict):
-        query = query.get('question', '')  # 딕셔너리에서 'question' 키의 값을 사용
-        
-    # 엔티티 추출
+        query = query.get('question', '')
+    
     entities = extract_entities(query)
-    
-    # 쿼리 벡터 생성
     query_vector = embedding.embed_query(query)
-    
-    # Elasticsearch 쿼리 생성
     es_query = generate_elasticsearch_query(entities)
     
-    # 각 인덱스에 대한 가중치 설정
     index_weights = {
         'university_data': 0.4,
         'university_major': 0.3,
@@ -471,11 +467,10 @@ async def multi_index_search(query, indices=['university_data', 'university_majo
         'pdf_data': 0.1
     }
 
-    # 멀티 인덱스 검색 쿼리 구성
     multi_search_body = []
     for index in indices:
         search_body = {
-            "size": top_k,
+            "size": top_k * 2,  # Increase initial results for reranking
             "query": {
                 "function_score": {
                     "query": es_query["query"],
@@ -496,10 +491,8 @@ async def multi_index_search(query, indices=['university_data', 'university_majo
         }
         multi_search_body.extend([{"index": index}, search_body])
 
-    # 멀티 검색 실행
     results = es_client.msearch(body=multi_search_body)
 
-    # 결과 처리 (이전과 동일)
     processed_results = []
     for i, response in enumerate(results['responses']):
         if response['hits']['hits']:
@@ -511,8 +504,16 @@ async def multi_index_search(query, indices=['university_data', 'university_majo
                     'metadata': hit['_source']['metadata']
                 })
 
-    # 결과를 점수 기준으로 정렬
-    processed_results.sort(key=lambda x: x['score'], reverse=True)
+    # Reranking using CrossEncoder
+    if processed_results:
+        rerank_input = [(query, result['text']) for result in processed_results]
+        rerank_scores = cross_encoder.predict(rerank_input)
+        
+        for i, score in enumerate(rerank_scores):
+            processed_results[i]['rerank_score'] = score
+
+        # Sort by rerank score
+        processed_results.sort(key=lambda x: x['rerank_score'], reverse=True)
 
     return processed_results[:top_k]
 
@@ -522,7 +523,7 @@ def initialize_agent():
             if isinstance(query, dict):
                 query = query.get('question', '')
             results = await multi_index_search(query, indices=['university_data', 'university_major', 'major_details', 'pdf_data'], top_k=10)
-            return [Document(page_content=result['text'][:500], metadata=result['metadata']) for result in results]
+            return [Document(page_content=result['text'][:500], metadata={**result['metadata'], 'rerank_score': result.get('rerank_score', 0)}) for result in results]
 
         async def get_relevant_documents(self, query: str) -> List[Document]:
             return await self._aget_relevant_documents(query)

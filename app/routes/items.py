@@ -4,7 +4,7 @@ from fastapi import APIRouter, File, UploadFile, HTTPException, Request
 from app.models.grammar_correction import grammar_corrector
 from app.models.t2t import t2t
 from pydantic import BaseModel
-from app.models.study_crawl import setup_langchain
+from app.models.academic.study_crawl import setup_langchain
 from contextlib import asynccontextmanager
 from app.models.medical import MedicalAssistant
 from app.models.job_crawl import create_agent_executor_job
