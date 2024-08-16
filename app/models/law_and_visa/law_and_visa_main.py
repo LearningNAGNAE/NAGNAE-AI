@@ -1,55 +1,33 @@
 import os
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.vectorstores import FAISS
 from langchain_community.retrievers import BM25Retriever
 from langchain_community.chat_message_histories import ChatMessageHistory
-from langchain.retrievers import EnsembleRetriever
+from langchain.retrievers import EnsembleRetriever, MultiQueryRetriever
 from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables.history import RunnableWithMessageHistory
-from langchain.schema import BaseChatMessageHistory
 from fastapi.middleware.cors import CORSMiddleware
 import logging
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
-import torch
 from llama_index.core.postprocessor import SentenceTransformerRerank
 from llama_index.core import QueryBundle
 from llama_index.core.schema import NodeWithScore, TextNode
-from fastapi import Depends
 from sqlalchemy.orm import Session
-from fastapi import Depends, HTTPException
-from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
-from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List, Dict
 import sys
-import os
+from langchain.prompts import PromptTemplate
+from langchain.chains import LLMChain
+from langchain_core.runnables import RunnablePassthrough
+
+# 1. 환경 설정
 app_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(app_dir)
 from ...database.db import get_db
-from ...database import crud, models
-from fastapi import Request
-from pydantic import ValidationError
+from ...database import crud
 
-class ChatRequest(BaseModel):
-    question: str
-    userNo: int
-    categoryNo: int
-    session_id: str
-    is_new_session: Optional[bool] = False
-    
-class ChatResponse(BaseModel):
-    question: str
-    answer: str
-    chatHisNo: int
-    chatHisSeq: int
-    detected_language: str
-
-# 환경 변수 로드 및 FastAPI 애플리케이션 생성
 load_dotenv()
 app = FastAPI()
 
@@ -62,36 +40,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 입력 데이터 모델 정의
-class Query(BaseModel):
-    question: str
-    session_id: str
-
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# CUDA 사용 가능 여부 확인
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-logger.info(f"Using device: {device}")
-
-# Fine-tuned Gemma-2b 모델 및 토크나이저 로드
-def load_model_and_tokenizer():
-    quantization_config = BitsAndBytesConfig(load_in_4bit=True)
-    model_path = './app/models/law_and_visa/fine_tuned_gemma'
-    tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
-    model = AutoModelForCausalLM.from_pretrained(
-        model_path, 
-        quantization_config=quantization_config, 
-        local_files_only=True,
-        device_map="auto",
-        torch_dtype=torch.float16 if device.type == "cuda" else torch.float32
-    )
-    return tokenizer, model
-
-tokenizer_gemma, model_gemma = load_model_and_tokenizer()
-
-# FAISS 인덱스 로드 및 설정
+# 2. FAISS 인덱스 로드
 def load_faiss_index():
     embeddings = OpenAIEmbeddings()
     index_name = "faiss_index_law_and_visa_page"
@@ -106,7 +59,7 @@ def load_faiss_index():
 vector_store = load_faiss_index()
 faiss_retriever = vector_store.as_retriever(search_kwargs={"k": 2})
 
-# BM25 및 FAISS 검색기 설정
+# 3. BM25 및 FAISS 리트리버 설정
 bm25_texts = [
     "For all visa types: Overstaying can result in fines, deportation, and future entry bans. Always consult the Korea Immigration Service for the most up-to-date information.",
     "Work permit is separate from visa and may need to be updated when changing jobs, even if visa is still valid.",
@@ -116,16 +69,27 @@ bm25_texts = [
 ]
 bm25_retriever = BM25Retriever.from_texts(bm25_texts, k=4)
 
-# 하이브리드 검색기 설정
+# ChatOpenAI 모델 초기화
+chat = ChatOpenAI(temperature=0, model="gpt-4o-mini")
+
+# MultiQueryRetriever 설정
+multi_query_retriever = MultiQueryRetriever.from_llm(
+    retriever=faiss_retriever,
+    llm=chat
+)
+
+# Ensemble 리트리버 설정
 ensemble_retriever = EnsembleRetriever(
-    retrievers=[bm25_retriever, faiss_retriever],
+    retrievers=[bm25_retriever, multi_query_retriever],
     weights=[0.3, 0.7]
 )
 
-# ChatOpenAI 모델 초기화
-chat = ChatOpenAI(temperature=0, model="gpt-3.5-turbo")
+# 리랭커 설정
+postprocessor = SentenceTransformerRerank(
+    model="cross-encoder/ms-marco-MiniLM-L-2-v2", top_n=3
+)
 
-# System prompt
+# 4. 프롬프트 설정
 system_prompt = """
 # AI Assistant for Foreign Workers and Students in Korea: Detailed Legal and Visa Information
 
@@ -170,104 +134,118 @@ You are a specialized AI assistant providing comprehensive information on Korean
 Remember, your goal is to provide as much relevant, accurate, and detailed information as possible while ensuring it's understandable and actionable for the user.
 """
 
-# 프롬프트 템플릿 설정
-system_message_prompt = SystemMessagePromptTemplate.from_template(system_prompt)
-
 human_template = """
 Question: {question}
 RESPONSE_LANGUAGE: {language}
 Context: {context_summary}
-Additional Information: {additional_info}
 
-Please provide a detailed and comprehensive answer to the above question in the specified RESPONSE_LANGUAGE, including specific visa information when relevant. Incorporate insights from the Additional Information if applicable. Organize your response clearly and include all pertinent details. Do not include any HTML tags or formatting in your response. Do not mention or refer to any AI models or sources in your response.
+Please provide a detailed and comprehensive answer to the above question in the specified RESPONSE_LANGUAGE, including specific visa information when relevant. Organize your response clearly and include all pertinent details. Do not include any HTML tags or formatting in your response. Do not mention or refer to any AI Assistant or sources in your response.
 """
+
+system_message_prompt = SystemMessagePromptTemplate.from_template(system_prompt)
 human_message_prompt = HumanMessagePromptTemplate.from_template(human_template)
+chat_prompt = ChatPromptTemplate.from_messages([system_message_prompt, human_message_prompt])
 
-chat_prompt = ChatPromptTemplate.from_messages([
-    system_message_prompt,
-    human_message_prompt,
-])
-
-# -------- Rerank -----------
-postprocessor = SentenceTransformerRerank(
-    model="cross-encoder/ms-marco-MiniLM-L-2-v2", top_n=3
-)
-
-# 검색 체인 구성
-def get_context(question: str):
-    # 앙상블 검색기를 사용하여 질문과 관련된 문서들을 검색
-    # 이 검색기는 BM25와 FAISS를 조합한 하이브리드 방식을 사용
+# 5. 컨텍스트 검색 함수 (Self-RAG 포함)
+def get_context(question: str) -> List[str]:
+    # 1단계: 초기 검색
     docs = ensemble_retriever.get_relevant_documents(question)
-
-    # 질문을 QueryBundle 객체로 변환
-    # QueryBundle은 LlamaIndex에서 사용되는 쿼리 표현 방식
     query_bundle = QueryBundle(query_str=question)
-    
-    # 검색된 각 문서를 NodeWithScore 객체로 변환
-    # 초기에는 모든 노드에 동일한 점수 1.0을 할당
     nodes = [NodeWithScore(node=TextNode(text=doc.page_content), score=1.0) for doc in docs]
     
-    # SentenceTransformerRerank를 사용하여 노드들의 순위를 재조정
-    # 이 과정에서 질문과의 관련성에 따라 노드들의 점수가 조정됨
+    # 2단계: 리랭킹
     reranked_nodes = postprocessor.postprocess_nodes(nodes, query_bundle=query_bundle)
+    
+    # 3단계: Self-RAG
+    refined_query = chat.invoke([
+        {"role": "system", "content": "You are an AI assistant tasked with refining user queries to improve information retrieval. Based on the initial context and the original question, generate a more specific and targeted query that will help retrieve the most relevant information."},
+        {"role": "user", "content": f"Original question: {question}\nInitial context: {[node.node.text for node in reranked_nodes[:2]]}\n\nPlease provide a refined query:"}
+    ]).content
+    
+    # 4단계: 정제된 쿼리로 두 번째 검색
+    refined_docs = ensemble_retriever.get_relevant_documents(refined_query)
+    refined_nodes = [NodeWithScore(node=TextNode(text=doc.page_content), score=1.0) for doc in refined_docs]
+    
+    # 5단계: 최종 리랭킹
+    final_reranked_nodes = postprocessor.postprocess_nodes(refined_nodes, query_bundle=QueryBundle(query_str=refined_query))
+    
+    return [node.node.text for node in final_reranked_nodes]
 
-    # 재순위가 매겨진 노드들의 텍스트를 하나의 문자열로 결합
-    context = "\n".join(node.node.text for node in reranked_nodes)
-    return process_context(context)
+# 6. 컨텍스트 요약 함수
+def summarize_context(context: List[str]) -> str:
+    return "Context summary:\n" + "\n".join(context[:3])
 
-
-# Gemma-2b로 텍스트 생성 함수
-@torch.no_grad()
-def generate_text_with_gemma(question: str) -> str:
-    prompt = f"Provide concise, relevant information for: {question}"
-    input_ids = tokenizer_gemma(prompt, return_tensors="pt").to(model_gemma.device)
-    outputs = model_gemma.generate(
-        **input_ids, 
-        max_length=128,
-        num_return_sequences=1,
-        temperature=0.7,
-        top_k=50,
-        top_p=0.95,
+# 7. CRAG 관련 함수 및 프롬프트 정의
+def is_relevant(question: str, context: str) -> bool:
+    relevance_prompt = PromptTemplate(
+        input_variables=["question", "context"],
+        template="Question: {question}\n\nContext: {context}\n\nIs this context relevant to answering the question? Respond with 'Yes' or 'No'."
     )
-    return tokenizer_gemma.decode(outputs[0], skip_special_tokens=True)
+    relevance_chain = LLMChain(llm=chat, prompt=relevance_prompt)
+    response = relevance_chain.run(question=question, context=context)
+    return response.strip().lower() == 'yes'
 
-def summarize_context(context: dict) -> str:
-    summary = "Context summary:\n"
-    if context['general']:
-        summary += "General info: " + " ".join(context['general'][:2]) + "\n"
-    if context['specific']:
-        summary += "Specific info: " + " ".join(context['specific'][:2]) + "\n"
-    return summary
+def get_refined_context(question: str, contexts: List[str]) -> str:
+    relevant_contexts = [ctx for ctx in contexts if is_relevant(question, ctx)]
+    return "\n".join(relevant_contexts) if relevant_contexts else ""
 
+# 8. 검색 체인 설정
 retrieval_chain = (
     {
         "context_summary": lambda x: summarize_context(get_context(x["question"])),
         "question": lambda x: x["question"],
         "language": lambda x: x["language"],
-        "additional_info": lambda x: generate_text_with_gemma(x["question"])
     }
     | chat_prompt
     | chat
     | StrOutputParser()
 )
 
-# 메모리 저장소 설정
-memory_store = {}
+# 9. CRAG를 적용한 새로운 retrieval_chain 정의
+async def crag_chain(inputs: dict):
+    question = inputs["question"]
+    language = inputs["language"]
+    session_id = inputs["session_id"]
+    
+    # 컨텍스트 검색 및 요약
+    contexts = get_context(question)
+    refined_context = get_refined_context(question, contexts)
+    context_summary = summarize_context([refined_context])
+    
+    # 메모리에서 대화 기록 가져오기
+    memory = get_memory(session_id)
+    chat_history = memory.messages
+    
+    # 프롬프트 생성
+    prompt = chat_prompt.format(
+        question=question,
+        language=language,
+        context_summary=context_summary,
+        chat_history=chat_history
+    )
+    
+    # LLM을 사용하여 응답 생성
+    response = await chat.ainvoke([{"role": "user", "content": prompt}])
+    answer = response.content
+    
+    # 대화 기록 업데이트
+    memory.add_user_message(question)
+    memory.add_ai_message(answer)
+    
+    return answer
 
-def get_memory(session_id: str) -> BaseChatMessageHistory:
+# 10. 메모리 저장소 및 관리 함수
+memory_store: Dict[str, ChatMessageHistory] = {}
+
+def get_memory(session_id: str) -> ChatMessageHistory:
     if session_id not in memory_store:
         memory_store[session_id] = ChatMessageHistory()
     return memory_store[session_id]
 
-# RunnableWithMessageHistory 설정
-chain_with_history = RunnableWithMessageHistory(
-    retrieval_chain,
-    get_memory,
-    input_messages_key="question",
-    history_messages_key="chat_history",
-)
+# 11. RunnablePassthrough 설정
+crag_chain_with_history = RunnablePassthrough() | crag_chain
 
-# 언어 감지 함수 정의
+# 12. 언어 감지 함수
 def detect_language(text: str) -> str:
     system_prompt = "You are a language detection expert. Detect the language of the given text and respond with only the language name in English, using lowercase."
     human_prompt = f"Text: {text}"
@@ -280,28 +258,80 @@ def detect_language(text: str) -> str:
     logger.info(f"Detected language: {detected_language}")
     return detected_language
 
-# 컨텍스트 처리 함수 추가
-def process_context(context: str) -> dict:
-    info = {
-        "general": [],
-        "specific": [],
-        "disclaimer": "For the most up-to-date and accurate information, please consult the official Korea Immigration Service website or speak with an immigration officer."
-    }
-    
-    lines = context.split('\n')
-    for line in lines:
-        if "typically" in line.lower() or "generally" in line.lower():
-            info["general"].append(line.strip())
-        elif "specific" in line.lower() or "exact" in line.lower():
-            info["specific"].append(line.strip())
-    
-    return info
+# 13. Semantic Router 클래스
+class SemanticRouter:
+    def __init__(self, routes: Dict[str, callable]):
+        self.routes = routes
+        self.embeddings = OpenAIEmbeddings()
+        self.route_texts = list(routes.keys())
+        self.route_embeddings = self.embeddings.embed_documents(self.route_texts)
 
-# 채팅 엔드포인트
+    def route(self, query: str):
+        query_embedding = self.embeddings.embed_query(query)
+        similarities = [self.cosine_similarity(query_embedding, route_embedding) 
+                        for route_embedding in self.route_embeddings]
+        max_similarity_index = similarities.index(max(similarities))
+        return self.routes[self.route_texts[max_similarity_index]]
+
+    @staticmethod
+    def cosine_similarity(a, b):
+        return sum(x*y for x, y in zip(a, b)) / (sum(x*x for x in a)**0.5 * sum(y*y for y in b)**0.5)
+
+# 14. 라우터 함수 정의
+async def handle_visa_query(question: str, language: str, session_id: str, userNo: int):
+    response = await crag_chain_with_history.ainvoke({
+        "question": question,
+        "language": language,
+        "session_id": session_id,
+        "userNo": userNo
+    })
+    return response
+
+async def handle_labor_law_query(question: str, language: str, session_id: str, userNo: int):
+    response = await crag_chain_with_history.ainvoke({
+        "question": question,
+        "language": language,
+        "session_id": session_id,
+        "userNo": userNo
+    })
+    return response
+
+async def handle_general_query(question: str, language: str, session_id: str, userNo: int):
+    response = await crag_chain_with_history.ainvoke({
+        "question": question,
+        "language": language,
+        "session_id": session_id,
+        "userNo": userNo
+    })
+    return response
+
+# Semantic Router 초기화
+semantic_router = SemanticRouter({
+    "Questions about visas, immigration, and stay in Korea": handle_visa_query,
+    "Questions about labor laws, worker rights, and employment in Korea": handle_labor_law_query,
+    "General questions about life in Korea": handle_general_query,
+})
+
+# 15. 입력 및 출력 모델 정의
+class ChatRequest(BaseModel):
+    question: str
+    userNo: int
+    categoryNo: int
+    session_id: str
+    is_new_session: Optional[bool] = False
+
+class ChatResponse(BaseModel):
+    question: str
+    answer: str
+    chatHisNo: int
+    chatHisSeq: int
+    detected_language: str
+
+# 16. 채팅 엔드포인트
 @app.post("/law", response_model=ChatResponse)
-async def chat_endpoint(chat_request: ChatRequest, request: Request, db: Session = Depends(get_db)):
+async def chat_endpoint(chat_request: ChatRequest, db: Session = Depends(get_db)):
     try:
-        logger.debug(f"Received chat request: {chat_request}")
+        logger.info(f"수신된 채팅 요청: {chat_request}")
         
         question = chat_request.question
         userNo = chat_request.userNo
@@ -309,21 +339,17 @@ async def chat_endpoint(chat_request: ChatRequest, request: Request, db: Session
         session_id = chat_request.session_id
         is_new_session = chat_request.is_new_session
         
-        logger.debug(f"Processing request for userNo: {userNo}, categoryNo: {categoryNo}, session_id: {session_id}, is_new_session: {is_new_session}")
-        
-        # 챗봇 로직 처리
+        # 언어 감지
         language = detect_language(question)
-        logger.debug(f"Detected language: {language}")
         
-        response = await chain_with_history.ainvoke(
-            {"question": question, "language": language},
-            config={"configurable": {"session_id": session_id, "userNo": userNo}}
-        )
-        logger.debug(f"Generated response: {response}")
+        # Semantic routing을 사용하여 적절한 핸들러 선택
+        handler = semantic_router.route(question)
         
-        # 대화 내용 저장
+        # 선택된 핸들러를 사용하여 응답 생성
+        response = await handler(question, language, session_id, userNo)
+        
+        # 채팅 기록 저장
         chat_history = crud.create_chat_history(db, userNo, categoryNo, question, response, is_new_session)
-        logger.debug(f"Chat history created: {chat_history}")
         
         # JSON 응답 생성
         chat_response = ChatResponse(
@@ -334,16 +360,24 @@ async def chat_endpoint(chat_request: ChatRequest, request: Request, db: Session
             detected_language=language 
         )
         
-        logger.debug(f"Returning chat response: {chat_response}")
+        logger.info(f"Returning chat response: {chat_response}")
         return JSONResponse(content=chat_response.dict())
     except Exception as e:
         logger.error(f"Error processing request: {str(e)}", exc_info=True)
         return JSONResponse(
             status_code=500,
-            content={"detail": f"Internal Server Error: {str(e)}"}
+            content={"detail": f"Internal Server Error:  {str(e)}"}
         )
-    
-# Run the application
+
+# 17. 메모리 관리를 위한 새로운 엔드포인트
+@app.post("/clear_memory")
+async def clear_memory(session_id: str):
+    if session_id in memory_store:
+        del memory_store[session_id]
+        return {"message": f"Memory for session {session_id} has been cleared."}
+    return {"message": f"No memory found for session {session_id}."}
+
+# 18. 애플리케이션 실행
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)
