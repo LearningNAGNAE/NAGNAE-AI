@@ -21,9 +21,17 @@ import os
 from dotenv import load_dotenv
 from langid import classify
 from fastapi.middleware.cors import CORSMiddleware
+from elasticsearch import Elasticsearch
+from elastic_transport import ObjectApiResponse
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 load_dotenv()
+
+elasticsearch_url = os.getenv("ELASTICSEARCH_URL")
+es_client = Elasticsearch([elasticsearch_url])
 
 app = FastAPI()
 
@@ -66,9 +74,6 @@ def extract_entities(query):
     # Generate the response from the model
     response = llm(messages=messages)
     
-    # Check the response object structure
-    print(response)  # Debugging: print the response to understand its structure
-
     # Handle response based on its actual structure
     response_content = response.choices[0].message.content if hasattr(response, 'choices') else str(response)
     
@@ -160,118 +165,78 @@ def jobploy_crawler(lang, pages=3):
         
     return results
 
-# 언어별 데이터 저장 및 로드 함수
+# ElasticSearch 인덱스 생성 및 데이터 업로드
+def create_elasticsearch_index(data, index_name="jobs"):
+    for item in data:
+        es_client.index(index=index_name, body=item)
+
+# 언어별 데이터 저장 함수
 def save_data_to_file(data, filename):
     with open(filename, "w", encoding="utf-8") as file:
         json.dump(data, file, ensure_ascii=False, indent=2)
 
-def load_data_from_file(lang):
-    filename = f"crawled_data_{lang}.txt"
-    try:
-        with open(filename, "r", encoding="utf-8") as file:
-            return json.load(file)
-    except FileNotFoundError:
-        return None
-    
-# 벡터 스토어 생성 함수
-def create_vectorstore(data):
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-    texts = text_splitter.split_documents([
-        Document(
-            page_content=json.dumps(item, ensure_ascii=False),
-            metadata={"location": item.get("location", "")}  # 메타데이터에 location 추가
-        ) 
-        for item in data
-    ])
-    embeddings = OpenAIEmbeddings()
-    return FAISS.from_texts([text.page_content for text in texts], embeddings, metadatas=[text.metadata for text in texts])
-
-# 글로벌 변수로 벡터 스토어 딕셔너리 선언
-vectorstores = {}
-
-# Query processing function to detect language and extract entities
-def process_query(query: str):
-    lang = detect_language(query)
-    entities = extract_entities(query)
-    return lang, entities
 
 @tool
 def search_jobs(query: str) -> str:
     """Search for job listings based on the given query."""
     lang = detect_language(query)
-    if lang not in vectorstores:
-        data = load_data_from_file(lang)
-        if data is None:
-            data = jobploy_crawler(lang)
-            save_data_to_file(data, lang)
-        vectorstores[lang] = create_vectorstore(data)
-
     entities = extract_entities(query)
 
-    # 위치 필터링을 위한 람다 함수 정의
-    location_filter = None
+    # 기본적으로 bool 쿼리를 설정합니다.
+    search_body = {
+        "query": {
+            "bool": {
+                "must": [],
+                "filter": []
+            }
+        }
+    }
+
     if entities["LOCATION"]:
-        # 위치 엔터티가 있는 경우에만 필터를 적용
-        location_filter = lambda d: any(
-            loc.lower() in d.get('location', '').lower()
-            for loc in entities["LOCATION"]
-        )
+        search_body["query"]["bool"]["filter"].append({
+            "terms": {"location.keyword": entities["LOCATION"]}
+        })
 
-    # 유사도 검색을 필터와 함께 실행
-    docs = vectorstores[lang].similarity_search(query, k=10)
+    if entities["MONEY"]:
+        try:
+            required_salary = int(entities["MONEY"][0].replace('만원', '0000').replace(',', '').replace('원', '').strip())
+            search_body["query"]["bool"]["filter"].append({
+                "range": {"pay": {"gte": required_salary}}
+            })
+        except ValueError:
+            pass
+
+    if entities["OCCUPATION"]:
+        search_body["query"]["bool"]["must"].append({
+            "multi_match": {
+                "query": " ".join(entities["OCCUPATION"]),
+                "fields": ["title", "task"],
+                "type": "best_fields"
+            }
+        })
+
+    logging.debug(f"Search body: {json.dumps(search_body, ensure_ascii=False, indent=2)}")
+
+    # Elasticsearch로 쿼리 실행
+    res: ObjectApiResponse = es_client.search(index="jobs", body=search_body)
     
-    filtered_results = []
-
-    for doc in docs:
-        job_info = json.loads(doc.page_content)
-        
-        # 위치 필터링
-        if location_filter and not location_filter(job_info):
-            continue
-
-        match = True  # 조건이 모두 충족되는지 확인하는 플래그
-
-        # 급여 필터링
-        if entities["MONEY"]:
-            try:
-                required_salary_str = entities["MONEY"][0].replace(',', '').replace('원', '').strip()
-                required_salary = int(required_salary_str)
-                
-                # 급여 정보 추출 및 비교
-                job_salary_str = job_info.get('pay', '').replace(',', '').replace('원', '').strip()
-                job_salary = int(''.join(filter(str.isdigit, job_salary_str)))
-                
-                # 직무의 급여가 요구 급여보다 낮으면 필터링
-                if job_salary < required_salary:
-                    continue
-                    
-            except ValueError:
-                continue
-
-        # 직무 필터링
-        if entities["OCCUPATION"] and match:
-            occupation_match = any(
-                occ.lower() in job_info.get('title', '').lower() or 
-                occ.lower() in job_info.get('task', '').lower() 
-                for occ in entities["OCCUPATION"]
-            )
-            if not occupation_match:
-                match = False
-
-        if match:
-            filtered_results.append(job_info)
-
-    if not filtered_results:
+    # ObjectApiResponse 객체를 dict로 변환
+    res_dict = res.body
+    
+    if not res_dict['hits']['hits']:
         return "No job listings found for the specified criteria."
+
+    filtered_results = []
+    for hit in res_dict['hits']['hits']:
+        filtered_results.append(hit["_source"])
 
     return json.dumps({
         "search_summary": {
             "total_jobs_found": len(filtered_results)
         },
         "job_listings": filtered_results,
-        "additional_info": f"These are the job listings that match your query."
+        "additional_info": "These are the job listings that match your query."
     }, ensure_ascii=False, indent=2)
-
 
 # 크롤링 데이터 가져오기 및 파일로 저장
 default_lang = 'ko'  # 기본 언어를 한국어로 설정
@@ -280,11 +245,15 @@ crawled_data = jobploy_crawler(lang=default_lang, pages=3)
 # 크롤링 데이터를 텍스트 파일로 저장
 save_data_to_file(crawled_data, f"crawled_data_{default_lang}.txt")
 
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-texts = text_splitter.split_documents([
-    Document(page_content=json.dumps(item, ensure_ascii=False)) 
-    for item in crawled_data
-])
+# ElasticSearch에 데이터 업로드
+create_elasticsearch_index(crawled_data)
+
+
+# text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+# texts = text_splitter.split_documents([
+#     Document(page_content=json.dumps(item, ensure_ascii=False)) 
+#     for item in crawled_data
+# ])
 
 tools = [search_jobs]
 
@@ -403,14 +372,6 @@ agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 @app.post("/search_jobs")
 async def search_jobs_endpoint(request: Request, query: str = Form(...)):
     chat_history = []
-
-    detected_lang = detect_language(query)
-    if detected_lang not in vectorstores:
-        data = load_data_from_file(detected_lang)
-        if data is None:
-            data = jobploy_crawler(detected_lang)
-            save_data_to_file(data, detected_lang)
-        vectorstores[detected_lang] = create_vectorstore(data)
 
     result = agent_executor.invoke({"input": query, "chat_history": chat_history})
     chat_history.extend(
