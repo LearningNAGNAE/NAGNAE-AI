@@ -1,60 +1,38 @@
-import csv
-import re
+import os
 import torch
+import logging
 from datasets import load_dataset, Dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, Trainer, DataCollatorForLanguageModeling
 from peft import LoraConfig, get_peft_model
 from accelerate import init_empty_weights
 from dotenv import load_dotenv
-import os
-import logging
-from typing import Dict, Any, List
+from typing import Dict, Any
+from transformers import TrainerCallback
 
 # 상수 정의
-QA_PATTERN = re.compile(r'Q\d+:|A\d+:')
-INPUT_FILE_PATH = './app/models/medical/fine_tuning/medical_fine_tuning_file.txt'
-OUTPUT_FILE_PATH = './app/models/medical/fine_tuning/medical_fine_tuning_file.csv'
-FIELDNAMES = ['instruction', 'input', 'output', 'prompt']
 MODEL_NAME = "google/gemma-2b"
 OUTPUT_DIR = "./app/models/medical/fine_tuning"
 MODEL_SAVE_PATH = './app/models/medical/fine_tuning/medical_fine_tuned_gemma'
+OUTPUT_FILE_PATH = './app/models/medical/fine_tuning/medical_fine_tuning_file.csv'
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# CSV 생성 관련 함수들
-def read_file_content(file_path: str) -> str:
-    with open(file_path, 'r', encoding='utf-8') as file:
-        return file.read()
+class DataVisualizationCallback(TrainerCallback):
+    def __init__(self, tokenizer, dataset, num_examples=5):
+        self.tokenizer = tokenizer
+        self.dataset = dataset
+        self.num_examples = num_examples
 
-def split_qa_pairs(content: str) -> List[str]:
-    qa_pairs = QA_PATTERN.split(content)
-    return [pair.strip() for pair in qa_pairs if pair.strip()]
-
-def create_prompt(question: str, answer: str) -> str:
-    return f"<start_of_turn>user\n{question}\n<end_of_turn>\n<start_of_turn>model\n{answer}\n<end_of_turn>"
-
-def process_qa_pairs(qa_pairs: List[str]) -> List[Dict[str, str]]:
-    data = []
-    for i in range(0, len(qa_pairs), 2):
-        if i+1 < len(qa_pairs):
-            question = qa_pairs[i]
-            answer = qa_pairs[i+1]
-            prompt = create_prompt(question, answer)
-            data.append({
-                'instruction': question,
-                'input': '',
-                'output': answer,
-                'prompt': prompt
-            })
-    return data
-
-def save_to_csv(data: List[Dict[str, str]], file_path: str) -> None:
-    with open(file_path, 'w', newline='', encoding='utf-8') as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=FIELDNAMES)
-        writer.writeheader()
-        writer.writerows(data)
+    def on_train_begin(self, args, state, control, **kwargs):
+        print("\n=== 학습 데이터 샘플 ===")
+        for i in range(min(self.num_examples, len(self.dataset))):
+            example = self.dataset[i]
+            print(f"예시 {i+1}:")
+            print("입력:", self.tokenizer.decode(example['input_ids']))
+            print("라벨:", self.tokenizer.decode(example['labels']))
+            print()
 
 # 모델 파인튜닝 관련 함수들
 def load_env_variables() -> str:
@@ -96,7 +74,7 @@ def load_model_and_tokenizer(model_name: str, token: str) -> tuple:
 
 def apply_lora_config(model: Any) -> Any:
     lora_config = LoraConfig(
-        r=8,
+        r=16,
         lora_alpha=32,
         target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
         lora_dropout=0.05,
@@ -126,30 +104,25 @@ def preprocess_dataset(dataset: Dataset, tokenizer: Any) -> Dataset:
 def setup_training_args() -> TrainingArguments:
     return TrainingArguments(
         output_dir=OUTPUT_DIR,
-        num_train_epochs=3,
+        num_train_epochs=20,
         per_device_train_batch_size=1,
         gradient_accumulation_steps=4,
         save_steps=500,
         save_total_limit=2,
         logging_steps=100,
-        learning_rate=5e-6,
+        learning_rate=5e-5,
         weight_decay=0.01,
         fp16=True,
         gradient_checkpointing=False,
         remove_unused_columns=False,
         push_to_hub=False,
+        logging_dir='./logs',  # 로그를 저장할 디렉토리
+        logging_strategy="steps",  # 각 스텝마다 로깅
+        logging_first_step=True,  # 첫 번째 스텝에서도 로깅
+        report_to=["tensorboard"]  # TensorBoard를 사용하여 로그 시각화
     )
 
 def main():
-    # CSV 파일 생성
-    logger.info("CSV 파일 생성 시작")
-    content = read_file_content(INPUT_FILE_PATH)
-    qa_pairs = split_qa_pairs(content)
-    data = process_qa_pairs(qa_pairs)
-    save_to_csv(data, OUTPUT_FILE_PATH)
-    logger.info(f"데이터가 {OUTPUT_FILE_PATH} 파일로 저장되었습니다.")
-
-    # 모델 파인튜닝
     logger.info("모델 파인튜닝 시작")
     torch.cuda.empty_cache()
     token = load_env_variables()
@@ -157,7 +130,10 @@ def main():
     dataset = load_and_process_dataset(OUTPUT_FILE_PATH)
     model, tokenizer = load_model_and_tokenizer(MODEL_NAME, token)
     model = apply_lora_config(model)
-    
+
+    # for param in model.parameters():
+    #     param.requires_grad = True
+
     print_trainable_parameters(model)
     
     tokenized_dataset = preprocess_dataset(dataset, tokenizer)
@@ -171,6 +147,7 @@ def main():
         train_dataset=tokenized_dataset,
         tokenizer=tokenizer,
         data_collator=data_collator,
+        callbacks=[DataVisualizationCallback(tokenizer, tokenized_dataset)]
     )
     
     logger.info("학습을 시작합니다.")
