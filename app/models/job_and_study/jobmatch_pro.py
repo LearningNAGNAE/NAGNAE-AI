@@ -7,7 +7,6 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.agents.format_scratchpad.openai_tools import format_to_openai_tool_messages
 from langchain.agents.output_parsers.openai_tools import OpenAIToolsAgentOutputParser
 from langchain.agents import AgentExecutor
-from langchain_core.messages import AIMessage, HumanMessage
 from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from selenium import webdriver
@@ -19,7 +18,6 @@ from selenium.webdriver.support import expected_conditions as EC
 from langchain_core.documents import Document
 import json
 import os
-import spacy
 from dotenv import load_dotenv
 from langid import classify
 from fastapi.middleware.cors import CORSMiddleware
@@ -38,8 +36,6 @@ app.add_middleware(
 )
 templates = Jinja2Templates(directory="templates")  # html 파일내 동적 콘텐츠 삽입 할 수 있게 해줌(렌더링).
 
-nlp = spacy.load("ko_core_news_sm")
-
 llm = ChatOpenAI(
     model="gpt-3.5-turbo", api_key=os.getenv("OPENAI_API_KEY"), temperature=0.1
 )
@@ -49,48 +45,50 @@ def detect_language(text):
     lang, _ = classify(text)
     return lang
 
-# 엔터티 추출 함수
-# 현재 스크립트의 디렉토리 경로를 얻습니다
-current_dir = os.path.dirname(os.path.abspath(__file__))
-
-# job_location.json 파일 경로를 생성합니다
-json_path = os.path.join(current_dir, 'job_location.json')
-
-# job_location.json 파일 로드
-with open(json_path, 'r', encoding='utf-8') as f:
-    job_locations = json.load(f)
-
+# 엔터티 추출 함수 (ChatGPT 기반)
 def extract_entities(query):
-    doc = nlp(query)
+    system_message = """
+    You are a specialized AI assistant for extracting entities from text. Your task is to extract the following entities:
+    - LOCATION: Identifies geographical locations (e.g., cities, provinces). 
+      - In Korean, locations often end with "시" (si), "군" (gun), or "구" (gu).
+      - In English or other languages, locations may end with "-si", "-gun", or "-gu".
+    - MONEY: Recognizes salary or wage information.
+    - OCCUPATION: Detects job titles or professions.
+
+    Please extract these entities from the following text while considering the specific patterns mentioned for LOCATION.
+    """
+
+    messages = [
+        {"role": "system", "content": system_message},
+        {"role": "user", "content": query}
+    ]
+
+    # Generate the response from the model
+    response = llm(messages=messages)
+    
+    # Check the response object structure
+    print(response)  # Debugging: print the response to understand its structure
+
+    # Handle response based on its actual structure
+    response_content = response.choices[0].message.content if hasattr(response, 'choices') else str(response)
+    
     entities = {
         "LOCATION": [],
         "MONEY": [],
         "OCCUPATION": []
     }
     
-    # spaCy의 엔티티 인식 결과 처리
-    for ent in doc.ents:
-        if ent.label_ in entities:
-            entities[ent.label_].append(ent.text)
-    
-    words = query.split()
-    for word in words:
-        # 지역명 처리
-        for location, data in job_locations.items():
-            # aliases 확인
-            if word in data['aliases']:
+    # Extract entities from the response content
+    for line in response_content.splitlines():
+        if "LOCATION:" in line:
+            location = line.split("LOCATION:")[-1].strip()
+            if location.endswith(("시", "군", "구", "-si", "-gun", "-gu")):
                 entities["LOCATION"].append(location)
-                break
-            
-            # areas 확인
-            for area in data['areas']:
-                if word == area['ko'] or word == area['en']:
-                    entities["LOCATION"].append(f"{location} {area['ko']}")
-                    break
-            else:
-                continue
-            break
-
+        elif "MONEY:" in line:
+            entities["MONEY"].append(line.split("MONEY:")[-1].strip())
+        elif "OCCUPATION:" in line:
+            entities["OCCUPATION"].append(line.split("OCCUPATION:")[-1].strip())
+    
     return entities
 
 def jobploy_crawler(lang, pages=3):
@@ -226,6 +224,8 @@ def search_jobs(query: str) -> str:
 
     for doc in docs:
         job_info = json.loads(doc.page_content)
+        
+        # 위치 필터링
         if location_filter and not location_filter(job_info):
             continue
 
@@ -234,25 +234,18 @@ def search_jobs(query: str) -> str:
         # 급여 필터링
         if entities["MONEY"]:
             try:
-                # 사용자가 입력한 급여 정보 추출 및 정수로 변환
                 required_salary_str = entities["MONEY"][0].replace(',', '').replace('원', '').strip()
                 required_salary = int(required_salary_str)
                 
-                # 직무의 급여 정보 추출 및 정수로 변환
-                pay_elements = job_info.get('pay', '').split()
-                if len(pay_elements) >= 3:
-                    job_salary_str = pay_elements[2].replace(',', '').replace('원', '').strip()
-                    job_salary = int(job_salary_str)    
-                    
-                    # 직무의 급여가 요구 급여보다 낮으면 필터링
-                    if job_salary < required_salary:
-                        continue
-                else:
-                    # 급여 정보가 부족한 경우 필터링
+                # 급여 정보 추출 및 비교
+                job_salary_str = job_info.get('pay', '').replace(',', '').replace('원', '').strip()
+                job_salary = int(''.join(filter(str.isdigit, job_salary_str)))
+                
+                # 직무의 급여가 요구 급여보다 낮으면 필터링
+                if job_salary < required_salary:
                     continue
                     
             except ValueError:
-                # 급여 정보가 올바르지 않거나 변환 실패 시 필터링
                 continue
 
         # 직무 필터링

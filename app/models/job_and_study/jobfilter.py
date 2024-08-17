@@ -18,6 +18,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from dotenv import load_dotenv
+from langdetect import detect
 
 # 중복 라이브러리 오류를 방지
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
@@ -39,12 +40,21 @@ llm = ChatOpenAI(
 )
 
 # 언어 감지 함수
-def detect_language(text):
-    lang = "ko"  # 기본적으로 한국어로 설정
-    return lang
+def detect_language(query):
+    try:
+        lang = detect(query)
+        print(f"Detected language: {lang}")  # 감지된 언어를 출력
+        if lang in ['ko', 'en', 'vi']:
+            return lang  # 한국어, 영어, 베트남어
+        else:
+            return 'ko'  # 기본값 한국어
+    except Exception as e:
+        print(f"Language detection failed: {str(e)}")
+        return 'ko'  # 오류 발생 시 기본값 한국어
 
 # JobPloy 크롤러
 def jobploy_crawler(lang, pages=3):
+    print(f"Starting crawler for language: {lang}")  # 크롤러 시작 로그
     chrome_driver_path = r"C:\chromedriver\chromedriver.exe"
 
     chrome_options = Options()
@@ -98,6 +108,10 @@ def jobploy_crawler(lang, pages=3):
                     "task": task,
                     "language": lang
                 })
+            print(f"Number of jobs found on page {page}: {len(job_listings)}")  # 찾은 일자리 수 로그
+
+    except Exception as e:
+        print(f"Crawling failed: {str(e)}")  # 크롤링 실패 시 오류 메시지 로그
 
     finally:
         driver.quit()
@@ -106,19 +120,23 @@ def jobploy_crawler(lang, pages=3):
 
 # 언어별 데이터 저장 및 로드 함수
 def save_data_to_file(data, filename):
+    print(f"Saving data to file: {filename}")  # 파일 저장 로그
     with open(filename, "w", encoding="utf-8") as file:
         json.dump(data, file, ensure_ascii=False, indent=2)
 
 def load_data_from_file(lang):
     filename = f"crawled_data_{lang}.txt"
+    print(f"Loading data from file: {filename}")  # 파일 로드 로그
     try:
         with open(filename, "r", encoding="utf-8") as file:
             return json.load(file)
     except FileNotFoundError:
+        print(f"File not found: {filename}")  # 파일이 없을 때 로그
         return None
 
 # 벡터 스토어 생성 함수
 def create_vectorstore(data):
+    print(f"Creating vectorstore with {len(data)} documents")  # 벡터 스토어 생성 로그
     text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     texts = text_splitter.split_documents([
         Document(
@@ -148,21 +166,30 @@ class OccupationQuery(BaseModel):
 
 # 특정 위치에 대한 검색 처리 함수
 def search_jobs_by_location(query: str, location: str, top_k: int = 10) -> str:
-    lang = detect_language(query)
+    print(f"Searching jobs by location: {location}, query: {query}")
+    lang = detect_language(query)  # 쿼리를 기반으로 언어 감지
     if lang not in vectorstores:
+        print(f"Vectorstore for language {lang} not found. Loading data.")
         data = load_data_from_file(lang)
         if data is None:
+            print(f"No data found for language {lang}, crawling data.")
             data = jobploy_crawler(lang)
-            save_data_to_file(data, lang)
+            save_data_to_file(data, f"crawled_data_{lang}.txt")
         vectorstores[lang] = create_vectorstore(data)
 
     docs = vectorstores[lang].similarity_search(query, k=top_k)
+    print(f"Found {len(docs)} documents")
 
     filtered_results = [
         json.loads(doc.page_content)
         for doc in docs
         if location.lower() in json.loads(doc.page_content).get('location', '').lower()
     ]
+    print(f"Filtered {len(filtered_results)} results for location {location}")
+
+    # 필터링된 결과를 터미널에 출력
+    for result in filtered_results:
+        print(f"Title: {result.get('title')}, Location: {result.get('location')}, Pay: {result.get('pay')}, Link: {result.get('link')}")
 
     if not filtered_results:
         return "No job listings found for the specified location."
@@ -176,15 +203,19 @@ def search_jobs_by_location(query: str, location: str, top_k: int = 10) -> str:
 
 # 특정 급여 기준에 대한 검색 처리 함수
 def search_jobs_by_salary(query: str, min_salary: int, top_k: int = 10) -> str:
-    lang = detect_language(query)
+    print(f"Searching jobs by salary: {min_salary}, query: {query}")
+    lang = detect_language(query)  # 쿼리를 기반으로 언어 감지
     if lang not in vectorstores:
+        print(f"Vectorstore for language {lang} not found. Loading data.")
         data = load_data_from_file(lang)
         if data is None:
+            print(f"No data found for language {lang}, crawling data.")
             data = jobploy_crawler(lang)
-            save_data_to_file(data, lang)
+            save_data_to_file(data, f"crawled_data_{lang}.txt")
         vectorstores[lang] = create_vectorstore(data)
 
     docs = vectorstores[lang].similarity_search(query, k=top_k)
+    print(f"Found {len(docs)} documents")
 
     filtered_results = []
     for doc in docs:
@@ -196,6 +227,7 @@ def search_jobs_by_salary(query: str, min_salary: int, top_k: int = 10) -> str:
                 job_salary = int(job_salary_str)
                 if job_salary >= min_salary:
                     filtered_results.append(job_info)
+                    print(f"Job matched salary criteria: {job_info['title']}")
         except ValueError:
             continue
 
@@ -211,15 +243,19 @@ def search_jobs_by_salary(query: str, min_salary: int, top_k: int = 10) -> str:
 
 # 특정 직무에 대한 검색 처리 함수
 def search_jobs_by_occupation(query: str, occupation: str, top_k: int = 10) -> str:
-    lang = detect_language(query)
+    print(f"Searching jobs by occupation: {occupation}, query: {query}")
+    lang = detect_language(query)  # 쿼리를 기반으로 언어 감지
     if lang not in vectorstores:
+        print(f"Vectorstore for language {lang} not found. Loading data.")
         data = load_data_from_file(lang)
         if data is None:
+            print(f"No data found for language {lang}, crawling data.")
             data = jobploy_crawler(lang)
-            save_data_to_file(data, lang)
+            save_data_to_file(data, f"crawled_data_{lang}.txt")
         vectorstores[lang] = create_vectorstore(data)
 
     docs = vectorstores[lang].similarity_search(query, k=top_k)
+    print(f"Found {len(docs)} documents")
 
     filtered_results = [
         json.loads(doc.page_content)
@@ -227,6 +263,7 @@ def search_jobs_by_occupation(query: str, occupation: str, top_k: int = 10) -> s
         if occupation.lower() in (json.loads(doc.page_content).get('title', '').lower() +
                                   json.loads(doc.page_content).get('task', '').lower())
     ]
+    print(f"Filtered {len(filtered_results)} results for occupation {occupation}")
 
     if not filtered_results:
         return "No job listings found for the specified occupation."
@@ -237,7 +274,6 @@ def search_jobs_by_occupation(query: str, occupation: str, top_k: int = 10) -> s
         },
         "job_listings": filtered_results
     }, ensure_ascii=False, indent=2)
-
 
 # 도구들을 올바른 형식으로 정의
 tools = [
@@ -349,7 +385,7 @@ prompt = ChatPromptTemplate.from_messages(
         ),
         (
             "assistant",
-            "Thank you for your query. I'll search for job listings based on your request using the search_jobs tool. I'll provide a summary of the results and detailed information about relevant job listings.If you mentioned a specific location, I'll ensure to include all relevant job listings from that location."
+            "Thank you for your query. I'll search for job listings based on your request using the search_jobs tool. I'll provide a summary of the results and detailed information about relevant job listings. If you mentioned a specific location, I'll ensure to include all relevant job listings from that location."
         ),
         MessagesPlaceholder(variable_name=MEMORY_KEY),
         MessagesPlaceholder(variable_name="agent_scratchpad"),
@@ -360,17 +396,32 @@ llm_with_tools = llm.bind_tools(tools)
 
 agent_executor = AgentExecutor(agent=llm_with_tools, tools=tools, verbose=True)
 
+# FastAPI endpoint 수정
 @app.post("/search_jobs")
 async def search_jobs_endpoint(request: Request, query: str = Form(...), location: str = None, min_salary: int = None, occupation: str = None):
     chat_history = []
 
+    # 언어 감지
+    lang = detect_language(query)
+    print(f"Detected language: {lang}")
+
+    # 언어별 데이터 로드 또는 크롤링
+    if lang not in vectorstores:
+        print(f"Vectorstore for language {lang} not found. Loading data.")
+        data = load_data_from_file(lang)
+        if data is None:
+            print(f"No data found for language {lang}, crawling data.")
+            data = jobploy_crawler(lang)
+            save_data_to_file(data, f"crawled_data_{lang}.txt")
+        vectorstores[lang] = create_vectorstore(data)
+
     # 도구 선택에 따라 분기 처리
     if location:
-        result = tools[0].func(query=query, location=location)
+        result = search_jobs_by_location(query=query, location=location)
     elif min_salary:
-        result = tools[1].func(query=query, min_salary=min_salary)
+        result = search_jobs_by_salary(query=query, min_salary=min_salary)
     elif occupation:
-        result = tools[2].func(query=query, occupation=occupation)
+        result = search_jobs_by_occupation(query=query, occupation=occupation)
     else:
         result = "Please specify a filter (location, salary, or occupation)."
 
@@ -382,6 +433,7 @@ async def search_jobs_endpoint(request: Request, query: str = Form(...), locatio
     )
 
     return JSONResponse(content={"response": result, "chat_history": chat_history})
+
 
 if __name__ == "__main__":
     import uvicorn

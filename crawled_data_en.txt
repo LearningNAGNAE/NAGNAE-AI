@@ -1,0 +1,812 @@
+[
+  {
+    "title": "Production job openings",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044728",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeonggi Paju-si",
+    "pay": "Salary : 2,060,740 KRW",
+    "task": "Etc",
+    "language": "en"
+  },
+  {
+    "title": "MCT worker",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044727",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeonggi Hwaseong-si",
+    "pay": "Salary : 3,000,000 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "We are a bed manufacturing company. We are hiring a production manager.",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044726",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeonggi Pocheon-si",
+    "pay": "Salary : 2,700,000 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "Recruiting production staff",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044725",
+    "closing_date": "Deadline D-43",
+    "location": "Daegu Dalseong-gun",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "Recruitment of kitchen assistants for Nolbu Co., Ltd. direct branch (Jamsil)",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044724",
+    "closing_date": "Deadline D-28",
+    "location": "Seoul Songpa-gu",
+    "pay": "Salary : 2,563,600 KRW",
+    "task": "Kitchen assistant",
+    "language": "en"
+  },
+  {
+    "title": "Recruitment of kitchen assistants for Nolbu Co., Ltd. direct branch (tomorrow)",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044723",
+    "closing_date": "Deadline D-28",
+    "location": "Seoul Gangdong-gu",
+    "pay": "Salary : 2,563,600 KRW",
+    "task": "Kitchen assistant",
+    "language": "en"
+  },
+  {
+    "title": "Recruitment of kitchen assistants for Nolbu Co., Ltd. direct branch (Cheongdam)",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044722",
+    "closing_date": "Deadline D-28",
+    "location": "Seoul Gangnam-gu",
+    "pay": "Salary : 2,699,175 KRW",
+    "task": "Kitchen assistant",
+    "language": "en"
+  },
+  {
+    "title": "Recruitment of kitchen assistants for Nolbu Co., Ltd. direct branch (Mapo Gwanghungchang)",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044721",
+    "closing_date": "Deadline D-28",
+    "location": "Seoul Mapo-gu",
+    "pay": "Salary : 2,699,175 KRW",
+    "task": "Kitchen assistant",
+    "language": "en"
+  },
+  {
+    "title": "Recruitment of kitchen assistants for Nolbu Co., Ltd. direct branch (Yeongdeungpo)",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044720",
+    "closing_date": "Deadline D-28",
+    "location": "Seoul Yeongdeungpo-gu",
+    "pay": "Salary : 2,859,840 KRW",
+    "task": "Kitchen assistant",
+    "language": "en"
+  },
+  {
+    "title": "Recruitment for production (weekly) (Jinrye work)",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044719",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeongnam Gimhae-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Etc",
+    "language": "en"
+  },
+  {
+    "title": "Recruitment of kitchen assistants for Nolbu Co., Ltd. direct branch (Nangok)",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044718",
+    "closing_date": "Deadline D-28",
+    "location": "Seoul Gwanak-gu",
+    "pay": "Salary : 2,699,175 KRW",
+    "task": "Kitchen assistant",
+    "language": "en"
+  },
+  {
+    "title": "Shipbuilding industry installation, welding, mortaring, cleaning workers",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044717",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeongnam Changwon-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Welding",
+    "language": "en"
+  },
+  {
+    "title": "[Production Team Full-time] Manufacturing of advertising fabric (tarpaulin)",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044716",
+    "closing_date": "Deadline D-13",
+    "location": "Chungbuk Cheongju-si",
+    "pay": "Salary : 2,900,000 KRW",
+    "task": "Etc",
+    "language": "en"
+  },
+  {
+    "title": "Recruiting production workers with experience and beginners (tool sharpening/grinding)",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044715",
+    "closing_date": "Deadline D-33",
+    "location": "Gyeonggi Pyeongtaek-si",
+    "pay": "Annual salary : 50,000,000 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "Kitchen Assistant Recruitment",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044714",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeonggi Bucheon-si",
+    "pay": "Salary : 2,600,000 KRW",
+    "task": "Kitchen assistant",
+    "language": "en"
+  },
+  {
+    "title": "Seeking someone to serve and wash dishes in the kitchen",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044713",
+    "closing_date": "Deadline D-28",
+    "location": "Jeollabuk-do Jeonju-si",
+    "pay": "Hourly : 10,000 KRW",
+    "task": "Server",
+    "language": "en"
+  },
+  {
+    "title": "E-Food - Recruiting production staff (pickles, sauce manufacturing)",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044712",
+    "closing_date": "Deadline D-13",
+    "location": "Gyeonggi Seongnam-si",
+    "pay": "Salary : 2,100,000 KRW",
+    "task": "Food manufacturing",
+    "language": "en"
+  },
+  {
+    "title": "Recruiting production staff for foundry machine operation",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044711",
+    "closing_date": "Deadline D-28",
+    "location": "Daegu Buk-gu",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Welding",
+    "language": "en"
+  },
+  {
+    "title": "Recruiting experienced and beginner production workers (tool sharpening)",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044710",
+    "closing_date": "Deadline D-33",
+    "location": "Gyeonggi Pyeongtaek-si",
+    "pay": "Annual salary : 50,000,000 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "[5 days a week][Sat-Wed] Recruiting Doraji Peeling Staff (Jingeon-eup)",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044709",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeonggi Namyangju-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Food manufacturing",
+    "language": "en"
+  },
+  {
+    "title": "※ Wage negotiation / Mold site recruitment (both experienced and beginners available)",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044708",
+    "closing_date": "Deadline D-13",
+    "location": "Daegu Buk-gu",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "Mushroom Farm Staff Recruitment",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044707",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeongnam Sacheon-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Food crops",
+    "language": "en"
+  },
+  {
+    "title": "Doosan Machining Center is recruiting employees for Mings 6.",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044706",
+    "closing_date": "Deadline D-28",
+    "location": "Daegu Dalseo-gu",
+    "pay": "Salary : 4,000,000 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "Recruitment of personnel for cosmetics production (filling and packaging)",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044705",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeonggi Icheon-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "Recruitment of Hyundai Mipo Dockyard internal partner internal business chief and chief signalman",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044704",
+    "closing_date": "Deadline D-13",
+    "location": "Ulsan Nam-gu",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Construction/Civil Engineering",
+    "language": "en"
+  },
+  {
+    "title": "Hiring production workers at Heize Composite Industry Co., Ltd.",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044703",
+    "closing_date": "Deadline D-58",
+    "location": "Jeollabuk-do Wanju-gun",
+    "pay": "Hourly : 10,020 KRW",
+    "task": "Etc",
+    "language": "en"
+  },
+  {
+    "title": "Plastic Extrusion Machine Operator Recruitment",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044702",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeonggi Gimpo-si",
+    "pay": "Salary : 2,500,000 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "Recruitment of agricultural simple laborers",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044701",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeonggi Yeoju-si",
+    "pay": "Salary : 2,500,000 KRW",
+    "task": "Food crops",
+    "language": "en"
+  },
+  {
+    "title": "Hiring experienced Machining (MCT) technicians",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044700",
+    "closing_date": "Deadline D-13",
+    "location": "Gyeonggi Hwaseong-si",
+    "pay": "Annual salary : 45,000,000 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "Transfer work on white porcelain and hand coloring with liquid gold (recruitment for production staff)",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044699",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeonggi Yeoju-si",
+    "pay": "Salary : 2,180,740 KRW",
+    "task": "Etc",
+    "language": "en"
+  },
+  {
+    "title": "Kitchen assistant",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044698",
+    "closing_date": "Deadline D-28",
+    "location": "Seoul Jongno-gu",
+    "pay": "Salary : 3,000,000 KRW",
+    "task": "Kitchen assistant",
+    "language": "en"
+  },
+  {
+    "title": "Melting, shaping, injection, post-processing",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044697",
+    "closing_date": "Deadline D-58",
+    "location": "Gyeongbuk Goryeong-gun",
+    "pay": "Hourly : 11,500 KRW",
+    "task": "Mechanical",
+    "language": "en"
+  },
+  {
+    "title": "Textile factory production job recruitment",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044696",
+    "closing_date": "Deadline D-28",
+    "location": "Incheon Namdong-gu",
+    "pay": "Salary : 2,060,740 KRW",
+    "task": "Textile, clothing manufacturing",
+    "language": "en"
+  },
+  {
+    "title": "CoMS Co., Ltd. CNC and MCT Machining Experience Recruitment",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044695",
+    "closing_date": "Deadline D-28",
+    "location": "Chungbuk Cheongju-si",
+    "pay": "Annual salary : 28,000,000 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "Hiring a kitchen assistant",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044694",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeonggi Osan-si",
+    "pay": "Hourly : 11,000 KRW",
+    "task": "Kitchen assistant",
+    "language": "en"
+  },
+  {
+    "title": "Yewon Food is looking for production workers",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044693",
+    "closing_date": "Deadline D-28",
+    "location": "Jeollabuk-do Iksan-si",
+    "pay": "Salary : 2,200,000 KRW",
+    "task": "Food manufacturing",
+    "language": "en"
+  },
+  {
+    "title": "Hiring Senior Facility Management and Cleaning Staff",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044692",
+    "closing_date": "Deadline D-28",
+    "location": "Daegu Suseong-gu",
+    "pay": "Salary : 1,100,000 KRW",
+    "task": "Etc",
+    "language": "en"
+  },
+  {
+    "title": "Simple worker related to manufacturing at Myeongho Enterprise",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044691",
+    "closing_date": "Deadline D-12",
+    "location": "Gyeongbuk Gyeongju-si",
+    "pay": "Hourly : 10,000 KRW",
+    "task": "Mechanical",
+    "language": "en"
+  },
+  {
+    "title": "Recruitment of forge workers (press workers, cutting machine operators)",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044690",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeongnam Sacheon-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "Job opening for 10 Dojo staff members",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044689",
+    "closing_date": "Deadline D-28",
+    "location": "Ulsan Dong-gu",
+    "pay": "Daily : 150,000 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "We are hiring production staff.",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044688",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeonggi Gwangju-si",
+    "pay": "Salary : 2,300,000 KRW",
+    "task": "Etc",
+    "language": "en"
+  },
+  {
+    "title": "[Urgent Recruitment] This is a recruitment notice for a kitchen assistant at Gyeongseong Kalguksu.",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044687",
+    "closing_date": "Deadline D-13",
+    "location": "sejong-si sejong-si",
+    "pay": "Salary : 2,800,000 KRW",
+    "task": "Kitchen assistant",
+    "language": "en"
+  },
+  {
+    "title": "Electrical and electronic components assembler",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044686",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeongnam Gimhae-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Electrical, electronic product manufacturing",
+    "language": "en"
+  },
+  {
+    "title": "Kitchen Assistant Wanted",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044685",
+    "closing_date": "Deadline D-28",
+    "location": "Chungnam Nonsan-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Kitchen assistant",
+    "language": "en"
+  },
+  {
+    "title": "Hall serving job openings",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044684",
+    "closing_date": "Deadline D-28",
+    "location": "Chungnam Nonsan-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Server",
+    "language": "en"
+  },
+  {
+    "title": "Recruiting production staff",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044683",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeonggi Uiwang-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Electrical, electronic product manufacturing",
+    "language": "en"
+  },
+  {
+    "title": "Looking for staff to make ringu",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044682",
+    "closing_date": "Deadline D-19",
+    "location": "Gyeonggi Namyangju-si",
+    "pay": "Salary : 2,300,000 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "Field Machine Operator (Laser)",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044681",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeonggi Siheung-si",
+    "pay": "Annual salary : 40,000,000 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "Recruiting production staff (cotton/clothing)",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044680",
+    "closing_date": "Deadline D-12",
+    "location": "Incheon Namdong-gu",
+    "pay": "Salary : 2,060,740 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "Recruiting textile manufacturing production staff (2 shifts)",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044679",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeongbuk Gyeongsan-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Textile, clothing manufacturing",
+    "language": "en"
+  },
+  {
+    "title": "Voice Factory Blind Production Line Staff Recruitment",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044678",
+    "closing_date": "Deadline D-13",
+    "location": "Chungbuk Eumseong-gun",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "Plastic Extrusion Extruder Wanted",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044677",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeonggi Pyeongtaek-si",
+    "pay": "Annual salary : 50,000,000 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "Recruitment of fishermen",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044676",
+    "closing_date": "Deadline D-28",
+    "location": "Jeollanam-do Yeonggwang-gun",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Food crops",
+    "language": "en"
+  },
+  {
+    "title": "Woodworking Park Assistant",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044675",
+    "closing_date": "Deadline D-28",
+    "location": "Chungnam Buyeo-gun",
+    "pay": "Salary : 2,070,000 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "Recruiting production staff",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044674",
+    "closing_date": "Deadline D-28",
+    "location": "Chungnam Asan-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Etc",
+    "language": "en"
+  },
+  {
+    "title": "We are recruiting production team for the second half of 2024.",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044673",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeonggi Pyeongtaek-si",
+    "pay": "Salary : 3,000,000 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "Recruitment of manufacturing simple labor staff",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044672",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeongnam Jinju-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Etc",
+    "language": "en"
+  },
+  {
+    "title": "Manufacturing simple laborer",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044671",
+    "closing_date": "Deadline D-8",
+    "location": "Jeollanam-do Goheung-gun",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Mechanical",
+    "language": "en"
+  },
+  {
+    "title": "Forklift driver (licensed)",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044670",
+    "closing_date": "Deadline D-12",
+    "location": "Daegu Dalseong-gun",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Etc",
+    "language": "en"
+  },
+  {
+    "title": "[Dong-gu Office Recruitment Agency] Kitchen Assistant and Hall Server Recruitment",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044669",
+    "closing_date": "Deadline D-28",
+    "location": "Daejeon Dong-gu",
+    "pay": "Salary : 2,500,000 KRW",
+    "task": "Kitchen assistant",
+    "language": "en"
+  },
+  {
+    "title": "Simple workers in manufacturing",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044668",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeonggi Hwaseong-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Etc",
+    "language": "en"
+  },
+  {
+    "title": "Gravure Printing Technician",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044667",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeonggi Hwaseong-si",
+    "pay": "Salary : 3,500,000 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "Motel room cleaners wanted",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044666",
+    "closing_date": "Deadline D-12",
+    "location": "Seoul Gwanak-gu",
+    "pay": "Salary : 2,500,000 KRW",
+    "task": "Store management",
+    "language": "en"
+  },
+  {
+    "title": "Daehan F&amp;B Co., Ltd. Recruitment of simple manufacturing workers (preference given to those with experience)",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044665",
+    "closing_date": "Deadline D-13",
+    "location": "Jeju Jeju-si",
+    "pay": "Annual salary : 28,800,000 KRW",
+    "task": "Food manufacturing",
+    "language": "en"
+  },
+  {
+    "title": "We are looking for honest talents",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044664",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeonggi Yongin-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Etc",
+    "language": "en"
+  },
+  {
+    "title": "Film production staff recruitment",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044663",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeongnam Yangsan-si",
+    "pay": "Salary : 2,760,000 KRW",
+    "task": "Etc",
+    "language": "en"
+  },
+  {
+    "title": "Recruitment of construction waterproofing assistant waterproofing workers",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044662",
+    "closing_date": "Deadline D-28",
+    "location": "Incheon Dong-gu",
+    "pay": "Daily : 150,000 KRW",
+    "task": "Construction/Civil Engineering",
+    "language": "en"
+  },
+  {
+    "title": "Simple",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044661",
+    "closing_date": "Deadline D-8",
+    "location": "Gyeonggi Gimpo-si",
+    "pay": "Hourly : 12,500 KRW",
+    "task": "Etc",
+    "language": "en"
+  },
+  {
+    "title": "Recruitment of duck feet and packaging workers (food processing industry)",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044660",
+    "closing_date": "Deadline D-28",
+    "location": "Busan Gangseo-gu",
+    "pay": "Salary : 2,100,000 KRW",
+    "task": "Food manufacturing",
+    "language": "en"
+  },
+  {
+    "title": "Recruitment of simple production workers and feeding personnel",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044659",
+    "closing_date": "Deadline D-28",
+    "location": "Ulsan Ulju-gun",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Etc",
+    "language": "en"
+  },
+  {
+    "title": "Recruitment of livestock breeders",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044658",
+    "closing_date": "Deadline D-6",
+    "location": "Gyeongnam Goseong-gun",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Livestock",
+    "language": "en"
+  },
+  {
+    "title": "Recruitment of manufacturing staff",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044657",
+    "closing_date": "Deadline D-28",
+    "location": "Seoul Yeongdeungpo-gu",
+    "pay": "Annual salary : 33,600,000 KRW",
+    "task": "Etc",
+    "language": "en"
+  },
+  {
+    "title": "Night workers at the sorting facility of Korea Eco Industry Co., Ltd.",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044656",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeonggi Pyeongtaek-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Medical, beauty products manufacturing",
+    "language": "en"
+  },
+  {
+    "title": "Recruiting production staff",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044655",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeonggi Gwangju-si",
+    "pay": "Salary : 2,060,740 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "Recruitment for pre-processing of Joseon Dynasty’s products (shot blasting, sanding)",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044654",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeongnam Goseong-gun",
+    "pay": "Salary : 4,100,000 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "We are recruiting assistants for the painting class.",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044653",
+    "closing_date": "Deadline D-18",
+    "location": "Gyeongnam Gimhae-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Etc",
+    "language": "en"
+  },
+  {
+    "title": "[Kimhae Display] Material Operation Team Full-time Functional Position Recruitment",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044652",
+    "closing_date": "Deadline D-40",
+    "location": "Gyeongnam Gimhae-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Electrical, electronic product manufacturing",
+    "language": "en"
+  },
+  {
+    "title": "Recruitment of regular SMT OP for production team (shift work), recruitment of production technology team",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044651",
+    "closing_date": "Deadline D-40",
+    "location": "Gyeongnam Gimhae-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Electrical, electronic product manufacturing",
+    "language": "en"
+  },
+  {
+    "title": "Recruiting people capable of MCT, CNC, and 3D measurement",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044650",
+    "closing_date": "Deadline D-7",
+    "location": "Gyeonggi Yeoncheon-gun",
+    "pay": "Salary : 4,000,000 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "Recruitment of Automotive Exterior Product Packaging and Inspector",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044649",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeongnam Gimhae-si",
+    "pay": "Annual salary : 35,000,000 KRW",
+    "task": "Production/Quality Control",
+    "language": "en"
+  },
+  {
+    "title": "Recruitment of simple production staff for mushroom cultivation facilities",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044648",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeongbuk Cheongdo-gun",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Food crops",
+    "language": "en"
+  },
+  {
+    "title": "NC/CNC Operator Recruitment",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044647",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeonggi Ansan-si",
+    "pay": "Hourly : 10,000 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "Pig farm feeding management",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044646",
+    "closing_date": "Deadline D-13",
+    "location": "Chungnam Cheonan-si",
+    "pay": "Salary : 2,400,000 KRW",
+    "task": "Food crops",
+    "language": "en"
+  },
+  {
+    "title": "Whole serving job openings",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044645",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeonggi Seongnam-si",
+    "pay": "Salary : 3,400,000 KRW",
+    "task": "Server",
+    "language": "en"
+  },
+  {
+    "title": "Fisherman Recruitment",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044644",
+    "closing_date": "Deadline D-58",
+    "location": "Gyeongbuk Pohang-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Etc",
+    "language": "en"
+  },
+  {
+    "title": "We are recruiting additional field staff to work together in the field.",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044643",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeongbuk Gyeongju-si",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Etc",
+    "language": "en"
+  },
+  {
+    "title": "Recruiting production staff",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044642",
+    "closing_date": "Deadline D-28",
+    "location": "Gyeonggi Pyeongtaek-si",
+    "pay": "Salary : 2,500,000 KRW",
+    "task": "Mechanical",
+    "language": "en"
+  },
+  {
+    "title": "Recruitment for automotive parts production",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044641",
+    "closing_date": "Deadline D-28",
+    "location": "Ulsan Ulju-gun",
+    "pay": "Hourly : 9,860 KRW",
+    "task": "Machine, equipment operation",
+    "language": "en"
+  },
+  {
+    "title": "Full-time production team recruitment in the second half of 2024 (food mixing)",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044640",
+    "closing_date": "Deadline D-28",
+    "location": "Chungbuk Jincheon-gun",
+    "pay": "Salary : 2,200,000 KRW",
+    "task": "Etc",
+    "language": "en"
+  },
+  {
+    "title": "Seeking production staff",
+    "link": "https://www.jobploy.kr/en/recruit/RS0000044639",
+    "closing_date": "Deadline D-28",
+    "location": "Chungbuk Cheongju-si",
+    "pay": "Hourly : 10,000 KRW",
+    "task": "Etc",
+    "language": "en"
+  }
+]
