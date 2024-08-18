@@ -1,17 +1,11 @@
 import os
 import torch
+from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, Trainer, DataCollatorForLanguageModeling
 from peft import LoraConfig, get_peft_model
 from accelerate import init_empty_weights
 from sklearn.model_selection import train_test_split
 import pandas as pd
-from datasets import load_dataset
-import wandb
-from tqdm.auto import tqdm
-from transformers import TrainerCallback
-
-
-
 
 # 학습 가능한 매개변수 출력 함수
 def print_trainable_parameters(model):
@@ -26,8 +20,8 @@ def print_trainable_parameters(model):
     )
 
 # 1. 데이터 준비
-def prepare_data(file_path):
-    df = pd.read_csv(file_path)
+def prepare_data(csv_path):
+    df = pd.read_csv(csv_path)
     train_df, temp_df = train_test_split(df, test_size=0.3, random_state=42)
     val_df, test_df = train_test_split(temp_df, test_size=0.5, random_state=42)
     return train_df, val_df, test_df
@@ -49,7 +43,7 @@ def generate_training_data(df, rag_pipeline):
         })
     return pd.DataFrame(training_data)
 
-# 2. 모델 및 토크나이저 로드
+# 3. 모델 및 토크나이저 로드
 def load_model_and_tokenizer(model_name):
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     tokenizer.pad_token = tokenizer.eos_token
@@ -60,7 +54,7 @@ def load_model_and_tokenizer(model_name):
     model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto", torch_dtype=torch.float16)
     return model, tokenizer
 
-# 3. LoRA 설정 및 적용
+# 4. LoRA 설정 및 적용
 def apply_lora(model):
     lora_config = LoraConfig(
         r=32,
@@ -72,13 +66,13 @@ def apply_lora(model):
     )
     return get_peft_model(model, lora_config)
 
-# 4. 데이터 전처리
+# 5. 데이터 전처리
 def preprocess_function(examples, tokenizer):
     inputs = tokenizer(examples["prompt"], truncation=True, padding="max_length", max_length=512)
     inputs["labels"] = inputs["input_ids"].copy()
     return inputs
 
-# 5. 훈련 설정
+# 6. 훈련 설정
 def get_training_args(output_dir):
     return TrainingArguments(
         output_dir=output_dir,
@@ -94,8 +88,6 @@ def get_training_args(output_dir):
         gradient_checkpointing=False,
         remove_unused_columns=False,
         push_to_hub=False,
-        report_to="wandb",
-        run_name="gemma_fine_tuning"
     )
 
 # 7. 모델 평가 (간단한 구현)
@@ -119,37 +111,15 @@ def evaluate_model(model, test_df, tokenizer):
     accuracy = correct / total
     print(f"Model Accuracy: {accuracy:.2f}")
 
-class TqdmCallback(TrainerCallback):
-    def __init__(self):
-        super().__init__()
-        self.pbar = None
-
-    def on_train_begin(self, args, state, control, **kwargs):
-        if state.max_steps is not None:
-            total = state.max_steps
-        else:
-            total = state.num_train_epochs * state.num_update_steps_per_epoch
-        self.pbar = tqdm(total=total, desc="Training")
-
-    def on_step_end(self, args, state, control, **kwargs):
-        if self.pbar is not None:
-            self.pbar.update(1)
-
-    def on_train_end(self, args, state, control, **kwargs):
-        if self.pbar is not None:
-            self.pbar.close()
-            self.pbar = None
-
 # 메인 실행 함수
 def main():
-    # 텍스트 데이터 준비
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(script_dir, 'gemma_academic_fine_tuning_dataset.csv')
-    train_df, val_df, test_df = prepare_data(file_path)
+    # 데이터 준비
+    csv_path = './app/models/academic/gemma_academic_fine_tuning_dataset.csv'
+    train_df, val_df, test_df = prepare_data(csv_path)
     print("데이터 준비 완료")
 
     # 모델 및 토크나이저 로드
-    model_name = "google/gemma-2-2b"
+    model_name = "qwen/qwen2-1.5b"  # 모델 이름 업데이트
     model, tokenizer = load_model_and_tokenizer(model_name)
     print("모델 및 토크나이저 로드 완료")
 
@@ -157,9 +127,12 @@ def main():
     model = apply_lora(model)
     print_trainable_parameters(model)
 
-    # 데이터셋 생성 및 전처리
-    dataset = load_dataset('csv', data_files=file_path)
-    
+    # 훈련 데이터 생성 (임시 RAG 파이프라인 사용)
+    # training_data = generate_training_data(train_df, temp_rag_pipeline)
+    # print("훈련 데이터 생성 완료")
+
+    # 데이터셋 전처리
+    dataset = load_dataset('csv', data_files=csv_path)
     tokenized_dataset = dataset.map(
         lambda examples: preprocess_function(examples, tokenizer),
         batched=True,
@@ -173,13 +146,13 @@ def main():
     # 훈련 인자 설정
     training_args = get_training_args("./app/models/academic/results")
 
+    # Trainer 초기화 및 학습
     trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=tokenized_dataset["train"],
         tokenizer=tokenizer,
         data_collator=data_collator,
-        callbacks=[TqdmCallback()]  # TqdmCallback 인스턴스 생성
     )
 
     # 학습 시작
@@ -187,18 +160,20 @@ def main():
     trainer.train()
     print("학습 완료")
 
-    # 현재 스크립트 파일의 디렉토리 경로를 얻습니다
-    script_dir = os.path.dirname(os.path.abspath(__file__))
+    # 훈련 후 메모리 해제
+    torch.cuda.empty_cache()
 
-    # 모델 저장 경로를 스크립트 위치를 기준으로 설정합니다
-    model_save_path = os.path.join(script_dir, 'fine_tuned_gemma')
-
+    # 모델 저장
+    model_save_path = './app/models/academic/fine_tuned_qwen2_1_5b'
     model.save_pretrained(model_save_path)
     tokenizer.save_pretrained(model_save_path)
     print(f"파인튜닝이 완료되었습니다. 모델이 '{model_save_path}' 디렉토리에 저장되었습니다.")
 
     # 모델 평가
     evaluate_model(model, test_df, tokenizer)
+
+    # 평가 후 메모리 해제
+    torch.cuda.empty_cache()
 
 if __name__ == "__main__":
     main()

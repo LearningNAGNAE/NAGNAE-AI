@@ -163,7 +163,7 @@ def initialize_agent():
             "chat_history": lambda x: x.get("chat_history", [])
         }
         | prompt
-        | (lambda x: generate_response_with_fine_tuned_model(x, fine_tuned_model, fine_tuned_tokenizer))
+        | (lambda x: generate_response_with_fine_tuned_model(str(x), fine_tuned_model, fine_tuned_tokenizer))
         | StrOutputParser()
     )
 

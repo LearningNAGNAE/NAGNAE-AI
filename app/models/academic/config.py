@@ -32,8 +32,8 @@ BATCH_SIZE = 100
 RATE_LIMIT_DELAY = 1  # 초 단위
 
 # 파인튜닝된 모델 경로
-MODEL_PATH = "./fine_tuned_gemma"
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "fine_tuned_qwen2_1_5b")
 
 # 파인튜닝된 모델과 토크나이저 로드
-fine_tuned_model = AutoModelForCausalLM.from_pretrained(MODEL_PATH)
-fine_tuned_tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
+fine_tuned_model = AutoModelForCausalLM.from_pretrained(MODEL_PATH).to('cuda')
+fine_tuned_tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, clean_up_tokenization_spaces=True)

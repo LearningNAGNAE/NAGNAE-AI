@@ -2,6 +2,7 @@ from config import openai, cross_encoder
 from langchain.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
 from typing import List
+import torch  # torch import 추가
 
 class Entities(BaseModel):
     universities: List[str] = Field(description="List of university names")
@@ -70,6 +71,9 @@ def generate_elasticsearch_query(entities: Entities):
     }
 
 def generate_response_with_fine_tuned_model(prompt, model, tokenizer, max_length=100):
-    inputs = tokenizer(prompt, return_tensors="pt")
-    outputs = model.generate(**inputs, max_length=max_length)
+    print(f"Prompt type: {type(prompt)}")
+    print(f"Prompt content: {prompt}")
+    
+    inputs = tokenizer(prompt, return_tensors="pt").to('cuda')  # 입력 데이터를 GPU로 이동
+    outputs = model.generate(**inputs, max_new_tokens=256, max_length=max_length)
     return tokenizer.decode(outputs[0], skip_special_tokens=True)

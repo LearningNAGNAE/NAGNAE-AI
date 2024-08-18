@@ -4,7 +4,7 @@ from tqdm import tqdm
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from config import es_client, embedding, BATCH_SIZE, RATE_LIMIT_DELAY
+from config import es_client, embedding, BATCH_SIZE, RATE_LIMIT_DELAY, pdf_path
 from data_collection import fetch_university_data, fetch_university_major, fetch_major_details, load_pdf_document
 
 def process_in_batches(data, process_func):
