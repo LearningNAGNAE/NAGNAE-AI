@@ -121,6 +121,7 @@ tools = [
 prompt = ChatPromptTemplate.from_messages([
     SystemMessage(content="""You are a specialized AI assistant for job searching and entity extraction. Your primary tasks are:
 
+
 1. Help users find relevant job listings based on their queries using the JobSearch tool.
 
 2. Extract and analyze key information from job listings and user queries, focusing on these entities:

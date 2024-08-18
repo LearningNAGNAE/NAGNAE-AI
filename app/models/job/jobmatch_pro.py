@@ -53,6 +53,7 @@ def detect_language(text):
     lang, _ = classify(text)
     return lang
 
+
 # 엔터티 추출 함수 (ChatGPT 기반)
 def extract_entities(query):
     system_message = """
