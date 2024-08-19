@@ -21,6 +21,7 @@ import sys
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from langchain_core.runnables import RunnablePassthrough
+from typing import Optional, List, Dict
 
 # 1. 환경 설정
 app_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -318,7 +319,9 @@ class ChatRequest(BaseModel):
     userNo: int
     categoryNo: int
     session_id: str
-    is_new_session: Optional[bool] = False
+    is_new_session: bool
+    chat_his_no: Optional[int] = None
+
 
 class ChatResponse(BaseModel):
     question: str
@@ -338,6 +341,7 @@ async def chat_endpoint(chat_request: ChatRequest, db: Session = Depends(get_db)
         categoryNo = chat_request.categoryNo
         session_id = chat_request.session_id
         is_new_session = chat_request.is_new_session
+        chat_his_no = chat_request.chat_his_no
         
         # 언어 감지
         language = detect_language(question)
@@ -349,7 +353,7 @@ async def chat_endpoint(chat_request: ChatRequest, db: Session = Depends(get_db)
         response = await handler(question, language, session_id, userNo)
         
         # 채팅 기록 저장
-        chat_history = crud.create_chat_history(db, userNo, categoryNo, question, response, is_new_session)
+        chat_history = crud.create_chat_history(db, userNo, categoryNo, question, response, is_new_session, chat_his_no)
         
         # JSON 응답 생성
         chat_response = ChatResponse(
@@ -366,7 +370,7 @@ async def chat_endpoint(chat_request: ChatRequest, db: Session = Depends(get_db)
         logger.error(f"Error processing request: {str(e)}", exc_info=True)
         return JSONResponse(
             status_code=500,
-            content={"detail": f"Internal Server Error:  {str(e)}"}
+            content={"detail": f"Internal Server Error: {str(e)}"}
         )
 
 # 17. 메모리 관리를 위한 새로운 엔드포인트
