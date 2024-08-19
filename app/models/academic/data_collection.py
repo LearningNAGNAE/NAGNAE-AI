@@ -4,6 +4,7 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from config import university_api_key, pdf_path
 from langchain.document_loaders import PyPDFLoader
+from study_crawl import study_search_crawler
 
 def fetch_university_data(per_page=30000):
     """대학 정보 데이터 수집"""
@@ -24,7 +25,8 @@ def fetch_major_details(major_seq):
     return response.json()
 
 def load_pdf_document(pdf_path):
-    
+    # 크롤링
+    study_search_crawler()
     """PDF 파일의 데이터 수집"""
     loader = PyPDFLoader(pdf_path)
     documents = loader.load()

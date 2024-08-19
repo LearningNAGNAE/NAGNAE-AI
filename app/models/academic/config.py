@@ -12,7 +12,7 @@ load_dotenv()
 university_api_key = os.getenv("UNIVERSITY_API_KEY")
 gpt_api_key = os.getenv("OPENAI_API_KEY")
 elasticsearch_url = os.getenv("ELASTICSEARCH_URL")
-pdf_path = r"C:\Users\hi02\dev\NAGNAE\NAGNAE-AI\pdf\2025학년도 재외국민과 외국인 특별전형 시행계획 주요사항.pdf"
+pdf_path = r"C:\Users\hi02\dev\NAGNAE\NAGNAE-AI\pdf\외국인 전형 대학 정보.pdf"
 
 # CrossEncoder 모델 초기화
 cross_encoder = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-2-v2')

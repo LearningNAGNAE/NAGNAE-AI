@@ -7,6 +7,7 @@ import torch  # torch import 추가
 class Entities(BaseModel):
     universities: List[str] = Field(description="List of university names")
     majors: List[str] = Field(description="List of major names")
+    region: List[str] = Field(description="List of regions")
     keywords: List[str] = Field(description="List of other relevant keywords")
 
 def detect_language(text: str) -> str:
@@ -31,12 +32,23 @@ def korean_language(text: str) -> str:
     response = openai.invoke(messages)
     return response.content.strip().lower()
 
+def trans_language(text: str, target_language: str) -> str:
+    """텍스트를 감지된 언어로 번역하는 함수"""
+    system_prompt = f"You are a professional translator. Translate the following text into {target_language} accurately and concisely. Provide only the translated text without any additional comments or explanations."
+    human_prompt = f"Translate this text: {text}"
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": human_prompt}
+    ]
+    response = openai.invoke(messages)
+    return response.content.strip()
+
 def extract_entities(query: str) -> Entities:
     """엔티티 추출 함수"""
     try:
         parser = PydanticOutputParser(pydantic_object=Entities)
         prompt = f"""
-        Extract relevant entities from the following query. The entities should include university names, major names, and other relevant keywords.
+        Extract relevant entities from the following query. The entities should include university names, major names, regions, and other relevant keywords.
 
         Query: {query}
 
@@ -47,10 +59,13 @@ def extract_entities(query: str) -> Entities:
             {"role": "user", "content": prompt}
         ]
         response = openai.invoke(messages)
+
+        print(response.content);
+
         return parser.parse(response.content)
     except Exception as e:
         print(f"엔티티 추출 중 오류 발생: {e}")
-        return Entities(universities=[], majors=[], keywords=[])
+        return Entities(universities=[], majors=[], region=[], keywords=[])
 
 def generate_elasticsearch_query(entities: Entities):
     """Elasticsearch 쿼리 생성 함수"""

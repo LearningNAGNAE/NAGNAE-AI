@@ -6,7 +6,7 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from config import cross_encoder, openai, es_client, embedding, session_histories, fine_tuned_model, fine_tuned_tokenizer
 from embedding_indexing import index_exists, embed_and_index_university_data, embed_and_index_university_major, embed_and_index_major_details, embed_and_index_pdf_data, update_indices
-from utils import detect_language, korean_language, extract_entities, generate_elasticsearch_query, generate_response_with_fine_tuned_model
+from utils import trans_language, detect_language, korean_language, extract_entities, generate_elasticsearch_query, generate_response_with_fine_tuned_model
 from langchain.schema import BaseRetriever, Document
 from langchain.prompts import PromptTemplate
 from langchain.schema.runnable import RunnablePassthrough
@@ -112,41 +112,66 @@ def initialize_agent():
     retriever = FunctionRetriever()
 
     prompt_template = """
-    You are a Korean university information expert. Your role is to provide accurate and detailed answers to questions about Korean universities using the provided tools.
+    당신은 한국 대학 정보 전문가입니다. 한국 대학에 대한 질문에 정확하고 상세한 답변을 제공하는 역할을 맡고 있습니다. 제공된 도구를 사용하여 대학 입학 절차, 프로그램, 전공 및 관련 정보에 대한 자세한 답변을 제공하십시오.
 
-    Information Provision:
-    - Answer questions regarding university admission procedures, programs, majors, and related information.
-    - Focus your responses using the extracted entities (universities, majors, keywords).
+    **정보 제공:**
+    - 대학 입학 절차, 학술 프로그램, 전공 및 관련 정보를 포괄적으로 제공하십시오.
+    - 질문에 언급된 지역에 위치한 모든 대학의 정보를 생략하지 말고 포함하십시오.
+    - 추출된 엔티티인 대학, 전공, 지역 및 키워드를 활용하여 답변을 집중하고 향상시키십시오.
 
-    Language and Translation:
-    - Translate the final response into {language}. Always ensure that the response is translated, and if it is not, make sure to translate it again.
-    - Provide only the translated response.
+    **구조와 명확성:**
+    - 답변을 명확하고 체계적으로 제시하십시오.
+    - 필요에 따라 총알 점이나 번호 목록을 사용하여 정보를 정리하십시오.
+    - 정보의 적용 예시나 시나리오를 포함하십시오.
 
-    Structure and Clarity:
-    - Present your answers clearly and in an organized manner. Use bullet points or numbered lists if necessary.
-    - Include examples or scenarios to illustrate how the information applies.
+    **정확성 및 업데이트:**
+    - 제공된 정보가 도구에서 제공하는 최신 데이터에 기반하여 정확한지 확인하십시오.
+    - 공식 대학 웹사이트나 기타 권위 있는 출처를 통해 세부 정보를 확인하도록 권장하십시오.
 
-    Accuracy and Updates:
-    - Provide accurate information based on the latest data available from the tools.
-    - Advise the user to check official sources for the most current information.
+    **추출된 엔티티:**
+    - **대학:** 질문과 관련된 대학 이름을 나열하십시오. 해당 지역의 모든 대학을 포함하십시오.
+    - **전공:** 언급된 경우 특정 학술 프로그램이나 전공에 대한 세부 정보를 제공하십시오.
+    - **지역:** 질문과 관련된 지역에 대한 세부 정보를 제공하십시오. 지역은 대학교의 위치를 기준으로 하여 제공하되, 관련 지역의 설명도 포함하십시오.
+    - **키워드:** 추가적인 맥락이나 세부 정보를 제공하기 위해 관련 키워드를 포함하십시오.
 
-    Extracted Entities:
-    - Universities: {universities}
-    - Majors: {majors}
-    - Keywords: {keywords}
+    **컨텍스트:** {context}
 
-    Use these entities to guide your search and response.
+    **질문:** {question}
 
-    Context: {context}
+    **답변:**
+    - 질문의 모든 측면을 다루는 자세한 답변을 제공하십시오.
+    - 필요한 경우 이름, 위치, 캠퍼스 정보 및 공식 웹사이트 링크와 같은 특정 세부 정보를 포함하십시오.
+    - 지역에 대한 답변은 대학교의 위치를 기준으로 하여, 관련 지역의 설명과 함께 제공하십시오.
+    - 사용된 정보의 출처를 인용하여 신뢰성을 보장하십시오.
 
-    Question: {question}
+    **예시 질문:** '경기도에 있는 대학교들을 생략하지 말고 알려줘 자료 출처도 알려줘'
 
-    Answer:
+    **예시 답변:**
+    - **고려대학교**
+    - **위치:** 서울특별시 성북구 안암동
+    - **캠퍼스 정보:** 안암캠퍼스, 세종캠퍼스
+    - **웹사이트:** [고려대학교](http://www.korea.ac.kr)
+    - **지역 설명:** 경기도와 인접한 서울특별시에 위치한 고려대학교는 한국을 대표하는 대학 중 하나로, 국내외에서 평가가 높은 대학입니다.
+
+    - **한국외국어대학교**
+    - **위치:** 경기도 용인시 수지구 죽전로 55
+    - **캠퍼스 정보:** 제1캠퍼스, 제2캠퍼스
+    - **웹사이트:** [한국외국어대학교](http://www.hufs.ac.kr)
+    - **지역 설명:** 경기도 용인시에 위치한 한국외국어대학교는 외국어 교육 및 국제 교류에 특화된 대학으로, 다양한 언어 전공 프로그램을 제공합니다.
+
+    - **경희대학교**
+    - **위치:** 경기도 용인시 처인구 포곡읍 서울대학로 1732
+    - **캠퍼스 정보:** 서울캠퍼스, 국제캠퍼스
+    - **웹사이트:** [경희대학교](http://www.khu.ac.kr)
+    - **지역 설명:** 경기도 용인시에 위치한 경희대학교는 국내 최고의 사립대학 중 하나로, 교육 및 연구 분야에서 우수한 성과를 내고 있습니다.
+
+    **출처:** 최신 데이터에서 제공된 정보입니다. 가장 정확하고 최신의 세부 사항은 공식 대학 웹사이트를 참조하십시오.
+
     """
 
     prompt = PromptTemplate(
         template=prompt_template,
-        input_variables=["context", "question", "language", "universities", "majors", "keywords"]
+        input_variables=["context", "question", "universities", "majors", "regions", "keywords"]
     )
 
     def format_docs(docs):
@@ -156,14 +181,15 @@ def initialize_agent():
         {
             "context": retriever | format_docs,
             "question": lambda x: x["question"],
-            "language": lambda x: x["language"],
             "universities": lambda x: ", ".join(x["universities"]),
             "majors": lambda x: ", ".join(x["majors"]),
+            "regions": lambda x: ", ".join(x["regions"]),
             "keywords": lambda x: ", ".join(x["keywords"]),
             "chat_history": lambda x: x.get("chat_history", [])
         }
         | prompt
-        | (lambda x: generate_response_with_fine_tuned_model(str(x), fine_tuned_model, fine_tuned_tokenizer))
+        # | (lambda x: generate_response_with_fine_tuned_model(str(x), fine_tuned_model, fine_tuned_tokenizer))
+        | (lambda x: openai.predict(str(x)))  # GPT-3.5-turbo 모델로 예측
         | StrOutputParser()
     )
 
@@ -193,22 +219,26 @@ async def query_agent(query: Query):
     # 세션 기록 가져오기 또는 새로 생성
     chat_history = session_histories.get(query.session_id, [])
 
+    # 마지막 agent 사용
     response = await agent_executor.ainvoke({
         "question": query.input,
         "chat_history": chat_history,
         "agent_scratchpad": [],
-        "language": language,
         "universities": entities.universities,
         "majors": entities.majors,
+        "regions": entities.region,
         "keywords": entities.keywords
     })
 
+    # 번역기
+    translated_response = trans_language(response, language)
+
     # 대화 기록 업데이트
     chat_history.append({"role": "user", "content": query.input})
-    chat_history.append({"role": "assistant", "content": response})
+    chat_history.append({"role": "assistant", "content": translated_response})
     session_histories[query.session_id] = chat_history
 
-    return Response(answer=response)
+    return Response(answer=translated_response)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
