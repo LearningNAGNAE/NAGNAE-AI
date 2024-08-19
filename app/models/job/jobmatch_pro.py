@@ -25,7 +25,7 @@ from elasticsearch import Elasticsearch
 from elastic_transport import ObjectApiResponse
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.DEBUG)
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 load_dotenv()
@@ -45,7 +45,7 @@ app.add_middleware(
 templates = Jinja2Templates(directory="templates")  # html 파일내 동적 콘텐츠 삽입 할 수 있게 해줌(렌더링).
 
 llm = ChatOpenAI(
-    model="gpt-3.5-turbo", api_key=os.getenv("OPENAI_API_KEY"), temperature=0.1
+    model="gpt-3.5-turbo", api_key=os.getenv("OPENAI_API_KEY"), temperature=0.0
 )
 
 # 언어 감지 함수
@@ -57,14 +57,33 @@ def detect_language(text):
 # 엔터티 추출 함수 (ChatGPT 기반)
 def extract_entities(query):
     system_message = """
-    You are a specialized AI assistant for extracting entities from text. Your task is to extract the following entities:
-    - LOCATION: Identifies geographical locations (e.g., cities, provinces). 
-      - In Korean, locations often end with "시" (si), "군" (gun), or "구" (gu).
-      - In English or other languages, locations may end with "-si", "-gun", or "-gu".
-    - MONEY: Recognizes salary or wage information.
-    - OCCUPATION: Detects job titles or professions.
+# Role
+You are an NER (Named Entity Recognition) machine that specializes in extracting entities from text.
 
-    Please extract these entities from the following text while considering the specific patterns mentioned for LOCATION.
+# Task
+- Extract the following entities from the user query: LOCATION, MONEY, and OCCUPATION.
+- Return the extracted entities in a fixed JSON format, as shown below.
+
+# Entities
+- **LOCATION**: Identifies geographical locations (e.g., cities, provinces). 
+  - In Korean, locations often end with "시" (si), "군" (gun), or "구" (gu).
+  - In English or other languages, locations may end with "-si", "-gun", or "-gu".
+- **MONEY**: Identify any salary or wage information mentioned in the text. This could be represented in different forms:
+  - Examples include "250만원", "300만 원", "5천만 원" etc.
+  - Convert amounts expressed in "만원" or "천원" to full numerical values. For example:
+    - "250만원" should be interpreted as 250 * 10,000 = 2,500,000원.
+    - "5천만원" should be interpreted as 5,000 * 10,000 = 50,000,000원.
+  - Extract the numerical value in its full form.
+- **OCCUPATION**: Detects job titles or professions.
+
+# Output Format
+- The output should be a JSON object with the following structure:
+  {"LOCATION": "", "MONEY": "", "OCCUPATION": ""}
+
+# Policy
+- If there is no relevant information for a specific entity, return null for that entity.
+- Do not provide any explanations or additional information beyond the JSON output.
+- The output should be strictly in the JSON format specified.
     """
 
     messages = [
@@ -75,26 +94,22 @@ def extract_entities(query):
     # Generate the response from the model
     response = llm(messages=messages)
     
+    print(f"==============================================")
+    print(response)
+    print(f"==============================================")
     # Handle response based on its actual structure
     response_content = response.choices[0].message.content if hasattr(response, 'choices') else str(response)
     
-    entities = {
-        "LOCATION": [],
-        "MONEY": [],
-        "OCCUPATION": []
-    }
+
+
+    # Parse the JSON response
+    try:
+        entities = json.loads(response.content)
+    except json.JSONDecodeError as e:
+        print(f"Error parsing JSON: {e}")
+        entities = {"LOCATION": None, "MONEY": None, "OCCUPATION": None}
     
-    # Extract entities from the response content
-    for line in response_content.splitlines():
-        if "LOCATION:" in line:
-            location = line.split("LOCATION:")[-1].strip()
-            if location.endswith(("시", "군", "구", "-si", "-gun", "-gu")):
-                entities["LOCATION"].append(location)
-        elif "MONEY:" in line:
-            entities["MONEY"].append(line.split("MONEY:")[-1].strip())
-        elif "OCCUPATION:" in line:
-            entities["OCCUPATION"].append(line.split("OCCUPATION:")[-1].strip())
-    
+    print("잘뽑아 왔나!!:", entities)
     return entities
 
 def jobploy_crawler(lang, pages=3):
@@ -194,18 +209,25 @@ def search_jobs(query: str) -> str:
     }
 
     if entities["LOCATION"]:
-        search_body["query"]["bool"]["filter"].append({
-            "terms": {"location.keyword": entities["LOCATION"]}
+        # 여기를 수정합니다
+        search_body["query"]["bool"]["must"].append({
+            "match": {"location": " ".join(entities["LOCATION"])}
         })
 
     if entities["MONEY"]:
         try:
-            required_salary = int(entities["MONEY"][0].replace('만원', '0000').replace(',', '').replace('원', '').strip())
+            # 괄호 안의 숫자 추출
+            money_str = entities["MONEY"][0]
+            if "(" in money_str:
+                required_salary = int(money_str.split('(')[-1].replace('만원', '0000').replace('원', '').replace(',', '').replace(')', '').strip())
+            else:
+                required_salary = int(money_str.replace('만원', '0000').replace('원', '').replace(',', '').strip())
+            
             search_body["query"]["bool"]["filter"].append({
                 "range": {"pay": {"gte": required_salary}}
             })
-        except ValueError:
-            pass
+        except ValueError as e:
+            print(f"Error processing MONEY entity: {e}")
 
     if entities["OCCUPATION"]:
         search_body["query"]["bool"]["must"].append({
@@ -215,29 +237,61 @@ def search_jobs(query: str) -> str:
                 "type": "best_fields"
             }
         })
+    # logging.debug(f"Search body: {json.dumps(search_body, ensure_ascii=False, indent=2)}")
 
-    logging.debug(f"Search body: {json.dumps(search_body, ensure_ascii=False, indent=2)}")
+
+    print("인덱스 존재 여부:")
+    print(es_client.indices.exists(index="jobs"))
+
+    print("인덱스 내 문서 수:")
+    print(es_client.count(index="jobs"))
+
+    print("인덱스 매핑:")
+    mapping_response = es_client.indices.get_mapping(index="jobs")
+    print(json.dumps(mapping_response.body, indent=2))
+
+
+
+
 
     # Elasticsearch로 쿼리 실행
+    # Elasticsearch로 쿼리 실행
+    print("검색중...")
     res: ObjectApiResponse = es_client.search(index="jobs", body=search_body)
-    
+    print(f"Query executed. Response type: {type(res)}")
+
+
+    # res_dict 데이터 값이 제대로 안들어옴 여기서부터 확인해보면 됩니다.!!!!!!!!!!!!!! res.body에서 값이 제대로 저장 되어 있는지 index안에 저장되어있는 형식에 맞쳐서 값을 가져와 저장을 해야함
     # ObjectApiResponse 객체를 dict로 변환
+    print("Converting ObjectApiResponse to dict...")
     res_dict = res.body
-    
+    print(f"Conversion complete. res_dict type: {type(res_dict)}")
+
+
     if not res_dict['hits']['hits']:
+        print("No job listings found.")
         return "No job listings found for the specified criteria."
 
+    print("Processing search results...")
     filtered_results = []
     for hit in res_dict['hits']['hits']:
         filtered_results.append(hit["_source"])
+        print(f"Processed job: {hit['_source'].get('title', 'No title')}")
 
-    return json.dumps({
+    print(f"Total processed results: {len(filtered_results)}")
+
+    result = json.dumps({
         "search_summary": {
             "total_jobs_found": len(filtered_results)
         },
         "job_listings": filtered_results,
         "additional_info": "These are the job listings that match your query."
     }, ensure_ascii=False, indent=2)
+
+    print("JSON response created.")
+    print(f"Response length: {len(result)}")
+
+    return result
 
 # 크롤링 데이터 가져오기 및 파일로 저장
 default_lang = 'ko'  # 기본 언어를 한국어로 설정
