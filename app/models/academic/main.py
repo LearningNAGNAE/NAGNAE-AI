@@ -109,6 +109,7 @@ def initialize_agent():
         async def get_relevant_documents(self, query: str) -> List[Document]:
             return await self._aget_relevant_documents(query)
         
+        
     retriever = FunctionRetriever()
 
     prompt_template = """
