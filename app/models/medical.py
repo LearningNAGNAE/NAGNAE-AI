@@ -13,11 +13,13 @@ from langchain.schema import BaseRetriever, Document
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 import torch
 
+load_dotenv()
+
 llm = ChatOpenAI(
-            model="gpt-3.5-turbo",
-            temperature=0, 
-            openai_api_key=os.getenv("OPENAI_API_KEY")
-        )
+    model="gpt-3.5-turbo",
+    temperature=0, 
+    openai_api_key=os.getenv("OPENAI_API_KEY")
+)
 
 class GemmaModel:
     def __init__(self, model_path):
@@ -39,31 +41,31 @@ class GemmaModel:
             torch_dtype=torch.float16
         )
 
-    def generate_text(self, question: str, max_length: int = 128, temperature: float = 0.1) -> str:
-        prompt = f"Human: {question}\nAssistant:"
-        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.model.device)
+    def generate_text(self, question: str) -> str:
+        prompt = f"""
+        Health advice for foreigners in Korea: {question}
+        - Give clear, accurate info
+        - Explain relevant services
+        - Use simple language
+        - Advise when to see a doctor
+        """
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+        outputs = self.model.generate(
+            **inputs,
+            max_new_tokens=100,
+            num_return_sequences=1,
+            temperature=0.0,
+            top_k=50,
+            top_p=0.95,
+            no_repeat_ngram_size=2,
+            early_stopping=True
+        )
         
-        with torch.no_grad():
-            outputs = self.model.generate(
-                **inputs,
-                max_new_tokens=max_length,
-                num_return_sequences=1,
-                do_sample=True,
-                temperature=temperature,
-                top_k=50,
-                top_p=0.95,
-                repetition_penalty=1.2,
-                no_repeat_ngram_size=3,
-                eos_token_id=self.tokenizer.eos_token_id,
-            )
-        
-        generated_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-        response = generated_text.split("Assistant:")[-1].strip()
-        return response
+        generated_text = self.tokenizer.decode(outputs[0][inputs['input_ids'].shape[1]:], skip_special_tokens=True)
+        return generated_text.strip()
 
 class GoogleSearchRetriever(BaseRetriever):
     def translate_and_extract_keywords(self, query: str) -> str:
-        
         translation_prompt = f"Translate the following text to Korean: '{query}'"
         translated_text = llm.predict(translation_prompt)
 
@@ -76,14 +78,12 @@ class GoogleSearchRetriever(BaseRetriever):
             "외국인", "영어", "통역", "진단", "수술", "처방", "입원"
         ]
         
-        # Select a subset of additional keywords based on the query
         selected_keywords = self.smart_keyword_selection(keywords, additional_keywords)
         
         optimized_query = f"{keywords}, {', '.join(selected_keywords)}"
         return optimized_query
 
     def smart_keyword_selection(self, main_keywords: str, additional_keywords: List[str]) -> List[str]:
-        
         selection_prompt = f"""
         Given the main keywords: {main_keywords}
         And the list of additional keywords: {', '.join(additional_keywords)}
@@ -126,6 +126,7 @@ class GoogleSearchRetriever(BaseRetriever):
             raise ValueError("Input must be a dictionary with a 'question' key or a string")
         
         return self._search(query, **kwargs)
+
 class MedicalAssistant:
     def __init__(self):
         self.vector_store = self.__initialize_faiss_index()
@@ -148,6 +149,16 @@ class MedicalAssistant:
         detected_language = response.content.strip().lower()
         print(f"Detected language: {detected_language}")
         return detected_language
+    
+    def __translate_query_to_english(self, text):
+        prompt = "You are a language translation expert. Translate the given sentence into English. Don't say any other sentence."
+        human_prompt = f"Text: {text}"
+        messages = [
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": human_prompt}
+        ]
+        response = llm.invoke(messages)
+        return response.content
 
     def __setup_ensemble_retriever(self):
         bm25_texts = [
@@ -263,7 +274,10 @@ class MedicalAssistant:
                 "gemma_response": error_message
             }
 
-        gemma2_response = self.generate_text_with_gemma(query)
+        if language != 'english' :
+            query = self.__translate_query_to_english(query)
+
+        gemma_response = self.generate_text_with_gemma(query)
 
         retrieval_chain = self.__create_retrieval_chain()
         response = retrieval_chain.invoke({"question": query, "language": language})
@@ -272,5 +286,5 @@ class MedicalAssistant:
             "question": query,
             "answer": response,
             "detected_language": language,
-            "gemma2_response": gemma2_response
+            "gemma_response": gemma_response
         }
