@@ -2,10 +2,19 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from . import models
-from datetime import date
+from datetime import datetime
 
-def create_chat_history(db: Session, user_no: int, category_no: int, question: str, answer: str, is_new_session: bool, chat_his_no: Optional[int] = None):
+def create_chat_history(
+    db: Session, 
+    user_no: int, 
+    category_no: int, 
+    question: str, 
+    answer: str, 
+    is_new_session: bool, 
+    chat_his_no: Optional[int] = None
+):
     try:
+        current_time = datetime.now()
         if is_new_session:
             # 새 세션 시작: 새로운 CHAT_HIS_NO 생성 (auto-increment)
             chat_history = models.ChatHis(
@@ -14,16 +23,16 @@ def create_chat_history(db: Session, user_no: int, category_no: int, question: s
                 QUESTION=question,
                 ANSWER=answer,
                 INSERT_USER_NO=user_no,
-                INSERT_DATE=date.today(),
+                INSERT_DATE=current_time,
                 MODIFY_USER_NO=user_no,
-                MODIFY_DATE=date.today()
+                MODIFY_DATE=current_time
             )
         else:
             # 기존 세션 계속: 주어진 CHAT_HIS_NO 사용
-            new_chat_his_seq = db.query(func.max(models.ChatHis.CHAT_HIS_SEQ)).filter(
+            max_seq = db.query(func.max(models.ChatHis.CHAT_HIS_SEQ)).filter(
                 models.ChatHis.CHAT_HIS_NO == chat_his_no
             ).scalar() or 0
-            new_chat_his_seq += 1
+            new_chat_his_seq = max_seq + 1
 
             chat_history = models.ChatHis(
                 CHAT_HIS_NO=chat_his_no,
@@ -32,9 +41,9 @@ def create_chat_history(db: Session, user_no: int, category_no: int, question: s
                 QUESTION=question,
                 ANSWER=answer,
                 INSERT_USER_NO=user_no,
-                INSERT_DATE=date.today(),
+                INSERT_DATE=current_time,
                 MODIFY_USER_NO=user_no,
-                MODIFY_DATE=date.today()
+                MODIFY_DATE=current_time
             )
 
         db.add(chat_history)

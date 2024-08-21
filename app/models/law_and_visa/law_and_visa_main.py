@@ -22,6 +22,7 @@ from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from langchain_core.runnables import RunnablePassthrough
 from typing import Optional, List, Dict
+import uuid
 
 # 1. 환경 설정
 app_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -314,12 +315,15 @@ semantic_router = SemanticRouter({
 })
 
 # 15. 입력 및 출력 모델 정의
+# 세션 ID와 chat_his_no 매핑을 위한 딕셔너리
+session_chat_mapping: Dict[str, int] = {}
+
+# ChatRequest 모델 수정
 class ChatRequest(BaseModel):
     question: str
     userNo: int
     categoryNo: int
-    session_id: str
-    is_new_session: bool
+    session_id: Optional[str] = None
     chat_his_no: Optional[int] = None
 
 
@@ -339,10 +343,19 @@ async def chat_endpoint(chat_request: ChatRequest, db: Session = Depends(get_db)
         question = chat_request.question
         userNo = chat_request.userNo
         categoryNo = chat_request.categoryNo
-        session_id = chat_request.session_id
-        is_new_session = chat_request.is_new_session
+        session_id = chat_request.session_id or str(uuid.uuid4())
         chat_his_no = chat_request.chat_his_no
-        
+
+        # session_id에 매핑된 기존 chat_his_no를 가져옴
+        if not chat_his_no and session_id in session_chat_mapping:
+            chat_his_no = session_chat_mapping.get(session_id)
+
+        # 세션이 새로 생성된 경우
+        if not chat_his_no:
+            is_new_session = True
+        else:
+            is_new_session = False
+
         # 언어 감지
         language = detect_language(question)
         
@@ -355,13 +368,17 @@ async def chat_endpoint(chat_request: ChatRequest, db: Session = Depends(get_db)
         # 채팅 기록 저장
         chat_history = crud.create_chat_history(db, userNo, categoryNo, question, response, is_new_session, chat_his_no)
         
+        # 세션 ID와 chat_his_no 매핑 업데이트
+        session_chat_mapping[session_id] = chat_history.CHAT_HIS_NO
+
         # JSON 응답 생성
         chat_response = ChatResponse(
             question=question,
             answer=response,
             chatHisNo=chat_history.CHAT_HIS_NO,
             chatHisSeq=chat_history.CHAT_HIS_SEQ,
-            detected_language=language 
+            detected_language=language,
+            session_id=session_id
         )
         
         logger.info(f"Returning chat response: {chat_response}")
@@ -373,7 +390,18 @@ async def chat_endpoint(chat_request: ChatRequest, db: Session = Depends(get_db)
             content={"detail": f"Internal Server Error: {str(e)}"}
         )
 
-# 17. 메모리 관리를 위한 새로운 엔드포인트
+    
+# 세션 관리를 위한 새로운 엔드포인트 (차후 추가)
+@app.post("/end_session")
+async def end_session(session_id: str):
+    if session_id in session_chat_mapping:
+        del session_chat_mapping[session_id]
+        if session_id in memory_store:
+            del memory_store[session_id]
+        return {"message": f"Session {session_id} has been ended and memory cleared."}
+    return {"message": f"No active session found for {session_id}."}
+
+# 17. 메모리 관리를 위한 새로운 엔드포인트 (차후 추가)
 @app.post("/clear_memory")
 async def clear_memory(session_id: str):
     if session_id in memory_store:

@@ -9,7 +9,7 @@ from .database.models import Base
 
 load_dotenv()
 
-app = FastAPI(lifespan=items.lifespan)
+app = FastAPI()
 
 # CORS 설정
 origins = [

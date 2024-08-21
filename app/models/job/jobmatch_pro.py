@@ -24,6 +24,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from elasticsearch import Elasticsearch
 from elastic_transport import ObjectApiResponse
 import logging
+import re
+import json
+
+# # Load the job location data
+# with open('job_location.json', 'r', encoding='utf-8') as f:
+#     job_locations = json.load(f)
+
 
 # logging.basicConfig(level=logging.DEBUG)
 
@@ -48,42 +55,80 @@ llm = ChatOpenAI(
     model="gpt-3.5-turbo", api_key=os.getenv("OPENAI_API_KEY"), temperature=0.0
 )
 
+# 한국어로 번역
+# 오늘 프롬프트 손봐야함
+def korean_language(text: str) -> str:
+    """다국어 텍스트를 한국어로 번역하는 함수"""
+    system_prompt = """You are a multilingual translator specializing in Korean translations. Your task is to translate the given text from any language into natural, fluent Korean. Please follow these guidelines:
+    1. First, identify the source language of the given text.
+    2. Translate the text accurately into Korean, maintaining the original meaning and nuance.
+    3. Provide only the translated Korean text, without any additional explanations or information about the translation process.
+    4. Use appropriate honorifics and formal/informal language based on the context.
+    5. For specialized terms or proper nouns, provide the Korean translation followed by the original term in parentheses where necessary.
+    6. If certain terms are commonly used in their original language even in Korean context, keep them in the original language.
+    7. Ensure that idiomatic expressions are translated to their Korean equivalents, not literally.
+    """
+    human_prompt = f"Please translate the following text into Korean: {text}"
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": human_prompt}
+    ]
+    response = llm.invoke(messages)
+    return response.content.strip()
+
+# gpt 언어감지
+def gpt_detect_language(text: str) -> str:
+    """언어 감지 함수"""
+    system_prompt = "You are a language detection expert. Detect the language of the given text and respond with only the language name in English, using lowercase."
+    human_prompt = f"Text: {text}"
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": human_prompt}
+    ]
+    response = llm.invoke(messages)
+    return response.content.strip().lower()
+
+
 # 언어 감지 함수
 def detect_language(text):
     lang, _ = classify(text)
     return lang
 
-
 # 엔터티 추출 함수 (ChatGPT 기반)
 def extract_entities(query):
     system_message = """
-# Role
-You are an NER (Named Entity Recognition) machine that specializes in extracting entities from text.
+    # Role
+    You are an NER (Named Entity Recognition) machine that specializes in extracting entities from text.
 
-# Task
-- Extract the following entities from the user query: LOCATION, MONEY, and OCCUPATION.
-- Return the extracted entities in a fixed JSON format, as shown below.
+    # Task
+    - Extract the following entities from the user query: LOCATION, MONEY, OCCUPATION, and PAY_TYPE.
+    - Return the extracted entities in a fixed JSON format, as shown below.
 
-# Entities
-- **LOCATION**: Identifies geographical locations (e.g., cities, provinces). 
-  - In Korean, locations often end with "시" (si), "군" (gun), or "구" (gu).
-  - In English or other languages, locations may end with "-si", "-gun", or "-gu".
-- **MONEY**: Identify any salary or wage information mentioned in the text. This could be represented in different forms:
-  - Examples include "250만원", "300만 원", "5천만 원" etc.
-  - Convert amounts expressed in "만원" or "천원" to full numerical values. For example:
-    - "250만원" should be interpreted as 250 * 10,000 = 2,500,000원.
-    - "5천만원" should be interpreted as 5,000 * 10,000 = 50,000,000원.
-  - Extract the numerical value in its full form.
-- **OCCUPATION**: Detects job titles or professions.
+    # Entities
+    - **LOCATION**: Identifies geographical locations (e.g., cities, provinces). 
+    - In Korean, locations often end with "시" (si), "군" (gun), or "구" (gu).
+    - In English or other languages, locations may end with "-si", "-gun", or "-gu".
+    - Ensure "시" is not misinterpreted or separated from the city name.
+    - **MONEY**: Identify any salary information mentioned in the text. This could be represented in different forms:
+    - Examples include "250만원", "300만 원", "5천만 원" etc.
+    - Convert amounts expressed in "만원" or "천원" to full numerical values. For example:
+        - "250만원" should be interpreted as 250 * 10,000 = 2,500,000원.
+        - "5천만원" should be interpreted as 5,000 * 10,000 = 50,000,000원.
+    - Extract the numerical value in its full form.
+    - **OCCUPATION**: Detects job titles or professions.
+    - **PAY_TYPE**: Identifies the type of payment mentioned. This could be:
+    - "연봉" or "annual salary" for yearly salary
+    - "월급" or "salary" for monthly salary
+    - "시급" or "hourly" for hourly salary
 
-# Output Format
-- The output should be a JSON object with the following structure:
-  {"LOCATION": "", "MONEY": "", "OCCUPATION": ""}
+    # Output Format
+    - The output should be a JSON object with the following structure:
+    {"LOCATION": "", "MONEY": "", "OCCUPATION": "", "PAY_TYPE": ""}
 
-# Policy
-- If there is no relevant information for a specific entity, return null for that entity.
-- Do not provide any explanations or additional information beyond the JSON output.
-- The output should be strictly in the JSON format specified.
+    # Policy
+    - If there is no relevant information for a specific entity, return null for that entity.
+    - Do not provide any explanations or additional information beyond the JSON output.
+    - The output should be strictly in the JSON format specified.
     """
 
     messages = [
@@ -107,7 +152,7 @@ You are an NER (Named Entity Recognition) machine that specializes in extracting
         entities = json.loads(response.content)
     except json.JSONDecodeError as e:
         print(f"Error parsing JSON: {e}")
-        entities = {"LOCATION": None, "MONEY": None, "OCCUPATION": None}
+        entities = {"LOCATION": None, "MONEY": None, "OCCUPATION": None, "PAY_TYPE": None}
     
     print("잘뽑아 왔나!!:", entities)
     return entities
@@ -149,6 +194,7 @@ def jobploy_crawler(lang, pages=3):
                 title_element = job.find_element(By.CSS_SELECTOR, "h6.mb-1")
                 link_element = job.find_element(By.CSS_SELECTOR, "a").get_attribute("href")
                 pay_element = job.find_element(By.CSS_SELECTOR, "p.pay")
+                company_name_element = job.find_element(By.CSS_SELECTOR, "span.text-info")
                 badge_elements = job.find_elements(By.CSS_SELECTOR, ".badge.text-dark.bg-secondary-150.rounded-pill")
 
                 if len(badge_elements) >= 3:
@@ -165,9 +211,11 @@ def jobploy_crawler(lang, pages=3):
 
                 title = title_element.text
                 pay = pay_element.text
+                company_name = company_name_element.text
                 
                 results.append({
                     "title": title,
+                    "company_name": company_name,
                     "link": link_element,
                     "closing_date": closing_date,
                     "location": location,
@@ -178,107 +226,134 @@ def jobploy_crawler(lang, pages=3):
 
     finally:
         driver.quit()
-        
+           
     return results
+
 
 # ElasticSearch 인덱스 생성 및 데이터 업로드
 def create_elasticsearch_index(data, index_name="jobs"):
+    # 기존 인덱스 삭제 (있을 경우)
+    if es_client.indices.exists(index=index_name):
+        es_client.indices.delete(index=index_name)
+
+    # 새로운 매핑 생성
+    mapping = {
+        "mappings": {
+            "properties": {
+                "title": {"type": "text"},
+                "company_name": {"type": "text"},
+                "link": {"type": "text"},
+                "closing_date": {"type": "text"},
+                "location": {"type": "text"},
+                "pay": {"type": "text"},
+                "pay_amount": {"type": "long"},  # 급여 필드를 정수형으로 추가
+                "pay_type": {"type": "text"},
+                "task": {"type": "text"},
+                "language": {"type": "keyword"}
+            }
+        }
+    }
+
+    # 인덱스 생성
+    es_client.indices.create(index=index_name, body=mapping)
+
+    # 데이터 인덱싱
     for item in data:
+        pay_str = item.get("pay", "")
+        pay_amount = None
+        pay_type = None
+
+        # 급여 유형 및 금액 처리
+        if "연봉" in pay_str or "annual salary" in pay_str.lower():
+            pay_type = "annual salary"
+        elif "월급" in pay_str or "salary" in pay_str.lower():
+            pay_type = "salary"
+        elif "시급" in pay_str or "hourly" in pay_str.lower():
+            pay_type = "hourly"
+
+        
+
+
+        if pay_type:
+            try:
+                # 숫자 부분만 추출하여 pay_amount로 변환
+                pay_amount = int(pay_str.split(':')[1].replace('원', '').replace('KRW', '').replace('$', '').replace(',', '').strip())
+            except ValueError:
+                pass
+
+        item["pay_type"] = pay_type
+        item["pay_amount"] = pay_amount
         es_client.index(index=index_name, body=item)
+
+    print(f"Total {len(data)} documents indexed.")
 
 # 언어별 데이터 저장 함수
 def save_data_to_file(data, filename):
     with open(filename, "w", encoding="utf-8") as file:
         json.dump(data, file, ensure_ascii=False, indent=2)
 
-
+# 검색 도구 함수 정의
 @tool
 def search_jobs(query: str) -> str:
     """Search for job listings based on the given query."""
+    print(f"\n=== 검색 시작: '{query}' ===")
+    
     lang = detect_language(query)
+    
     entities = extract_entities(query)
+    print(f"추출된 엔티티: {json.dumps(entities, ensure_ascii=False, indent=2)}")
 
-    # 기본적으로 bool 쿼리를 설정합니다.
-    search_body = {
-        "query": {
-            "bool": {
-                "must": [],
-                "filter": []
-            }
-        }
-    }
-
-    if entities["LOCATION"]:
-        # 여기를 수정합니다
-        search_body["query"]["bool"]["must"].append({
-            "match": {"location": " ".join(entities["LOCATION"])}
-        })
-
-    if entities["MONEY"]:
-        try:
-            # 괄호 안의 숫자 추출
-            money_str = entities["MONEY"][0]
-            if "(" in money_str:
-                required_salary = int(money_str.split('(')[-1].replace('만원', '0000').replace('원', '').replace(',', '').replace(')', '').strip())
-            else:
-                required_salary = int(money_str.replace('만원', '0000').replace('원', '').replace(',', '').strip())
-            
-            search_body["query"]["bool"]["filter"].append({
-                "range": {"pay": {"gte": required_salary}}
-            })
-        except ValueError as e:
-            print(f"Error processing MONEY entity: {e}")
-
-    if entities["OCCUPATION"]:
-        search_body["query"]["bool"]["must"].append({
-            "multi_match": {
-                "query": " ".join(entities["OCCUPATION"]),
-                "fields": ["title", "task"],
-                "type": "best_fields"
-            }
-        })
-    # logging.debug(f"Search body: {json.dumps(search_body, ensure_ascii=False, indent=2)}")
-
-
-    print("인덱스 존재 여부:")
-    print(es_client.indices.exists(index="jobs"))
-
-    print("인덱스 내 문서 수:")
-    print(es_client.count(index="jobs"))
-
-    print("인덱스 매핑:")
-    mapping_response = es_client.indices.get_mapping(index="jobs")
-    print(json.dumps(mapping_response.body, indent=2))
-
-
-
-
-
-    # Elasticsearch로 쿼리 실행
-    # Elasticsearch로 쿼리 실행
-    print("검색중...")
-    res: ObjectApiResponse = es_client.search(index="jobs", body=search_body)
-    print(f"Query executed. Response type: {type(res)}")
-
-
-    # res_dict 데이터 값이 제대로 안들어옴 여기서부터 확인해보면 됩니다.!!!!!!!!!!!!!! res.body에서 값이 제대로 저장 되어 있는지 index안에 저장되어있는 형식에 맞쳐서 값을 가져와 저장을 해야함
-    # ObjectApiResponse 객체를 dict로 변환
-    print("Converting ObjectApiResponse to dict...")
-    res_dict = res.body
-    print(f"Conversion complete. res_dict type: {type(res_dict)}")
-
-
-    if not res_dict['hits']['hits']:
-        print("No job listings found.")
-        return "No job listings found for the specified criteria."
-
-    print("Processing search results...")
+    # 모든 job 데이터를 가져옵니다.
+    all_jobs = es_client.search(index="jobs", body={"query": {"match_all": {}}, "size": 10000})
+    print(f"총 검색된 문서 수: {len(all_jobs['hits']['hits'])}")
+    
     filtered_results = []
-    for hit in res_dict['hits']['hits']:
-        filtered_results.append(hit["_source"])
-        print(f"Processed job: {hit['_source'].get('title', 'No title')}")
 
-    print(f"Total processed results: {len(filtered_results)}")
+    
+    for i, job in enumerate(all_jobs['hits']['hits']):
+        job_data = job['_source']
+        if i < 5:  # 처음 5개의 문서만 출력
+            
+            print(f"\n문서 {i+1}:")
+            print(json.dumps(job['_source'], ensure_ascii=False, indent=2))
+        
+        # LOCATION 필터링
+        if entities["LOCATION"] and entities["LOCATION"].lower() not in job_data["location"].lower():
+            continue
+
+        # MONEY 필터링
+        if entities["MONEY"]:
+            try:
+                required_salary = int(entities["MONEY"].replace('만원', '0000').replace('원', '').replace(',', '').strip())
+                job_salary = int(job_data["pay"].split(':')[1].replace('원', '').replace(',', '').strip())
+                if job_salary < required_salary:
+                    continue
+            except ValueError:
+                print(f"급여 정보 파싱 실패: {job_data['pay']}")
+                pass  # 급여 정보를 파싱할 수 없는 경우 건너뜁니다.
+
+        # OCCUPATION 필터링
+        if entities["OCCUPATION"] and entities["OCCUPATION"].lower() not in job_data["title"].lower() and entities["OCCUPATION"].lower() not in job_data["task"].lower():
+            continue
+
+        # PAY_TYPE 필터링
+        if entities["PAY_TYPE"]:
+            pay_type = entities["PAY_TYPE"].lower()
+            job_pay_type = job_data.get("pay_type", "").lower()
+            
+            if pay_type in ["연봉", "annual salary"] and job_pay_type not in ["연봉", "annual salary"]:
+                continue
+            elif pay_type in ["월급", "salary"] and job_pay_type not in ["월급", "salary"]:
+                continue
+            elif pay_type in ["시급", "hourly"] and job_pay_type not in ["시급", "hourly"]:
+                continue
+                
+        filtered_results.append(job_data)
+        
+        if i % 1000 == 0:
+            print(f"처리 중: {i+1}/{len(all_jobs['hits']['hits'])} 문서 검사 완료")
+
+    print(f"\n필터링 후 결과 수: {len(filtered_results)}")
 
     result = json.dumps({
         "search_summary": {
@@ -287,9 +362,12 @@ def search_jobs(query: str) -> str:
         "job_listings": filtered_results,
         "additional_info": "These are the job listings that match your query."
     }, ensure_ascii=False, indent=2)
-
-    print("JSON response created.")
-    print(f"Response length: {len(result)}")
+    
+    print("\n=== 검색 결과 요약 ===")
+    print(json.dumps({
+        "total_jobs_found": len(filtered_results),
+        "sample_results": filtered_results[:3] if filtered_results else []
+    }, ensure_ascii=False, indent=2))
 
     return result
 
@@ -313,99 +391,75 @@ create_elasticsearch_index(crawled_data)
 tools = [search_jobs]
 
 MEMORY_KEY = "chat_history"
-prompt = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            """
-            You are a specialized AI assistant focused on job searches in Korea. Your primary function is to provide accurate, relevant, and up-to-date job information based on user queries.
+prompt = ChatPromptTemplate.from_messages([
+    (
+        "system",
+        """
+        You are a precise search engine operating based on a pre-crawled Korean job database. Your main function is to extract accurate keywords from user queries and provide only the job listings that exactly match those criteria.
 
-            You utilize the following NER categories to extract key information from user queries:
-            - LOCATION: Identifies geographical locations (e.g., cities, provinces)
-            - MONEY: Recognizes salary or wage information
-            - OCCUPATION: Detects job titles or professions
+        Language and Translation:
+        - The user's query language has been detected as {gpt_detect}.
+        - Translate the final response into {gpt_detect}.
+        - Ensure that all job-related information (titles, descriptions, etc.) is accurately translated.
+        - Maintain the original Korean names for locations and companies, but provide translations in parentheses where necessary.
+        - For salary information, convert the amounts to the appropriate currency if needed, but also include the original KRW amount.
+        - Provide only the translated response, but keep any proper nouns or specific terms in their original form if translation might cause confusion.
 
-            When responding to queries:
-            1. Analyze user queries by language type to extract relevant entities.
-            2. Search the job database using the extracted information.
-            3. Filter and prioritize job listings based on the user's requirements.
-            4. If the query includes a Location keyword, ensure that all relevant job listings for that location are retrieved and included in the response. I will include all relevant job listings from that location and will not provide information about other locations.
-            5. Provide a comprehensive summary of the search results.
-            6. Offer detailed information about each relevant job listing.
-            7. Filter job listings based on the type of salary information requested by the user:
-                - If the user asks for "monthly salary," only include jobs with monthly salary information (labeled as "Salary").
-                - If the user asks for "annual salary," only include jobs with annual salary information (labeled as "Annual Salary").
-                - If the user asks for "hourly wage," only include jobs with hourly wage information (labeled as "Hourly").
-            8. If the keyword or numerical value does not match the user's query, do not provide any other data.
 
-            Include the following information for each job listing:
-            - Title
-            - Company (if available)
-            - Location
-            - Task
-            - Salary information
-            - Brief job description (if available)
-            - Key requirements (if available)
-            - Application link
+        Accurately extract and utilize the following information from the user's query:
+        1. LOCATION:
+           - In Korean, look for place names ending with "시" (si), "군" (gun), or "구" (gu).
+           - In English, look for place names ending with "-si", "-gun", or "-gu".
+           - Include only job listings that exactly match the extracted location.
 
-            Ensure your response is clear, concise, and directly addresses the user's query. If a LOCATION is mentioned in the query, include all relevant job listings from that location.
-            """
-        ),
-        (
-            "user",
-            "I need you to search for job listings based on my query. Can you help me with that?"
-        ),
-        (
-            "assistant",
-            "Certainly! I'd be happy to help you search for job listings based on your query. Please provide me with your specific request, and I'll use the search_jobs tool to find relevant information for you. What kind of job or criteria are you looking for?"
-        ),
-        # Few-shot Example 1
-        (
-            "user",
-            "I'm looking for a kitchen job in Seoul with a salary of at least 3,000,000 KRW."
-        ),
-        (
-            "assistant",
-            """
-            Thank you for your query. I'll search for kitchen job listings in Seoul with a salary of at least 3,000,000 KRW. I'll provide a summary of the results and detailed information about relevant job listings.
-            """
-        ),
-        # Few-shot Example 2
-        (
-            "user",
-            "Can you tell me about kitchen jobs in Hwaseong with an annual salary of more than 3,000,000 KRW?"
-        ),
-        (
-            "assistant",
-            """
-            Thank you for your query. I'll search for jobs with an annual salary of more than 30,000,000 KRW in Hwaseong. I'll provide a summary of the results and detailed information about relevant job listings.
-            """
-        ),
-        # Few-shot Example 3
-        (
-            "user",
-            "경기도 화성에서 월급 3백만원 이상인 일자리 알려줘"
-        ),
-        (
-            "assistant",
-            """
-            질문 주셔서 감사합니다. 경기도 화성에서 월급 3,000,000 원 이상의 일자리를 검색해 드리겠습니다. 결과를 요약해서 제공하고, 관련된 구체적인 구인 정보도 함께 안내해 드리겠습니다.
-            """
-        ),
+        2. MONEY (Salary):
+           - Convert to exact numeric values. Examples:
+             "250만원" → 2,500,000 KRW
+             "5천만원" → 50,000,000 KRW
+           - Include only job listings that offer a salary equal to or greater than the amount specified by the user.
+           - Filter based on the correct type of salary (annual, monthly, hourly).
 
-        # User's query input
-        (
-            "user",
-            "{input}"
-        ),
-        (
-            "assistant",
-            "Thank you for your query. I'll search for job listings based on your request using the search_jobs tool. I'll provide a summary of the results and detailed information about relevant job listings.If you mentioned a specific location, I'll ensure to include all relevant job listings from that location."
-        ),
-        MessagesPlaceholder(variable_name=MEMORY_KEY),
-        MessagesPlaceholder(variable_name="agent_scratchpad"),
-    ]
-)
+        3. OCCUPATION:
+           - Include only job listings that exactly match or are closely related to the occupation keywords.
+
+        Search and Response Guidelines:
+        1. Provide only job listings that exactly match all extracted keywords (location, salary, occupation).
+        2. Completely exclude any information that does not match one or more of the keywords.
+        3. Mention the total number of search results first.
+        4. Clearly present the following details for each job listing:
+           - Title
+           - Company Name (if available)
+           - Location
+           - Salary Information (exact amount and type)
+           - Job Duties
+           - Brief Job Description (if available)
+           - Application Link
+           - Closing Date
+        5. If there are no results, clearly state this and suggest adjusting the search criteria.
+        6. Additionally, if the user is not satisfied with the search results, recommend other job search platforms such as:
+           - [JobPloy](https://www.jobploy.kr/)
+           - [JobKorea](https://www.jobkorea.co.kr/)
+           - [Saramin](https://www.saramin.co.kr/)
+           - [Albamon](https://www.albamon.com/)
+
+        Your responses should be concise and accurate, providing only information that is 100% relevant to the user's query.
+        Do not include any information that is irrelevant or only partially matches the criteria.
+
+        Important: Use the maximum token limit available to provide detailed and comprehensive information.
+        Include as many relevant job listings as possible, but provide detailed descriptions for each.
+        """
+    ),
+    (
+        "human",
+        "{input}"
+    ),
+    (
+        "assistant",
+        "Understood. I will search for job listings that precisely match your request. I will extract the keywords for location, salary, and occupation, and provide results that fully meet all the conditions. I will strictly exclude any partially matching or unrelated information."
+    ),
+    MessagesPlaceholder(variable_name=MEMORY_KEY),
+    MessagesPlaceholder(variable_name="agent_scratchpad"),
+])
 
 llm_with_tools = llm.bind_tools(tools)
 
@@ -415,6 +469,7 @@ agent = (
         "agent_scratchpad": lambda x: format_to_openai_tool_messages(
             x["intermediate_steps"]
         ),
+        "gpt_detect": lambda x: x["gpt_detect"],
         "chat_history": lambda x: x["chat_history"],
     }
     | prompt
@@ -424,19 +479,39 @@ agent = (
 
 agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 
+# 검색 결과를 사용자의 언어로 번역
+def translate_to_user_language(text: str, target_language: str) -> str:
+    """한국어 텍스트를 사용자의 언어로 번역하는 함수"""
+    system_prompt = f"""You are a multilingual translator. Please translate the following Korean text into {target_language}. Ensure the translation is natural and accurate."""
+    human_prompt = f"{text}"
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": human_prompt}
+    ]
+    response = llm.invoke(messages)
+    return response.content.strip()
+
+
 @app.post("/search_jobs")
 async def search_jobs_endpoint(request: Request, query: str = Form(...)):
     chat_history = []
 
-    result = agent_executor.invoke({"input": query, "chat_history": chat_history})
+    gpt_detect = gpt_detect_language(query)
+    ko_language = korean_language(query)
+
+
+    result = agent_executor.invoke({"input": ko_language, "chat_history": chat_history, "gpt_detect": gpt_detect})
     chat_history.extend(
         [
             {"role": "user", "content": query},
             {"role": "assistant", "content": result["output"]},
         ]
     )
+    
+     # 결과를 사용자의 언어로 번역
+    translated_result = translate_to_user_language(result["output"], gpt_detect)
 
-    return JSONResponse(content={"response": result["output"], "chat_history": chat_history})
+    return JSONResponse(content={"response": translated_result, "chat_history": chat_history})
 
 if __name__ == "__main__":
     import uvicorn
