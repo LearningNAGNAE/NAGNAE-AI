@@ -108,6 +108,7 @@ def extract_entities(query):
     - **LOCATION**: Identifies geographical locations (e.g., cities, provinces). 
     - In Korean, locations often end with "시" (si), "군" (gun), or "구" (gu).
     - In English or other languages, locations may end with "-si", "-gun", or "-gu".
+    - Ensure "시" is not misinterpreted or separated from the city name.
     - **MONEY**: Identify any salary information mentioned in the text. This could be represented in different forms:
     - Examples include "250만원", "300만 원", "5천만 원" etc.
     - Convert amounts expressed in "만원" or "천원" to full numerical values. For example:
@@ -193,6 +194,7 @@ def jobploy_crawler(lang, pages=3):
                 title_element = job.find_element(By.CSS_SELECTOR, "h6.mb-1")
                 link_element = job.find_element(By.CSS_SELECTOR, "a").get_attribute("href")
                 pay_element = job.find_element(By.CSS_SELECTOR, "p.pay")
+                company_name_element = job.find_element(By.CSS_SELECTOR, "span.text-info")
                 badge_elements = job.find_elements(By.CSS_SELECTOR, ".badge.text-dark.bg-secondary-150.rounded-pill")
 
                 if len(badge_elements) >= 3:
@@ -209,9 +211,11 @@ def jobploy_crawler(lang, pages=3):
 
                 title = title_element.text
                 pay = pay_element.text
+                company_name = company_name_element.text
                 
                 results.append({
                     "title": title,
+                    "company_name": company_name,
                     "link": link_element,
                     "closing_date": closing_date,
                     "location": location,
@@ -222,8 +226,9 @@ def jobploy_crawler(lang, pages=3):
 
     finally:
         driver.quit()
-        
+           
     return results
+
 
 # ElasticSearch 인덱스 생성 및 데이터 업로드
 def create_elasticsearch_index(data, index_name="jobs"):
@@ -236,6 +241,7 @@ def create_elasticsearch_index(data, index_name="jobs"):
         "mappings": {
             "properties": {
                 "title": {"type": "text"},
+                "company_name": {"type": "text"},
                 "link": {"type": "text"},
                 "closing_date": {"type": "text"},
                 "location": {"type": "text"},
@@ -303,7 +309,6 @@ def search_jobs(query: str) -> str:
     
     filtered_results = []
 
-    print(filtered_results)
     
     for i, job in enumerate(all_jobs['hits']['hits']):
         job_data = job['_source']
@@ -431,6 +436,11 @@ prompt = ChatPromptTemplate.from_messages([
            - Application Link
            - Closing Date
         5. If there are no results, clearly state this and suggest adjusting the search criteria.
+        6. Additionally, if the user is not satisfied with the search results, recommend other job search platforms such as:
+           - [JobPloy](https://www.jobploy.kr/)
+           - [JobKorea](https://www.jobkorea.co.kr/)
+           - [Saramin](https://www.saramin.co.kr/)
+           - [Albamon](https://www.albamon.com/)
 
         Your responses should be concise and accurate, providing only information that is 100% relevant to the user's query.
         Do not include any information that is irrelevant or only partially matches the criteria.
