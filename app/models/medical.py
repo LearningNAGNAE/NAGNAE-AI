@@ -10,8 +10,6 @@ from langchain.retrievers import EnsembleRetriever
 from typing import List, Dict, Any
 from googleapiclient.discovery import build
 from langchain.schema import BaseRetriever, Document
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
-import torch
 
 load_dotenv()
 
@@ -20,49 +18,6 @@ llm = ChatOpenAI(
     temperature=0, 
     openai_api_key=os.getenv("OPENAI_API_KEY")
 )
-
-class GemmaModel:
-    def __init__(self, model_path):
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        print(f"Using device: {self.device}")
-
-        self.tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
-        
-        quantization_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.float16
-        )
-        
-        self.model = AutoModelForCausalLM.from_pretrained(
-            model_path, 
-            quantization_config=quantization_config, 
-            local_files_only=True,
-            device_map="auto",
-            torch_dtype=torch.float16
-        )
-
-    def generate_text(self, question: str) -> str:
-        prompt = f"""
-        Health advice for foreigners in Korea: {question}
-        - Give clear, accurate info
-        - Explain relevant services
-        - Use simple language
-        - Advise when to see a doctor
-        """
-        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
-        outputs = self.model.generate(
-            **inputs,
-            max_new_tokens=100,
-            num_return_sequences=1,
-            temperature=0.0,
-            top_k=50,
-            top_p=0.95,
-            no_repeat_ngram_size=2,
-            early_stopping=True
-        )
-        
-        generated_text = self.tokenizer.decode(outputs[0][inputs['input_ids'].shape[1]:], skip_special_tokens=True)
-        return generated_text.strip()
 
 class GoogleSearchRetriever(BaseRetriever):
     def translate_and_extract_keywords(self, query: str) -> str:
@@ -131,7 +86,6 @@ class MedicalAssistant:
     def __init__(self):
         self.vector_store = self.__initialize_faiss_index()
         self.ensemble_retriever = self.__setup_ensemble_retriever()
-        self.gemma_model = GemmaModel('./app/models/medical/fine_tuning/medical_fine_tuned_gemma')
 
     def __initialize_faiss_index(self):
         medical_faiss_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "models", "medical", "medical_faiss")
@@ -149,16 +103,6 @@ class MedicalAssistant:
         detected_language = response.content.strip().lower()
         print(f"Detected language: {detected_language}")
         return detected_language
-    
-    def __translate_query_to_english(self, text):
-        prompt = "You are a language translation expert. Translate the given sentence into English. Don't say any other sentence."
-        human_prompt = f"Text: {text}"
-        messages = [
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": human_prompt}
-        ]
-        response = llm.invoke(messages)
-        return response.content
 
     def __setup_ensemble_retriever(self):
         bm25_texts = [
@@ -233,9 +177,8 @@ class MedicalAssistant:
         RESPONSE_LANGUAGE: {language}
         CONTEXT: {context}
         QUESTION: {question}
-        GEMMA_RESPONSE: {gemma_response}
 
-        Please provide a detailed and comprehensive answer to the above question in the specified RESPONSE_LANGUAGE, including specific visa information when relevant. Incorporate insights from the GEMMA_RESPONSE if applicable. Organize your response clearly and include all pertinent details.
+        Please provide a detailed and comprehensive answer to the above question in the specified RESPONSE_LANGUAGE, including specific visa information when relevant.
         """
         human_message_prompt = HumanMessagePromptTemplate.from_template(human_template)
 
@@ -253,8 +196,7 @@ class MedicalAssistant:
             {
                 "context": lambda x: self.ensemble_retriever.invoke(x["question"]),
                 "question": RunnablePassthrough(),
-                "language": lambda x: self.__identify_query_language(x["question"]),
-                "gemma_response": lambda x: self.generate_text_with_gemma(x["question"])
+                "language": lambda x: self.__identify_query_language(x["question"])
             }
             | chat_prompt
             | llm
@@ -270,14 +212,8 @@ class MedicalAssistant:
             return {
                 "question": query,
                 "answer": error_message,
-                "detected_language": language,
-                "gemma_response": error_message
+                "detected_language": language
             }
-
-        if language != 'english' :
-            query = self.__translate_query_to_english(query)
-
-        gemma_response = self.generate_text_with_gemma(query)
 
         retrieval_chain = self.__create_retrieval_chain()
         response = retrieval_chain.invoke({"question": query, "language": language})
@@ -285,6 +221,5 @@ class MedicalAssistant:
         return {
             "question": query,
             "answer": response,
-            "detected_language": language,
-            "gemma_response": gemma_response
+            "detected_language": language
         }
