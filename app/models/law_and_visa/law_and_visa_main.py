@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
@@ -23,6 +23,9 @@ from langchain.chains import LLMChain
 from langchain_core.runnables import RunnablePassthrough
 from typing import Optional, List, Dict
 import uuid
+from pydantic import BaseModel, Field, ValidationError
+from typing import Optional
+
 
 # 1. 환경 설정
 app_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -325,6 +328,7 @@ class ChatRequest(BaseModel):
     categoryNo: int
     session_id: Optional[str] = None
     chat_his_no: Optional[int] = None
+    is_new_session: Optional[bool] = None
 
 
 class ChatResponse(BaseModel):
@@ -336,25 +340,28 @@ class ChatResponse(BaseModel):
 
 # 16. 채팅 엔드포인트
 @app.post("/law", response_model=ChatResponse)
-async def chat_endpoint(chat_request: ChatRequest, db: Session = Depends(get_db)):
+async def chat_endpoint(request: Request, chat_request: ChatRequest, db: Session = Depends(get_db)):
     try:
-        logger.info(f"수신된 채팅 요청: {chat_request}")
+        # 요청 바디 로깅
+        body = await request.body()
+        logger.debug(f"Raw request body: {body.decode()}")
+        
+        logger.info(f"Received chat request: {chat_request}")
         
         question = chat_request.question
         userNo = chat_request.userNo
         categoryNo = chat_request.categoryNo
         session_id = chat_request.session_id or str(uuid.uuid4())
         chat_his_no = chat_request.chat_his_no
+        is_new_session = chat_request.is_new_session
 
         # session_id에 매핑된 기존 chat_his_no를 가져옴
         if not chat_his_no and session_id in session_chat_mapping:
             chat_his_no = session_chat_mapping.get(session_id)
 
-        # 세션이 새로 생성된 경우
-        if not chat_his_no:
-            is_new_session = True
-        else:
-            is_new_session = False
+        # is_new_session이 명시적으로 설정되지 않은 경우, chat_his_no 존재 여부로 판단
+        if is_new_session is None:
+            is_new_session = not chat_his_no
 
         # 언어 감지
         language = detect_language(question)
@@ -377,12 +384,17 @@ async def chat_endpoint(chat_request: ChatRequest, db: Session = Depends(get_db)
             answer=response,
             chatHisNo=chat_history.CHAT_HIS_NO,
             chatHisSeq=chat_history.CHAT_HIS_SEQ,
-            detected_language=language,
-            session_id=session_id
+            detected_language=language
         )
         
         logger.info(f"Returning chat response: {chat_response}")
         return JSONResponse(content=chat_response.dict())
+    except ValidationError as e:
+            logger.error(f"Validation error: {e.json()}")
+            return JSONResponse(
+                status_code=422,
+                content={"detail": e.errors()}
+        )
     except Exception as e:
         logger.error(f"Error processing request: {str(e)}", exc_info=True)
         return JSONResponse(
