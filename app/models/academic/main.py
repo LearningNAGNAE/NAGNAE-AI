@@ -1,5 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import sys
 import os
@@ -11,9 +12,18 @@ from langchain.schema import BaseRetriever, Document
 from langchain.prompts import PromptTemplate
 from langchain.schema.runnable import RunnablePassthrough
 from langchain.schema.output_parser import StrOutputParser
-from typing import List, Optional
+from typing import List, Optional, Dict
 from langchain.callbacks.manager import CallbackManagerForRetrieverRun
 import uvicorn
+import uuid
+from sqlalchemy.orm import Session
+# 1. 환경 설정
+app_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(app_dir)
+from ...database.db import get_db
+from ...database import crud
+
+
 
 app = FastAPI()
 
@@ -25,12 +35,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class Query(BaseModel):
-    input: str
-    session_id: str
+# 세션 ID와 chat_his_no 매핑을 위한 딕셔너리
+session_chat_mapping: Dict[str, int] = {}
 
-class Response(BaseModel):
+class ChatRequest(BaseModel):
+    question: str
+    userNo: int
+    categoryNo: int
+    session_id: Optional[str] = None
+    chat_his_no: Optional[int] = None
+    is_new_session: Optional[bool] = None
+
+class ChatResponse(BaseModel):
+    question: str
     answer: str
+    chatHisNo: int
+    chatHisSeq: int
+    detected_language: str
 
 async def multi_index_search(query, indices=['university_data', 'university_major', 'major_details', 'pdf_data'], top_k=10):
     """멀티 인덱스 검색 함수"""
@@ -185,8 +206,7 @@ def initialize_agent():
             "universities": lambda x: ", ".join(x["universities"]),
             "majors": lambda x: ", ".join(x["majors"]),
             "regions": lambda x: ", ".join(x["regions"]),
-            "keywords": lambda x: ", ".join(x["keywords"]),
-            "chat_history": lambda x: x.get("chat_history", [])
+            "keywords": lambda x: ", ".join(x["keywords"])
         }
         | prompt
         # | (lambda x: generate_response_with_fine_tuned_model(str(x), fine_tuned_model, fine_tuned_tokenizer))
@@ -196,8 +216,25 @@ def initialize_agent():
 
     return qa_chain
 
-@app.post("/academic", response_model=Response)
-async def query_agent(query: Query):
+
+
+
+
+
+
+
+
+
+@app.post("/academic", response_model=ChatResponse)
+async def query_agent(request: Request, chat_request: ChatRequest, db: Session = Depends(get_db)):
+
+    question = chat_request.question
+    userNo = chat_request.userNo
+    categoryNo = chat_request.categoryNo
+    session_id = chat_request.session_id or str(uuid.uuid4())
+    chat_his_no = chat_request.chat_his_no
+    is_new_session = chat_request.is_new_session
+
     # 인덱스 초기화 확인 및 수행
     if not index_exists('university_data') or \
        not index_exists('university_major') or \
@@ -213,17 +250,14 @@ async def query_agent(query: Query):
     # await update_indices()
 
     agent_executor = initialize_agent()
-    language = detect_language(query.input)
-    korean_lang = korean_language(query.input)
+    language = detect_language(chat_request.question)
+    korean_lang = korean_language(chat_request.question)
     entities = extract_entities(korean_lang)
 
-    # 세션 기록 가져오기 또는 새로 생성
-    chat_history = session_histories.get(query.session_id, [])
 
     # 마지막 agent 사용
     response = await agent_executor.ainvoke({
-        "question": query.input,
-        "chat_history": chat_history,
+        "question": korean_lang,
         "agent_scratchpad": [],
         "universities": entities.universities,
         "majors": entities.majors,
@@ -234,12 +268,23 @@ async def query_agent(query: Query):
     # 번역기
     translated_response = trans_language(response, language)
 
-    # 대화 기록 업데이트
-    chat_history.append({"role": "user", "content": query.input})
-    chat_history.append({"role": "assistant", "content": translated_response})
-    session_histories[query.session_id] = chat_history
+    # 채팅 기록 저장
+    chat_history = crud.create_chat_history(db, userNo, categoryNo, question, translated_response, is_new_session, chat_his_no)
+    
+    # 세션 ID와 chat_his_no 매핑 업데이트
+    session_chat_mapping[session_id] = chat_history.CHAT_HIS_NO
 
-    return Response(answer=translated_response)
+
+
+    chat_response = ChatResponse(
+            question=question,
+            answer=translated_response,
+            chatHisNo=chat_history.CHAT_HIS_NO,
+            chatHisSeq=chat_history.CHAT_HIS_SEQ,
+            detected_language=language
+        )
+
+    return JSONResponse(content=chat_response.dict())
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
