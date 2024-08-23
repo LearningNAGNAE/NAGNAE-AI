@@ -1,18 +1,20 @@
-# app/routes/items.py
-
-from app.models.study_analysis import text_to_speech, study_analysis
-from app.models.law_and_visa.law_and_visa_main import process_law_request, ChatRequest
-from fastapi import APIRouter, File, UploadFile, HTTPException, Depends, Request
+from fastapi import APIRouter, File, UploadFile, HTTPException, Depends, BackgroundTasks, Request
 from pydantic import BaseModel
-from app.models.medical import MedicalAssistant
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 from sqlalchemy.orm import Session
+from fastapi.responses import StreamingResponse
+
+from app.models.study_analysis import text_to_speech, study_analysis, study_image_analysis
+from app.models.law_and_visa.law_and_visa_main import process_law_request, ChatRequest
+from app.models.medical import MedicalAssistant
+from app.models.board_summary import manual_update_summaries, start_scheduler, shutdown_event
 from app.database.db import get_db
 from app.database import crud
+
 import asyncio
 import json
-from fastapi.responses import StreamingResponse
 import uuid
+
 
 router = APIRouter()
 
@@ -103,3 +105,20 @@ async def study_analysis_endpoint(file: UploadFile = File(..., max_size=1024*102
 @router.post("/law")
 async def law_endpoint(chat_request: ChatRequest, db: Session = Depends(get_db)):
     return await process_law_request(chat_request, db)
+
+
+@router.post("/update-summaries")
+async def update_summaries():
+    return await manual_update_summaries()
+
+# 애플리케이션 시작 시 스케줄러 실행
+@router.on_event("startup")
+def startup_event():
+    start_scheduler()
+
+# 애플리케이션 종료 시 스케줄러 정지
+@router.on_event("shutdown")
+async def shutdown_app():
+    await shutdown_event()
+
+
