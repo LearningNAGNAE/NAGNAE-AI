@@ -68,58 +68,84 @@ def apply_lora(model):
 
 # 5. 데이터 전처리
 def preprocess_function(examples, tokenizer):
-    inputs = tokenizer(examples["prompt"], truncation=True, padding="max_length", max_length=512)
+    prompts = examples["prompt"]
+    # 'prompt'가 리스트가 아니라면 리스트로 변환
+    if not isinstance(prompts, list):
+        prompts = [prompts]
+    
+    # None 값을 빈 문자열로 대체
+    prompts = [str(p) if p is not None else "" for p in prompts]
+    
+    inputs = tokenizer(prompts, truncation=True, padding="max_length", max_length=512)
     inputs["labels"] = inputs["input_ids"].copy()
     return inputs
 
 # 6. 훈련 설정
 def get_training_args(output_dir):
-    return TrainingArguments(
+    args = TrainingArguments(
         output_dir=output_dir,
         num_train_epochs=100,
-        per_device_train_batch_size=2,  # 배치 사이즈 조정
+        per_device_train_batch_size=2,
         gradient_accumulation_steps=8,
         save_steps=500,
         save_total_limit=2,
         logging_steps=100,
-        learning_rate=1e-5,
+        learning_rate=1e-4,  # 이 값을 조정해보세요 (예: 1e-4 또는 1e-5)
         weight_decay=0.01,
         fp16=True,
         gradient_checkpointing=False,
         remove_unused_columns=False,
         push_to_hub=False,
     )
+    args.lr_scheduler_type = 'linear'
+    args.warmup_ratio = 0.1
+    return args
 
 # 7. 모델 평가 (간단한 구현)
-def evaluate_model(model, test_df, tokenizer):
+def evaluate_model(model, test_dataset, tokenizer):
     model.eval()
     correct = 0
     total = 0
     
     with torch.no_grad():
-        for _, row in test_df.iterrows():
-            input_text = f"Question: {row['question']}\nContext: {row['document']}\nAnswer:"
+        for item in test_dataset:
+            input_text = item['prompt']
             inputs = tokenizer(input_text, return_tensors="pt", max_length=512, truncation=True, padding="max_length").to(model.device)
             
             outputs = model.generate(**inputs, max_length=100)
             predicted_answer = tokenizer.decode(outputs[0], skip_special_tokens=True)
             
-            if predicted_answer.strip().lower() in row['answer'].strip().lower():
+            # 'output' 열의 내용과 비교
+            if predicted_answer.strip().lower() in item['output'].strip().lower():
                 correct += 1
             total += 1
     
     accuracy = correct / total
     print(f"Model Accuracy: {accuracy:.2f}")
 
+
+def prepare_dataset(dataset):
+    if 'prompt' not in dataset.column_names:
+        dataset = dataset.map(lambda example: {
+            'prompt': f"<start_of_turn>user\n{example['instruction']}<end_of_turn>\n<start_of_turn>model\n{example['output']}<end_of_turn>"
+        })
+    return dataset
+
 # 메인 실행 함수
 def main():
     # 데이터 준비
     csv_path = './app/models/academic/gemma_academic_fine_tuning_dataset.csv'
-    train_df, val_df, test_df = prepare_data(csv_path)
+    dataset = load_dataset('csv', data_files=csv_path)
+    dataset = prepare_dataset(dataset['train'])  # 'train' 키를 사용
+
+    # 데이터셋 분할
+    dataset = dataset.train_test_split(test_size=0.2)
+
+
     print("데이터 준비 완료")
 
     # 모델 및 토크나이저 로드
-    model_name = "qwen/qwen2-1.5b"  # 모델 이름 업데이트
+    model_name = "qwen/qwen2-1.5b"
     model, tokenizer = load_model_and_tokenizer(model_name)
     print("모델 및 토크나이저 로드 완료")
 
@@ -127,12 +153,7 @@ def main():
     model = apply_lora(model)
     print_trainable_parameters(model)
 
-    # 훈련 데이터 생성 (임시 RAG 파이프라인 사용)
-    # training_data = generate_training_data(train_df, temp_rag_pipeline)
-    # print("훈련 데이터 생성 완료")
-
     # 데이터셋 전처리
-    dataset = load_dataset('csv', data_files=csv_path)
     tokenized_dataset = dataset.map(
         lambda examples: preprocess_function(examples, tokenizer),
         batched=True,
@@ -151,6 +172,7 @@ def main():
         model=model,
         args=training_args,
         train_dataset=tokenized_dataset["train"],
+        eval_dataset=tokenized_dataset["test"],
         tokenizer=tokenizer,
         data_collator=data_collator,
     )
@@ -170,7 +192,7 @@ def main():
     print(f"파인튜닝이 완료되었습니다. 모델이 '{model_save_path}' 디렉토리에 저장되었습니다.")
 
     # 모델 평가
-    evaluate_model(model, test_df, tokenizer)
+    evaluate_model(model, tokenized_dataset["test"], tokenizer)
 
     # 평가 후 메모리 해제
     torch.cuda.empty_cache()
