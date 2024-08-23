@@ -10,8 +10,18 @@ from langchain.retrievers import EnsembleRetriever
 from typing import List, Dict, Any
 from googleapiclient.discovery import build
 from langchain.schema import BaseRetriever, Document
+from pydantic import BaseModel
+from typing import Optional
 
 load_dotenv()
+
+class ChatRequest(BaseModel):
+    question: str
+    userNo: int
+    categoryNo: int
+    session_id: Optional[str] = None
+    chat_his_no: Optional[int] = None
+    is_new_session: Optional[bool] = None
 
 llm = ChatOpenAI(
     model="gpt-3.5-turbo",
@@ -203,23 +213,23 @@ class MedicalAssistant:
             | StrOutputParser()
         )
 
-    async def provide_medical_information(self, query: str):
-        print(f"Received question: {query}")
-        language = self.__identify_query_language(query)
+    async def provide_medical_information(self, chat_request: ChatRequest):
+        question = chat_request.question
+        language = self.__identify_query_language(question)
 
         if self.ensemble_retriever is None:
             error_message = "System error. Please try again later."
             return {
-                "question": query,
+                "question": question,
                 "answer": error_message,
                 "detected_language": language
             }
 
         retrieval_chain = self.__create_retrieval_chain()
-        response = retrieval_chain.invoke({"question": query, "language": language})
+        response = retrieval_chain.invoke({"question": question, "language": language})
 
         return {
-            "question": query,
+            "question": question,
             "answer": response,
             "detected_language": language
         }
