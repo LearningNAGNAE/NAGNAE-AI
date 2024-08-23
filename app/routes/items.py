@@ -1,14 +1,15 @@
 # app/routes/items.py
-
-from fastapi import APIRouter, File, UploadFile, HTTPException
+from fastapi import APIRouter, File, UploadFile, HTTPException, Depends
 from pydantic import BaseModel
 from app.models.medical import MedicalAssistant
-from app.models.study_analysis import text_to_speech
-from app.models.study_analysis import study_text_analysis
-from app.models.study_analysis import study_image_analysis
+from app.models.study_analysis import text_to_speech, study_text_analysis, study_image_analysis
+from app.models.law_and_visa.law_and_visa_main import process_law_request, ChatRequest
 from typing import Dict, Any
+from sqlalchemy.orm import Session
+from app.database.db import get_db
 
 router = APIRouter()
+
 
 class Query(BaseModel):
     input: str
@@ -56,3 +57,7 @@ async def study_image_analysis_endpoint(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/law")
+async def law_endpoint(chat_request: ChatRequest, db: Session = Depends(get_db)):
+    return await process_law_request(chat_request, db)

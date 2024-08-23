@@ -29,8 +29,9 @@ import asyncio
 from fastapi.responses import StreamingResponse
 import json
 
+app = FastAPI()
 router = APIRouter()
-
+app.include_router(router)
 
 # 1. 환경 설정
 app_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -39,7 +40,6 @@ from ...database.db import get_db
 from ...database import crud, models
 
 load_dotenv()
-app = FastAPI()
 
 # CORS 미들웨어 추가
 app.add_middleware(
@@ -414,8 +414,7 @@ class ChatResponse(BaseModel):
 
 
 # 16. 채팅 엔드포인트
-@router.post("/law", response_model=ChatResponse)
-async def chat_endpoint(request: Request, chat_request: ChatRequest, db: Session = Depends(get_db)):
+async def process_law_request(chat_request: ChatRequest, db: Session):
     try:
         question = chat_request.question
         userNo = chat_request.userNo
