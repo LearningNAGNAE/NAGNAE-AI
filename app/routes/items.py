@@ -1,9 +1,10 @@
 # app/routes/items.py
-from fastapi import APIRouter, File, UploadFile, HTTPException, Depends
+from fastapi import APIRouter, File, UploadFile, HTTPException, Depends, BackgroundTasks
 from pydantic import BaseModel
 from app.models.medical import MedicalAssistant
 from app.models.study_analysis import text_to_speech, study_text_analysis, study_image_analysis
 from app.models.law_and_visa.law_and_visa_main import process_law_request, ChatRequest
+from app.models.board_summary import manual_update_summaries, start_scheduler, shutdown_event
 from typing import Dict, Any
 from sqlalchemy.orm import Session
 from app.database.db import get_db
@@ -61,3 +62,20 @@ async def study_image_analysis_endpoint(
 @router.post("/law")
 async def law_endpoint(chat_request: ChatRequest, db: Session = Depends(get_db)):
     return await process_law_request(chat_request, db)
+
+
+@router.post("/update-summaries")
+async def update_summaries():
+    return await manual_update_summaries()
+
+# 애플리케이션 시작 시 스케줄러 실행
+@router.on_event("startup")
+def startup_event():
+    start_scheduler()
+
+# 애플리케이션 종료 시 스케줄러 정지
+@router.on_event("shutdown")
+async def shutdown_app():
+    await shutdown_event()
+
+

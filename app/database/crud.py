@@ -53,3 +53,4 @@ def create_chat_history(
     except Exception as e:
         db.rollback()
         raise e
+        
