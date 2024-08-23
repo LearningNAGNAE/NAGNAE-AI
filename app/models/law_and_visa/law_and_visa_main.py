@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi import FastAPI, HTTPException, Depends, Request, APIRouter
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
@@ -28,6 +28,8 @@ from typing import Optional
 import asyncio
 from fastapi.responses import StreamingResponse
 import json
+
+router = APIRouter()
 
 
 # 1. 환경 설정
@@ -409,8 +411,10 @@ class ChatResponse(BaseModel):
     chatHisSeq: int
     detected_language: str
 
+
+
 # 16. 채팅 엔드포인트
-@app.post("/law", response_model=ChatResponse)
+@router.post("/law", response_model=ChatResponse)
 async def chat_endpoint(request: Request, chat_request: ChatRequest, db: Session = Depends(get_db)):
     try:
         question = chat_request.question
@@ -425,10 +429,7 @@ async def chat_endpoint(request: Request, chat_request: ChatRequest, db: Session
         
         response = await handler(question, language, session_id, userNo, db)
         
-        # 새 세션 여부 확인
         is_new_session = chat_his_no is None and session_id not in session_chat_mapping
-
-        # 기존 세션이면 chat_his_no 사용, 새 세션이면 None
         current_chat_his_no = chat_his_no or session_chat_mapping.get(session_id)
 
         chat_history = crud.create_chat_history(
@@ -441,7 +442,6 @@ async def chat_endpoint(request: Request, chat_request: ChatRequest, db: Session
             chat_his_no=current_chat_his_no
         )
         
-        # 세션 매핑 업데이트
         session_chat_mapping[session_id] = chat_history.CHAT_HIS_NO
 
         async def generate_response():
