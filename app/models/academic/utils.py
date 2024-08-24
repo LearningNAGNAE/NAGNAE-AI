@@ -32,6 +32,17 @@ def korean_language(text: str) -> str:
     response = openai.invoke(messages)
     return response.content.strip().lower()
 
+def english_language(text: str) -> str:
+    """한국어로 번역하는 함수"""
+    system_prompt = "You are a translation expert. Your task is to detect the language of a given text and translate it into english. Please provide only the translated text in english, without any additional explanations or information."
+    human_prompt = f"Text: {text}"
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": human_prompt}
+    ]
+    response = openai.invoke(messages)
+    return response.content.strip().lower()
+
 def trans_language(text: str, target_language: str) -> str:
     """텍스트를 감지된 언어로 번역하는 함수"""
     system_prompt = f"You are a professional translator. Translate the following text into {target_language} accurately and concisely. Provide only the translated text without any additional comments or explanations."
@@ -48,9 +59,11 @@ def extract_entities(query: str) -> Entities:
     try:
         parser = PydanticOutputParser(pydantic_object=Entities)
         prompt = f"""
-        Extract relevant entities from the following query. The entities should include university names, major names, regions, and other relevant keywords.
+        Extract relevant entities from the following query. The entities should include university names, major names, and other relevant keywords. Additionally, make sure to clearly distinguish between university names and regions. If a region is mentioned, categorize it explicitly as a region, not a university.
 
         Query: {query}
+
+        After extracting the entities, translate the results into English.
 
         {parser.get_format_instructions()}
         """
@@ -74,8 +87,17 @@ def generate_elasticsearch_query(entities: Entities):
         should_clauses.append({"terms": {"metadata.schoolName.keyword": entities.universities}})
     if entities.majors:
         should_clauses.append({"terms": {"metadata.major.keyword": entities.majors}})
+    if entities.region:
+        should_clauses.append({"terms": {"metadata.region.keyword": entities.region}})
     if entities.keywords:
-        should_clauses.append({"match": {"text": " ".join(entities.keywords)}})
+        should_clauses.append({
+            "multi_match": {
+                "query": " ".join(entities.keywords),
+                "fields": ["text", "metadata.schoolName", "metadata.major", "metadata.region", "metadata.summary^2"],
+                "type": "best_fields",
+                "tie_breaker": 0.3
+            }
+        })
     return {
         "query": {
             "bool": {
