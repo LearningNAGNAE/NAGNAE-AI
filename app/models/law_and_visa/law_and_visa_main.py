@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request, APIRouter
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
@@ -22,15 +22,24 @@ from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from langchain_core.runnables import RunnablePassthrough
 from typing import Optional, List, Dict
+import uuid
+from pydantic import BaseModel, ValidationError
+from typing import Optional
+import asyncio
+from fastapi.responses import StreamingResponse
+import json
+
+app = FastAPI()
+router = APIRouter()
+app.include_router(router)
 
 # 1. 환경 설정
 app_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(app_dir)
 from ...database.db import get_db
-from ...database import crud
+from ...database import crud, models
 
 load_dotenv()
-app = FastAPI()
 
 # CORS 미들웨어 추가
 app.add_middleware(
@@ -136,16 +145,21 @@ Remember, your goal is to provide as much relevant, accurate, and detailed infor
 """
 
 human_template = """
+Question type: {query_type}
+Language: {language}
 Question: {question}
-RESPONSE_LANGUAGE: {language}
-Context: {context_summary}
+Context: {contexts}
+Chat history: {chat_history}
 
 Please provide a detailed and comprehensive answer to the above question in the specified RESPONSE_LANGUAGE, including specific visa information when relevant. Organize your response clearly and include all pertinent details. Do not include any HTML tags or formatting in your response. Do not mention or refer to any AI Assistant or sources in your response.
 """
 
 system_message_prompt = SystemMessagePromptTemplate.from_template(system_prompt)
 human_message_prompt = HumanMessagePromptTemplate.from_template(human_template)
-chat_prompt = ChatPromptTemplate.from_messages([system_message_prompt, human_message_prompt])
+chat_prompt = ChatPromptTemplate.from_messages([
+    SystemMessagePromptTemplate.from_template(system_prompt),
+    HumanMessagePromptTemplate.from_template(human_template)
+])
 
 # 5. 컨텍스트 검색 함수 (Self-RAG 포함)
 def get_context(question: str) -> List[str]:
@@ -278,33 +292,96 @@ class SemanticRouter:
     def cosine_similarity(a, b):
         return sum(x*y for x, y in zip(a, b)) / (sum(x*x for x in a)**0.5 * sum(y*y for y in b)**0.5)
 
+# ----대화 기록 관리 개선----- 
+# 채팅 내용 기억하기
+def get_chat_history(
+    db: Session, 
+    chat_his_no: int,
+    limit: int = 50,
+    offset: int = 0
+) -> Dict[str, any]:
+    logger.info(f"Fetching chat history for CHAT_HIS_NO: {chat_his_no}, limit: {limit}, offset: {offset}")
+    try:
+        query = db.query(models.ChatHis).filter(
+            models.ChatHis.CHAT_HIS_NO == chat_his_no
+        ).order_by(models.ChatHis.CHAT_HIS_SEQ.asc())
+
+        total_count = query.count()
+        logger.info(f"Total records found: {total_count}")
+
+        chat_history = query.offset(offset).limit(limit).all()
+        logger.info(f"Retrieved {len(chat_history)} records")
+
+        result = []
+        for chat in chat_history:
+            result.append({
+                "CHAT_HIS_SEQ": chat.CHAT_HIS_SEQ,
+                "QUESTION": chat.QUESTION,
+                "ANSWER": chat.ANSWER,
+                "INSERT_DATE": chat.INSERT_DATE.isoformat()
+            })
+            logger.debug(f"Processed record: CHAT_HIS_SEQ={chat.CHAT_HIS_SEQ}, INSERT_DATE={chat.INSERT_DATE}")
+
+        response = {
+            "total_count": total_count,
+            "records": result,
+            "has_more": total_count > offset + limit
+        }
+        logger.info(f"Returning response with {len(result)} records. Has more: {response['has_more']}")
+        return response
+
+    except Exception as e:
+        logger.error(f"Error occurred while fetching chat history: {str(e)}", exc_info=True)
+        db.rollback()
+        raise e
+    
+def load_chat_history(db: Session, session_id: str):
+    chat_his_no = session_chat_mapping.get(session_id)
+    logger.info(f"Loading chat history for session_id: {session_id}, chat_his_no: {chat_his_no}")
+    if chat_his_no:
+        chat_history = get_chat_history(db, chat_his_no)
+        logger.info(f"Loaded chat history: {chat_history}")
+        return chat_history
+    logger.info("No chat history found for this session")
+    return {"records": [], "total_count": 0, "has_more": False}
+
+def format_chat_history(chat_history):
+    if not chat_history or not isinstance(chat_history, dict) or 'records' not in chat_history:
+        return ""
+    return "\n".join([f"User: {msg['QUESTION']}\nAI: {msg['ANSWER']}" for msg in chat_history['records']])
+
+async def handle_query(question: str, language: str, session_id: str, userNo: int, db: Session, query_type: str):
+    contexts = get_context(question)
+    chat_history = load_chat_history(db, session_id)
+    
+    formatted_chat_history = format_chat_history(chat_history)
+    
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", system_prompt),
+        ("human", "Question type: {query_type}\nLanguage: {language}\n\nQuestion: {question}\n\nRelevant context:\n{contexts}\n\nChat history:\n{chat_history}\n\nPlease provide a detailed and comprehensive answer to the above question in the specified language, including specific visa or labor law information when relevant. Organize your response clearly and include all pertinent details.")
+    ])
+    
+    chain = prompt | chat | StrOutputParser()
+    response = await chain.ainvoke({
+        "question": question,
+        "language": language,
+        "query_type": query_type,
+        "contexts": contexts,
+        "chat_history": formatted_chat_history
+    })
+    
+    return response
+
+
 # 14. 라우터 함수 정의
-async def handle_visa_query(question: str, language: str, session_id: str, userNo: int):
-    response = await crag_chain_with_history.ainvoke({
-        "question": question,
-        "language": language,
-        "session_id": session_id,
-        "userNo": userNo
-    })
-    return response
+async def handle_visa_query(question: str, language: str, session_id: str, userNo: int, db: Session):
+    return await handle_query(question, language, session_id, userNo, db, "Visa and Immigration")
 
-async def handle_labor_law_query(question: str, language: str, session_id: str, userNo: int):
-    response = await crag_chain_with_history.ainvoke({
-        "question": question,
-        "language": language,
-        "session_id": session_id,
-        "userNo": userNo
-    })
-    return response
+async def handle_labor_law_query(question: str, language: str, session_id: str, userNo: int, db: Session):
+    return await handle_query(question, language, session_id, userNo, db, "Labor Law")
 
-async def handle_general_query(question: str, language: str, session_id: str, userNo: int):
-    response = await crag_chain_with_history.ainvoke({
-        "question": question,
-        "language": language,
-        "session_id": session_id,
-        "userNo": userNo
-    })
-    return response
+async def handle_general_query(question: str, language: str, session_id: str, userNo: int, db: Session):
+    return await handle_query(question, language, session_id, userNo, db, "General Information")
 
 # Semantic Router 초기화
 semantic_router = SemanticRouter({
@@ -314,13 +391,17 @@ semantic_router = SemanticRouter({
 })
 
 # 15. 입력 및 출력 모델 정의
+# 세션 ID와 chat_his_no 매핑을 위한 딕셔너리
+session_chat_mapping: Dict[str, int] = {}
+
+# ChatRequest 모델 수정
 class ChatRequest(BaseModel):
     question: str
     userNo: int
     categoryNo: int
-    session_id: str
-    is_new_session: bool
+    session_id: Optional[str] = None
     chat_his_no: Optional[int] = None
+    is_new_session: Optional[bool] = None
 
 
 class ChatResponse(BaseModel):
@@ -330,42 +411,54 @@ class ChatResponse(BaseModel):
     chatHisSeq: int
     detected_language: str
 
+
+
 # 16. 채팅 엔드포인트
-@app.post("/law", response_model=ChatResponse)
-async def chat_endpoint(chat_request: ChatRequest, db: Session = Depends(get_db)):
+async def process_law_request(chat_request: ChatRequest, db: Session):
     try:
-        logger.info(f"수신된 채팅 요청: {chat_request}")
-        
         question = chat_request.question
         userNo = chat_request.userNo
         categoryNo = chat_request.categoryNo
-        session_id = chat_request.session_id
-        is_new_session = chat_request.is_new_session
+        session_id = chat_request.session_id or str(uuid.uuid4())
         chat_his_no = chat_request.chat_his_no
-        
-        # 언어 감지
+
         language = detect_language(question)
         
-        # Semantic routing을 사용하여 적절한 핸들러 선택
         handler = semantic_router.route(question)
         
-        # 선택된 핸들러를 사용하여 응답 생성
-        response = await handler(question, language, session_id, userNo)
+        response = await handler(question, language, session_id, userNo, db)
         
-        # 채팅 기록 저장
-        chat_history = crud.create_chat_history(db, userNo, categoryNo, question, response, is_new_session, chat_his_no)
-        
-        # JSON 응답 생성
-        chat_response = ChatResponse(
-            question=question,
-            answer=response,
-            chatHisNo=chat_history.CHAT_HIS_NO,
-            chatHisSeq=chat_history.CHAT_HIS_SEQ,
-            detected_language=language 
+        is_new_session = chat_his_no is None and session_id not in session_chat_mapping
+        current_chat_his_no = chat_his_no or session_chat_mapping.get(session_id)
+
+        chat_history = crud.create_chat_history(
+            db, 
+            userNo, 
+            categoryNo, 
+            question, 
+            response, 
+            is_new_session=is_new_session, 
+            chat_his_no=current_chat_his_no
         )
         
-        logger.info(f"Returning chat response: {chat_response}")
-        return JSONResponse(content=chat_response.dict())
+        session_chat_mapping[session_id] = chat_history.CHAT_HIS_NO
+
+        async def generate_response():
+            paragraphs = response.split('\n\n')
+            for paragraph in paragraphs:
+                words = paragraph.split()
+                for i, word in enumerate(words):
+                    yield f"data: {json.dumps({'type': 'content', 'text': word})}\n\n"
+                    if i < len(words) - 1:
+                        yield f"data: {json.dumps({'type': 'content', 'text': ' '})}\n\n"
+                    await asyncio.sleep(0.05)
+                yield f"data: {json.dumps({'type': 'newline'})}\n\n"
+                await asyncio.sleep(0.2)
+            
+            yield f"data: {json.dumps({'type': 'end', 'chatHisNo': chat_history.CHAT_HIS_NO, 'chatHisSeq': chat_history.CHAT_HIS_SEQ, 'detected_language': language})}\n\n"
+
+        return StreamingResponse(generate_response(), media_type="text/event-stream")
+        
     except Exception as e:
         logger.error(f"Error processing request: {str(e)}", exc_info=True)
         return JSONResponse(
@@ -373,7 +466,18 @@ async def chat_endpoint(chat_request: ChatRequest, db: Session = Depends(get_db)
             content={"detail": f"Internal Server Error: {str(e)}"}
         )
 
-# 17. 메모리 관리를 위한 새로운 엔드포인트
+    
+# 세션 관리를 위한 새로운 엔드포인트 (차후 추가)
+@app.post("/end_session")
+async def end_session(session_id: str):
+    if session_id in session_chat_mapping:
+        del session_chat_mapping[session_id]
+        if session_id in memory_store:
+            del memory_store[session_id]
+        return {"message": f"Session {session_id} has been ended and memory cleared."}
+    return {"message": f"No active session found for {session_id}."}
+
+# 17. 메모리 관리를 위한 새로운 엔드포인트 (차후 추가)
 @app.post("/clear_memory")
 async def clear_memory(session_id: str):
     if session_id in memory_store:

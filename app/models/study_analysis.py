@@ -9,11 +9,9 @@ import io
 from gtts import gTTS
 from dotenv import load_dotenv
 from fastapi.responses import StreamingResponse
-from transformers import WhisperProcessor, WhisperForConditionalGeneration, BlipProcessor, BlipForConditionalGeneration
+from transformers import WhisperProcessor, WhisperForConditionalGeneration
 from langchain_openai import ChatOpenAI
 from langchain.schema import HumanMessage, SystemMessage
-from PIL import Image
-from io import BytesIO
 
 load_dotenv()
 
@@ -21,9 +19,6 @@ load_dotenv()
 TARGET_SR = 16000
 whisper_processor = WhisperProcessor.from_pretrained("openai/whisper-large-v3")
 whisper_model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-large-v3")
-
-blip_processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-blip_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base", torch_dtype=torch.float16).to("cuda")
 
 # Project path setup
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -198,41 +193,7 @@ def create_audio_process_prompts(features, transcription):
     
     return system_template, human_template
 
-def create_image_process_prompts(image_description):
-    system_template = """
-    You are an expert in transforming image descriptions into natural Korean sentences.
-    Your task is to create a descriptive Korean sentence based on the given image description.
-    Follow these guidelines strictly:
-    1. The sentence should be in a narrative style, as if you're describing the scene to someone.
-    2. The description should be concise while including the main content of the image.
-    3. Use natural Korean expressions and avoid direct translations.
-    4. Provide only the requested Korean sentence without any additional explanation or comments.
-    """
-
-    human_template = f"""
-    Please transform the following image description into a descriptive Korean sentence:
-    "{image_description}"
-    Provide your response as one natural, narrative-style sentence in Korean. 
-    Ensure that the sentence ends with a verb or an adjective functioning as a verb.
-    Do not include any explanations or additional comments, just provide the Korean sentence.
-    """
-    
-    return system_template, human_template
-
-def describe_image(image_content: bytes):
-    try:
-        image_file = BytesIO(image_content)
-        raw_image = Image.open(image_file).convert('RGB')
-
-        inputs = blip_processor(raw_image, return_tensors="pt").to("cuda", torch.float16)
-        out = blip_model.generate(**inputs)
-        return blip_processor.decode(out[0], skip_special_tokens=True)
-
-    except Exception as e:
-        print(f"Error occurred while describing the image: {str(e)}")
-        raise
-
-async def study_text_analysis(file_content: bytes):
+async def study_analysis(file_content: bytes):
     try:
         transcription, audio = await speech_to_text(file_content)
         features = extract_audio_features(audio, TARGET_SR)
@@ -244,34 +205,6 @@ async def study_text_analysis(file_content: bytes):
         response = llm(messages)
         analysis = response.content.strip()
         return {"transcription": transcription, "analysis": analysis}
-    except Exception as e:
-        print(f"Error occurred: {str(e)}")
-        print(traceback.format_exc())
-        raise
-
-async def study_image_analysis(audio_content: bytes, image_content: bytes):
-    try:
-        image_description = describe_image(image_content)
-        print(f"Image description: {image_description}")
-        image_system_template, image_human_template = create_image_process_prompts(image_description)
-        image_messages = [
-            SystemMessage(content=image_system_template),
-            HumanMessage(content=image_human_template)
-        ]
-        image_response = llm(image_messages)
-        recommend = image_response.content.strip()
-
-        transcription, audio = await speech_to_text(audio_content)
-        features = extract_audio_features(audio, TARGET_SR)
-        audio_system_template, audio_human_template = create_audio_process_prompts(features, transcription)
-        audio_messages = [
-            SystemMessage(content=audio_system_template),
-            HumanMessage(content=audio_human_template)
-        ]
-        audio_response = llm(audio_messages)
-        analysis = audio_response.content.strip()
-
-        return {"transcription": transcription, "analysis": analysis, "recommend": recommend}
     except Exception as e:
         print(f"Error occurred: {str(e)}")
         print(traceback.format_exc())

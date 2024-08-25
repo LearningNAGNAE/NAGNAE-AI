@@ -1,31 +1,91 @@
-# app/routes/items.py
-
-from fastapi import APIRouter, File, UploadFile, HTTPException
+from fastapi import APIRouter, File, UploadFile, HTTPException, Depends, BackgroundTasks, Request
 from pydantic import BaseModel
+from typing import Optional, Dict, Any
+from sqlalchemy.orm import Session
+from fastapi.responses import StreamingResponse
+
+from app.models.study_analysis import text_to_speech, study_analysis, study_image_analysis
+from app.models.law_and_visa.law_and_visa_main import process_law_request, ChatRequest
 from app.models.medical import MedicalAssistant
-from app.models.study_analysis import text_to_speech
-from app.models.study_analysis import study_text_analysis
-from app.models.study_analysis import study_image_analysis
-from typing import Dict, Any
+from app.models.board_summary import manual_update_summaries, start_scheduler, shutdown_event
+from app.database.db import get_db
+from app.database import crud
+
+import asyncio
+import json
+import uuid
+
 
 router = APIRouter()
 
-class Query(BaseModel):
-    input: str
+class ChatRequest(BaseModel):
+    question: str
+    userNo: int
+    categoryNo: int
+    session_id: Optional[str] = None
+    chat_his_no: Optional[int] = None
+    is_new_session: Optional[bool] = None
 
 class TextRequest(BaseModel):
     text: str
 
+class ChatResponse(BaseModel):
+    question: str
+    answer: str
+    chatHisNo: int
+    chatHisSeq: int
+    detected_language: str
+
 medical_assistant = MedicalAssistant()
 
-@router.post("/medical")
-async def medical_endpoint(query: Query):
+# 세션 ID와 chat_his_no 매핑을 위한 딕셔너리
+session_chat_mapping: Dict[str, int] = {}
+
+@router.post("/medical", response_model=ChatResponse)
+async def medical_endpoint(request: Request, chat_request: ChatRequest, db: Session = Depends(get_db)):
     try:
-        result = await medical_assistant.provide_medical_information(query.input)
-        return result
+        question = chat_request.question
+        userNo = chat_request.userNo
+        categoryNo = chat_request.categoryNo
+        session_id = chat_request.session_id or str(uuid.uuid4())
+        chat_his_no = chat_request.chat_his_no
+
+        result = await medical_assistant.provide_medical_information(chat_request)
+
+        is_new_session = chat_his_no is None and session_id not in session_chat_mapping
+        current_chat_his_no = chat_his_no or session_chat_mapping.get(session_id)
+
+        chat_history = crud.create_chat_history(
+            db, 
+            userNo, 
+            categoryNo, 
+            question, 
+            result['answer'], 
+            is_new_session=is_new_session, 
+            chat_his_no=current_chat_his_no
+        )
+        
+        session_chat_mapping[session_id] = chat_history.CHAT_HIS_NO
+
+        async def generate_response():
+            paragraphs = result['answer'].split('\n\n')
+            for paragraph in paragraphs:
+                words = paragraph.split()
+                for i, word in enumerate(words):
+                    yield f"data: {json.dumps({'type': 'content', 'text': word})}\n\n"
+                    if i < len(words) - 1:
+                        yield f"data: {json.dumps({'type': 'content', 'text': ' '})}\n\n"
+                    await asyncio.sleep(0.05)
+                yield f"data: {json.dumps({'type': 'newline'})}\n\n"
+                await asyncio.sleep(0.2)
+            
+            yield f"data: {json.dumps({'type': 'end', 'chatHisNo': chat_history.CHAT_HIS_NO, 'chatHisSeq': chat_history.CHAT_HIS_SEQ, 'detected_language': result['detected_language']})}\n\n"
+
+        return StreamingResponse(generate_response(), media_type="text/event-stream")
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
- 
+
 @router.post("/text-to-speech")
 async def text_to_speech_endpoint(request: TextRequest):
     try:
@@ -33,26 +93,32 @@ async def text_to_speech_endpoint(request: TextRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/study-text-analysis")
-async def study_text_analysis_endpoint(file: UploadFile = File(..., max_size=1024*1024*10)):
+@router.post("/study-analysis")
+async def study_analysis_endpoint(file: UploadFile = File(..., max_size=1024*1024*10)):
     try:
         file_content = await file.read()
-        result = await study_text_analysis(file_content)
+        result = await study_analysis(file_content)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/law")
+async def law_endpoint(chat_request: ChatRequest, db: Session = Depends(get_db)):
+    return await process_law_request(chat_request, db)
 
-@router.post("/study-image-analysis")
-async def study_image_analysis_endpoint(
-    audio_file: UploadFile = File(..., description="The audio file to be analyzed"),
-    image_file: UploadFile = File(..., description="The image file to be analyzed")
-) -> Dict[str, Any]:
-    try:
-        audio_content = await audio_file.read()
-        image_content = await image_file.read()
-        result = await study_image_analysis(audio_content, image_content)
 
-        return result
+@router.post("/update-summaries")
+async def update_summaries():
+    return await manual_update_summaries()
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# 애플리케이션 시작 시 스케줄러 실행
+@router.on_event("startup")
+def startup_event():
+    start_scheduler()
+
+# 애플리케이션 종료 시 스케줄러 정지
+@router.on_event("shutdown")
+async def shutdown_app():
+    await shutdown_event()
+
+
