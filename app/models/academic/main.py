@@ -57,7 +57,6 @@ async def multi_index_search(query, entities, indices=['university_data', 'unive
     """멀티 인덱스 검색 함수"""
     if isinstance(query, dict):
         query = query.get('question', '')
-    
     # entities = extract_entities(query)
     query_vector = embedding.embed_query(query)
     es_query = generate_elasticsearch_query(entities)
@@ -135,113 +134,71 @@ def initialize_agent(entities):
     retriever = FunctionRetriever()
 
     prompt_template = """
-    You are a Korean university information expert. Answer questions clearly, specifically, and in detail. Your responses should be comprehensive and informative.
+    You are a Korean university information expert. Answer questions clearly, specifically, and in detail in Korean. Your responses should be comprehensive and informative.
 
     **Provide detailed information centered on majors, universities, regions, and keywords mentioned in the question.**
 
-    For each question, your answer MUST include at least the following information:
-    - **University:** Full name, location, historical background, notable features
-    - **Majors:** List of major departments, brief description of each
-    - **Campus:** Detailed description of campus facilities and environment
-    - **Notable Alumni:** At least 3 famous graduates and their achievements
+    Use the following information sources to answer the question:
+    1. University Data: {university_data}
+    2. University Major Data: {university_major}
+    3. Major Details: {major_details}
+    4. Foreign Student Information: {pdf_data}
+
+    IMPORTANT: 
+    1. Do not invent or generate any information that is not present in the provided data. If information is not available, explicitly state "이 정보는 제공된 데이터에 없습니다." Also, provide a relevant university website link if available. Example: "이 정보는 제공된 데이터에 없습니다. 자세한 내용은 다음 웹사이트를 참조하세요: [대학 웹사이트 링크]."
+    2. Pay close attention to the exact names of universities and locations. Do not confuse similar-sounding names (e.g., Cheongju University vs Chungju University). 
+    3. If a location name is mentioned in the question, do not assume it is a university name. Always check if it's a university in the provided data.
+    4. If you're unsure about any name or information, state clearly: "정확한 정보를 확인할 수 없습니다. 제공된 데이터에서 [name/information]에 대한 정보를 찾을 수 없습니다."
+    
+    For each question, your answer MUST include the following information (provide in an appropriate order based on the nature of the question):
+    - **University:** Full name, location, historical background, notable features (only provide this information if explicitly asked about university details. If asked about specific majors, recommend universities known for those majors only if relevant information is available; otherwise, do not include it. For all other situations, do not provide university information unless explicitly requested)
+    - **Majors:** Provide information only about the specific major(s) the user asks about, and give a brief description of each. Additionally, provide information about universities known for those specific majors
+    - **Campus:** Detailed description of campus facilities and environment. List the number of campuses and their respective names for the university
     - **Research:** Key research areas and any significant achievements
-    - **Rankings:** National and international rankings if available
-    - **Admission:** Brief overview of admission process and requirements
+    - **Admission:** Brief overview of admission process and requirements (provide separate explanations for the admission process and requirements for international students and general applicants)
     - **Student Life:** Description of student activities, clubs, and campus culture
 
     Use bullet points for clarity and organization. Provide specific examples and data where possible.
 
-    **Context:** {context}
+    Utilize the foreign student information ({pdf_data}) when providing details about special programs for international students, language requirements, cultural adaptation support, etc.
+
     **Question:** {question}
 
-    **Example Answers:**
-    Q: Please tell me about the universities in Jeju Island.
-    A: I will inform you about the universities in Jeju Island.
-    - Universities: Jeju Tourism University (1st Campus), Jeju International University (1st Campus), Jeju National University (1st Campus), Jeju Halla University (1st Campus), Korea Polytechnic I University Jeju Campus (1st Campus)
-    There are a total of 5 universities.
-
-    Q: Please tell me about Kyonggi University.
-    A: I will inform you about Kyonggi University.
-    - Campuses: Kyonggi University (1st Campus), Kyonggi University (2nd Campus)
-    - Locations: 24 Kyonggidae-ro 9-gil, Seodaemun-gu, Seoul (Chungjeong-ro 2-ga, Kyonggi University), 154-42 Gwanggyosan-ro, Yeongtong-gu, Suwon-si, Gyeonggi-do (Iui-dong, Kyonggi University)
-    - Offered Majors: 
-            - Gyeonggi-do: Korean Language and Literature, English Language and Literature, History, Library and Information Science, Global Language and Literature, Early Childhood Education, Three-Dimensional Modeling, Design Business, Fine Arts, Physical Education, Security Management, Sports Science, Law, Public Safety, Human Services, Public Human Resources, Economics, Business Administration, Industrial Management Information Engineering, AI Computer Engineering (Computer Engineering, Artificial Intelligence, SW Safety and Security), Mathematics, Chemistry, Bio-convergence, Architecture, Social Energy System Engineering, Electronic Engineering, Convergence Energy System Engineering, Smart City Engineering, Mechanical System Engineering, etc.
-            - Seoul: Acting, Animation, Media and Visual Studies, Applied Music, Tourism Development and Management, Tourism and Cultural Content, Hotel and Restaurant Management, etc.
-
-    Q: Please tell me about the Computer Science and Engineering department at Seoul National University.
-    A: The Computer Science and Engineering department at Seoul National University is located at one of Korea's top universities, Seoul National University. 
-    - Major: Computer Science and Engineering is the study of designing and developing computer systems, covering programming, algorithms, databases, artificial intelligence, etc.
-    - University: Seoul National University is located in Gwanak-gu, Seoul, and offers a wide range of academic fields.
-    - Main Subjects: Data Structures, Operating Systems, Computer Networks, Software Engineering, etc.
-    - Related Careers: Software Developer, System Engineer, Data Scientist, AI Researcher, etc.
-    - Keywords: #4thIndustrialRevolution #Coding #ITIndustry
-
-    Q: Please tell me about the universities in Jeju Island.
-    A: I will inform you about the universities in Jeju Island.
-    - Universities: Jeju Tourism University (1st Campus), Jeju International University (1st Campus), Jeju National University (1st Campus), Jeju Halla University (1st Campus), Korea Polytechnic I University Jeju Campus (1st Campus)
-    There are a total of 5 universities.
-
-    Q: Please tell me about the Nursing department.
-    A: I will inform you about the Nursing department.
-    - Department Overview: Have you heard of the Nightingale Pledge? It's a pledge about the role and mindset of nurses. The Nursing department aims to teach the actual nursing knowledge needed to care for patients well. In the Nursing department, you learn how to promote people's health and reduce suffering from diseases to help them live happier lives.
-    - Department Characteristics: Living a physically and mentally healthy life is considered the greatest blessing. The Nursing department is where you can learn about caring for sick people and living a life of helping others. In the past, there was a prejudice that only women entered this department, but gradually more men are entering as well.
-    - Interests and Aptitudes: It's good if you have an interest in the human body, diseases, life, etc., and like helping others. Since nursing studies basic medical fields, you need to be good at subjects like biology and chemistry, and because you meet and live with various people and sick patients in hospitals, you need good interpersonal skills.
-    - Related High School Subjects: 
-            - Common Subjects
-            English, Science, Ethics
-            - General Elective Subjects
-            English: English I, English II, English Reading and Writing
-            Science: Life Science I, Chemistry I
-            Social Studies: Life and Ethics, Ethics and Thought
-            Liberal Arts: Philosophy, Psychology
-            - Career Elective Subjects
-            Life Science II, Chemistry II
-            - Specialized Subjects I
-            Advanced Chemistry and Advanced Life Science, Chemistry Experiments and Life Science Experiments, Science Project Research
-            - Specialized Subjects II
-            Public Health, Human Structure and Function, Health Nursing
-            [Source: Sejong Special Self-Governing City Office of Education, Boinda Series 5.0 - Major and Aptitude Development Guide]
-    - Career Exploration Activities:
-        Medical Volunteer Work: Experience medical volunteer work at hospitals, medical organizations, etc., interacting with patients and doctors and learning to have a giving heart towards people.
-        Attending Medical Exhibitions: Attend hospital and medical device industry exhibitions to understand medical-related trends and gain new information through seminars.
-        Science (Biology, Chemistry, etc.) Related Club Activities: Find your interests through club activities related to science (biology, chemistry, etc.).
-        Medical-related Reading -
-    - Major University Subjects:
-        - Fundamentals of Nursing: Helps students entering nursing understand the basic principles required for professional nursing and connects theory and practice in the field.
-        - Adult Nursing: Learn to diagnose physical, psychological, and social nursing situations and nursing interventions to solve identified problems for common nursing issues in adulthood.
-        - Pediatric Nursing: Learn the role of mediator between care providers, parents, and health care teams based on the concepts of child growth and development processes, diseases common in childhood, and nursing problems.
-        - Anatomy: Develop accurate descriptive ability of each part of the human body by learning gross anatomical knowledge of the human body locally for back, arms, head, neck, chest, abdomen, pelvis, and legs, and learn the structure and function of the human body related to clinical practice.
-        - Pathology: Learn about the definition, causes, mechanisms, course, symptoms and signs, diagnosis, prognosis, and complications of diseases classified according to each organ system.
-    - Related Careers: Nurse, Emergency Medical Technician, Public Health Researcher, Health Teacher, Public Health Official, Probation Officer, Life Science Researcher, Operating Room Nurse, Research Nurse, Medical Tourism Coordinator, Medical Coordinator, Mental Health Counseling Specialist
-
-    - Fields of Employment after Graduation:
-        - Companies and Industries: General hospitals, university hospitals, private clinics, public health centers, senior welfare centers, social welfare centers, postpartum care centers, midwifery clinics, nursing homes, medical device companies, medical information companies, pharmaceutical companies, medical offices in leisure and sports-related facilities, etc.
-        - Academia and Research Institutions: Korea Institute for Health and Social Affairs, Korea Foundation for International Healthcare, etc.
-        - Government and Public Institutions, Schools: Korea Disease Control and Prevention Agency, Korea Health Industry Development Institute, Korea Human Resource Development Institute for Health & Welfare, Korea Institute for Health and Social Affairs, and other medical-related public institutions, health teachers
-    - Related Specific Departments: College of Nursing, Nursing Major, Department of Nursing, Department of Nursing (4-year), Department of Nursing (Gimhae), Department of Nursing (Night), Department of Nursing (Special Course), School of Nursing, School of Nursing Department of Nursing, School of Nursing (Nursing Major), Nursing Major, Global Health Nursing Major
-
-    Remember to answer in Korean, matching the language of the question. Ensure your response is thorough and covers all aspects mentioned above.
+    Always answer in Korean. Ensure your response is thorough and covers all aspects mentioned above. You can include English terms or names in parentheses if necessary. Do not include any information that is not present in the provided data sources. If the question mentions a location or name that is not clearly a university in the provided data, clarify this in your response and provide information about the location if available, not about a university.
     """
 
     prompt = PromptTemplate(
         template=prompt_template,
-        input_variables=["context", "question", "universities", "majors", "regions", "keywords"]
+        input_variables=["university_data", "university_major", "major_details", "pdf_data", "question"]
     )
 
-    def format_docs(docs):
-        return "\n\n".join(doc.page_content for doc in docs)
+    async def format_docs(docs):
+        formatted = {
+            "university_data": "",
+            "university_major": "",
+            "major_details": "",
+            "pdf_data": ""
+        }
+        for doc in docs:
+            source = doc.metadata.get('source_index', 'unknown')
+            if source in formatted:
+                formatted[source] += f"\n{doc.page_content}"
+        return formatted
+
+    async def get_formatted_docs(question, index):
+        docs = await retriever.get_relevant_documents(question)
+        formatted = await format_docs(docs)
+        return formatted[index]
 
     qa_chain = (
         {
-            "context": retriever | format_docs,
-            "question": lambda x: x["question"],
-            "universities": lambda x: ", ".join(x["universities"]),
-            "majors": lambda x: ", ".join(x["majors"]),
-            "regions": lambda x: ", ".join(x["regions"]),
-            "keywords": lambda x: ", ".join(x["keywords"])
+            "university_data": lambda x: get_formatted_docs(x["question"], "university_data"),
+            "university_major": lambda x: get_formatted_docs(x["question"], "university_major"),
+            "major_details": lambda x: get_formatted_docs(x["question"], "major_details"),
+            "pdf_data": lambda x: get_formatted_docs(x["question"], "pdf_data"),
+            "question": lambda x: x["question"]
         }
         | prompt
-        # | (lambda x: generate_response_with_fine_tuned_model(str(x), fine_tuned_model, fine_tuned_tokenizer))
         | (lambda x: openai.predict(str(x)))  # GPT-3.5-turbo 모델로 예측
         | StrOutputParser()
     )
@@ -289,11 +246,11 @@ async def query_agent(request: Request, chat_request: ChatRequest, db: Session =
     agent_executor = initialize_agent(entities)
     # 마지막 agent 사용
     response = await agent_executor.ainvoke({
-        "question": english_lang,
+        "question": korean_lang,
         "agent_scratchpad": [],
         "universities": entities.universities,
         "majors": entities.majors,
-        "regions": entities.region,
+        "regions": entities.regions,
         "keywords": entities.keywords
     })
 

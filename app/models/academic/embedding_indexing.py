@@ -31,6 +31,13 @@ def embed_and_index_university_data():
             metadata = {
                 'source': 'university_data',
                 'schoolName': item['schoolName'],
+                'campusName': item.get('campusName', ''),
+                'schoolType': item.get('schoolType', ''),
+                'estType': item.get('estType', ''),
+                'region': item.get('region', ''),
+                'adres': item.get('adres', ''),
+                'collegeInfoUrl': item.get('collegeInfoUrl', ''),
+                'seq': item.get('seq', '')
             }
             
             # 선택적 필드들을 메타데이터에 추가
@@ -64,14 +71,21 @@ def embed_and_index_university_major():
             text = f"{item.get('lClass', '')} {item.get('facilName', '')} {item.get('mClass', '')}"
             vector = embedding.embed_query(text)
             metadata = {
-                'source': 'university_major'
+                'source': 'university_major',
+                'lClass': item.get('lClass', ''),  # 대계열
+                'facilName': item.get('facilName', ''),  # 학과명
+                'majorSeq': item.get('majorSeq', ''),  # 전공 일련번호
+                'mClass': item.get('mClass', ''),  # 중계열
+                'totalCount': item.get('totalCount', ''),  # 총 학과 수
+                'seq': item.get('seq', ''),  # 일련번호
+                'part': item.get('part', ''),  # 학부
+                'schoolName': item.get('schoolName', ''),  # 학교명
+                'campus': item.get('campus', ''),  # 캠퍼스
+                'majorName': item.get('majorName', ''),  # 전공명
+                'orgCode': item.get('orgCode', ''),  # 기관코드
+                'estType': item.get('estType', ''),  # 설립구분
+                'region': item.get('region', ''),  # 지역
             }
-            
-            # 선택적 필드들을 메타데이터에 추가
-            optional_fields = ['lClass', 'facilName', 'majorSeq', 'mClass', 'totalCount']
-            for field in optional_fields:
-                if field in item:
-                    metadata[field] = item[field]
             
             doc = {
                 'text': text,
@@ -102,7 +116,13 @@ def embed_and_index_major_details():
                 text = f"{item.get('major', '')} {item.get('summary', '')}"
                 vector = embedding.embed_query(text)
                 metadata = {
-                    'source': 'major_details'
+                    'source': 'major_details',
+                    'major': item.get('major', ''),
+                    'summary': item.get('summary', ''),
+                    'job': item.get('job', ''),
+                    'qualifications': item.get('qualifications', ''),
+                    'salary': item.get('salary', ''),
+                    'employment': item.get('employment', '')
                 }
                 
                 # 선택적 필드들을 메타데이터에 추가
