@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Form
+from fastapi import FastAPI, Request, Depends
 from fastapi.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
 from langchain.agents import tool
@@ -8,24 +8,24 @@ from langchain.agents.format_scratchpad.openai_tools import format_to_openai_too
 from langchain.agents.output_parsers.openai_tools import OpenAIToolsAgentOutputParser
 from langchain.agents import AgentExecutor
 from langchain_community.vectorstores import FAISS
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from langchain_core.documents import Document
 import json
 import os
 from dotenv import load_dotenv
-from langid import classify
 from fastapi.middleware.cors import CORSMiddleware
 from elasticsearch import Elasticsearch
-from elastic_transport import ObjectApiResponse
-import logging
-import re
+from typing import List, Optional, Dict
+from pydantic import BaseModel
 import json
+import uuid
+from ...database.db import get_db
+from ...database import crud
+from sqlalchemy.orm import Session
 
 # # Load the job location data
 # with open('job_location.json', 'r', encoding='utf-8') as f:
@@ -44,11 +44,30 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 허용할 Origin 목록
+    allow_origins=["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],  # 허용할 HTTP 메서드 목록
     allow_headers=["*"],  # 허용할 HTTP 헤더 목록
 )
+
+# 세션 ID와 chat_his_no 매핑을 위한 딕셔너리
+session_chat_mapping: Dict[str, int] = {}
+
+class ChatRequest(BaseModel):
+    question: str
+    userNo: int
+    categoryNo: int
+    session_id: Optional[str] = None
+    chat_his_no: Optional[int] = None
+    is_new_session: Optional[bool] = None
+
+class ChatResponse(BaseModel):
+    question: str
+    answer: str
+    chatHisNo: int
+    chatHisSeq: int
+    detected_language: str
+
 templates = Jinja2Templates(directory="templates")  # html 파일내 동적 콘텐츠 삽입 할 수 있게 해줌(렌더링).
 
 llm = ChatOpenAI(
@@ -448,7 +467,6 @@ def search_jobs(query: str) -> str:
 
 tools = [search_jobs]
 
-# MEMORY_KEY = "chat_history"
 prompt = ChatPromptTemplate.from_messages([
     (
         "system",
@@ -528,7 +546,6 @@ agent = (
             x["intermediate_steps"]
         ),
         "gpt_detect": lambda x: x["gpt_detect"],
-        # "chat_history": lambda x: x["chat_history"],
     }
     | prompt
     | llm_with_tools
@@ -550,26 +567,49 @@ def translate_to_user_language(text: str, target_language: str) -> str:
     return response.content.strip()
 
 
-@app.post("/search_jobs")
-async def search_jobs_endpoint(request: Request, query: str = Form(...)):
-    # chat_history = []
+@app.post("/search_jobs", response_model=ChatResponse)
+async def search_jobs_endpoint(request: Request, chat_request: ChatRequest, db: Session = Depends(get_db)):
 
-    gpt_detect = gpt_detect_language(query)
-    ko_language = korean_language(query)
+    question = chat_request.question
+    userNo = chat_request.userNo
+    categoryNo = chat_request.categoryNo
+    session_id = chat_request.session_id or str(uuid.uuid4())
+    chat_his_no = chat_request.chat_his_no
+    is_new_session = chat_request.is_new_session
 
 
-    result = agent_executor.invoke({"input": ko_language, "gpt_detect": gpt_detect})
-    # chat_history.extend(
-    #     [
-    #         {"role": "user", "content": query},
-    #         {"role": "assistant", "content": result["output"]},
-    #     ]
-    # )
+    gpt_detect = gpt_detect_language(question)
+    ko_language = korean_language(question)
+
+
+    result = agent_executor.invoke({
+        "input": ko_language, 
+        "gpt_detect": gpt_detect,
+    })
     
      # 결과를 사용자의 언어로 번역
     translated_result = translate_to_user_language(result["output"], gpt_detect)
 
-    return JSONResponse(content={"response": translated_result})
+
+    # 채팅 기록 저장
+    chat_history = crud.create_chat_history(db, userNo, categoryNo, question, translated_result, is_new_session, chat_his_no)
+    
+    # 세션 ID와 chat_his_no 매핑 업데이트
+    session_chat_mapping[session_id] = chat_history.CHAT_HIS_NO
+
+    chat_response = ChatResponse(
+            question=question,
+            answer=translated_result,
+            chatHisNo=chat_history.CHAT_HIS_NO,
+            chatHisSeq=chat_history.CHAT_HIS_SEQ,
+            detected_language=gpt_detect
+        )
+
+
+
+
+
+    return JSONResponse(content=chat_response.dict())
 
 if __name__ == "__main__":
     import uvicorn

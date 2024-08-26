@@ -62,7 +62,7 @@ pip install elasticsearch langchain-community
 
 pip install fasttext-wheel
 
-
+pip install mysqlclient
 
 
 
