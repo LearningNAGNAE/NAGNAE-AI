@@ -177,12 +177,14 @@ def get_context(question: str) -> List[str]:
         {"role": "user", "content": f"Original question: {question}\nInitial context: {[node.node.text for node in reranked_nodes[:2]]}\n\nPlease provide a refined query:"}
     ]).content
     
-    # 4단계: 정제된 쿼리로 두 번째 검색
-    refined_docs = ensemble_retriever.get_relevant_documents(refined_query)
-    refined_nodes = [NodeWithScore(node=TextNode(text=doc.page_content), score=1.0) for doc in refined_docs]
+    # 4단계: 정제된 쿼리로 컨텍스트 필터링
+    filtered_nodes = [
+        node for node in reranked_nodes 
+        if is_relevant(refined_query, node.node.text)
+    ]
     
     # 5단계: 최종 리랭킹
-    final_reranked_nodes = postprocessor.postprocess_nodes(refined_nodes, query_bundle=QueryBundle(query_str=refined_query))
+    final_reranked_nodes = postprocessor.postprocess_nodes(filtered_nodes, query_bundle=QueryBundle(query_str=refined_query))
     
     return [node.node.text for node in final_reranked_nodes]
 
@@ -191,13 +193,13 @@ def summarize_context(context: List[str]) -> str:
     return "Context summary:\n" + "\n".join(context[:3])
 
 # 7. CRAG 관련 함수 및 프롬프트 정의
-def is_relevant(question: str, context: str) -> bool:
+def is_relevant(query: str, context: str) -> bool:
     relevance_prompt = PromptTemplate(
-        input_variables=["question", "context"],
-        template="Question: {question}\n\nContext: {context}\n\nIs this context relevant to answering the question? Respond with 'Yes' or 'No'."
+        input_variables=["query", "context"],
+        template="Query: {query}\n\nContext: {context}\n\nIs this context relevant to answering the query? Respond with 'Yes' or 'No'."
     )
     relevance_chain = LLMChain(llm=chat, prompt=relevance_prompt)
-    response = relevance_chain.run(question=question, context=context)
+    response = relevance_chain.run(query=query, context=context)
     return response.strip().lower() == 'yes'
 
 def get_refined_context(question: str, contexts: List[str]) -> str:
@@ -348,7 +350,11 @@ def load_chat_history(db: Session, session_id: str):
 def format_chat_history(chat_history):
     if not chat_history or not isinstance(chat_history, dict) or 'records' not in chat_history:
         return ""
-    return "\n".join([f"User: {msg['QUESTION']}\nAI: {msg['ANSWER']}" for msg in chat_history['records']])
+    formatted = []
+    for msg in chat_history['records'][-5:]:  # 최근 5개의 대화만 포함
+        formatted.append(f"User: {msg['QUESTION']}")
+        formatted.append(f"AI: {msg['ANSWER']}")
+    return "\n".join(formatted)
 
 async def handle_query(question: str, language: str, session_id: str, userNo: int, db: Session, query_type: str):
     contexts = get_context(question)
@@ -358,7 +364,7 @@ async def handle_query(question: str, language: str, session_id: str, userNo: in
     
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_prompt),
-        ("human", "Question type: {query_type}\nLanguage: {language}\n\nQuestion: {question}\n\nRelevant context:\n{contexts}\n\nChat history:\n{chat_history}\n\nPlease provide a detailed and comprehensive answer to the above question in the specified language, including specific visa or labor law information when relevant. Organize your response clearly and include all pertinent details.")
+        ("human", "Question type: {query_type}\nLanguage: {language}\n\nPrevious conversation:\n{chat_history}\n\nCurrent question: {question}\n\nRelevant context:\n{contexts}\n\nPlease provide a detailed and comprehensive answer to the current question, taking into account the previous conversation and the relevant context. Ensure your response is coherent, non-repetitive, and directly addresses the user's query. If the user points out that you're repeating information, acknowledge it and provide new or more specific information.")
     ])
     
     chain = prompt | chat | StrOutputParser()
@@ -370,10 +376,72 @@ async def handle_query(question: str, language: str, session_id: str, userNo: in
         "chat_history": formatted_chat_history
     })
     
+    # 응답 후처리
+    response = post_process_response(response, question)
+    
     return response
 
+def post_process_response(response: str, question: str) -> str:
+    # 응답이 질문과 관련 없는 내용을 반복하는지 확인
+    if "왜 같은 말만 반복해" in question.lower():
+        return "죄송합니다. 이전 답변이 반복적이었던 것 같습니다. 좀 더 구체적인 정보를 제공해 드리겠습니다. " + response
+    
+    # 기타 후처리 로직 추가 가능
+    return response
 
 # 14. 라우터 함수 정의
+from typing import Dict, Callable, List, Tuple
+from langchain_openai import OpenAIEmbeddings
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
+
+class ImprovedSemanticRouter:
+    def __init__(self, routes: Dict[str, Callable], default_handler: Callable, similarity_threshold: float = 0.5):
+        self.routes = routes
+        self.default_handler = default_handler
+        self.similarity_threshold = similarity_threshold
+        self.embeddings = OpenAIEmbeddings()
+        self.route_texts = list(routes.keys())
+        self.update_route_embeddings()
+
+    def update_route_embeddings(self):
+        self.route_embeddings = self.embeddings.embed_documents(self.route_texts)
+
+    def add_route(self, route_text: str, handler: Callable):
+        self.routes[route_text] = handler
+        self.route_texts.append(route_text)
+        new_embedding = self.embeddings.embed_documents([route_text])[0]
+        self.route_embeddings.append(new_embedding)
+
+    def remove_route(self, route_text: str):
+        if route_text in self.routes:
+            index = self.route_texts.index(route_text)
+            del self.routes[route_text]
+            del self.route_texts[index]
+            del self.route_embeddings[index]
+
+    def route(self, query: str, context: Dict = None) -> Tuple[Callable, float]:
+        try:
+            query_embedding = self.embeddings.embed_query(query)
+            
+            if context:
+                context_str = " ".join([f"{k}: {v}" for k, v in context.items()])
+                context_embedding = self.embeddings.embed_query(context_str)
+                query_embedding = np.mean([query_embedding, context_embedding], axis=0)
+
+            similarities = cosine_similarity([query_embedding], self.route_embeddings)[0]
+            max_similarity_index = np.argmax(similarities)
+            max_similarity = similarities[max_similarity_index]
+
+            if max_similarity >= self.similarity_threshold:
+                return self.routes[self.route_texts[max_similarity_index]], max_similarity
+            else:
+                return self.default_handler, max_similarity
+        except Exception as e:
+            logger.error(f"Error in routing: {str(e)}")
+            return self.default_handler, 0.0
+
+# Example usage:
 async def handle_visa_query(question: str, language: str, session_id: str, userNo: int, db: Session):
     return await handle_query(question, language, session_id, userNo, db, "Visa and Immigration")
 
@@ -382,6 +450,21 @@ async def handle_labor_law_query(question: str, language: str, session_id: str, 
 
 async def handle_general_query(question: str, language: str, session_id: str, userNo: int, db: Session):
     return await handle_query(question, language, session_id, userNo, db, "General Information")
+
+async def default_handler(question: str, language: str, session_id: str, userNo: int, db: Session):
+    return await handle_query(question, language, session_id, userNo, db, "General Information")
+
+# Initialize the router
+improved_semantic_router = ImprovedSemanticRouter(
+    routes={
+        "Questions about visas, immigration, and stay in Korea": handle_visa_query,
+        "Questions about labor laws, worker rights, and employment in Korea": handle_labor_law_query,
+        "General questions about life in Korea": handle_general_query
+    },
+    default_handler=default_handler,
+    similarity_threshold=0.6
+)
+
 
 # Semantic Router 초기화
 semantic_router = SemanticRouter({
@@ -424,9 +507,26 @@ async def process_law_request(chat_request: ChatRequest, db: Session):
 
         language = detect_language(question)
         
-        handler = semantic_router.route(question)
+        # 컨텍스트 정보 생성
+        context = {
+            "user_no": userNo,
+            "category_no": categoryNo,
+            "session_id": session_id,
+            "chat_his_no": chat_his_no
+        }
         
-        response = await handler(question, language, session_id, userNo, db)
+        # 개선된 라우터 사용
+        handler, similarity = improved_semantic_router.route(question, context)
+        
+        # 라우팅 결과 로깅
+        logger.info(f"Routed to handler: {handler.__name__} with similarity: {similarity:.2f}")
+        
+        # 낮은 신뢰도 처리
+        if similarity < 0.3:  # 이 임계값은 필요에 따라 조정할 수 있습니다
+            logger.warning(f"Low confidence routing for question: '{question}'. Using default handler.")
+            response = await default_handler(question, language, session_id, userNo, db)
+        else:
+            response = await handler(question, language, session_id, userNo, db)
         
         is_new_session = chat_his_no is None and session_id not in session_chat_mapping
         current_chat_his_no = chat_his_no or session_chat_mapping.get(session_id)
@@ -455,7 +555,7 @@ async def process_law_request(chat_request: ChatRequest, db: Session):
                 yield f"data: {json.dumps({'type': 'newline'})}\n\n"
                 await asyncio.sleep(0.2)
             
-            yield f"data: {json.dumps({'type': 'end', 'chatHisNo': chat_history.CHAT_HIS_NO, 'chatHisSeq': chat_history.CHAT_HIS_SEQ, 'detected_language': language})}\n\n"
+            yield f"data: {json.dumps({'type': 'end', 'chatHisNo': chat_history.CHAT_HIS_NO, 'chatHisSeq': chat_history.CHAT_HIS_SEQ, 'detected_language': language, 'routing_similarity': similarity})}\n\n"
 
         return StreamingResponse(generate_response(), media_type="text/event-stream")
         
@@ -465,7 +565,6 @@ async def process_law_request(chat_request: ChatRequest, db: Session):
             status_code=500,
             content={"detail": f"Internal Server Error: {str(e)}"}
         )
-
     
 # 세션 관리를 위한 새로운 엔드포인트 (차후 추가)
 @app.post("/end_session")

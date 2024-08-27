@@ -4,7 +4,7 @@ from typing import Optional, Dict, Any
 from sqlalchemy.orm import Session
 from fastapi.responses import StreamingResponse
 
-from app.models.study_analysis import text_to_speech, study_analysis, study_image_analysis
+from app.models.study_analysis import text_to_speech, study_analysis, study_analysis
 from app.models.law_and_visa.law_and_visa_main import process_law_request, ChatRequest
 from app.models.medical import MedicalAssistant
 from app.models.board_summary import manual_update_summaries, start_scheduler, shutdown_event
