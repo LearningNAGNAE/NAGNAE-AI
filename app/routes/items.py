@@ -6,6 +6,8 @@ from fastapi.responses import StreamingResponse
 
 from app.models.study_analysis import text_to_speech, study_analysis, study_analysis
 from app.models.law_and_visa.law_and_visa_main import process_law_request, ChatRequest
+from app.models.academic.main import query_agent, ChatRequest
+from app.models.job.jobmatch_pro import search_jobs_endpoint, ChatRequest
 from app.models.medical import MedicalAssistant
 from app.models.board_summary import manual_update_summaries, start_scheduler, shutdown_event
 from app.database.db import get_db
@@ -107,6 +109,16 @@ async def law_endpoint(chat_request: ChatRequest, db: Session = Depends(get_db))
     return await process_law_request(chat_request, db)
 
 
+@router.post("/academic")
+async def academin_endpoint(chat_request: ChatRequest, db: Session = Depends(get_db)):
+    return await query_agent(chat_request, db)
+
+@router.post("/search_jobs")
+async def job_endpoint(chat_request: ChatRequest, db: Session = Depends(get_db)):
+    return await search_jobs_endpoint(chat_request, db)
+
+
+
 @router.post("/update-summaries")
 async def update_summaries():
     return await manual_update_summaries()
@@ -120,5 +132,3 @@ def startup_event():
 @router.on_event("shutdown")
 async def shutdown_app():
     await shutdown_event()
-
-

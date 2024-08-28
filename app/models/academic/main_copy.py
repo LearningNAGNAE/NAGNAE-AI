@@ -207,8 +207,15 @@ def initialize_agent(entities):
 
 
 
-# 엔드포인트
-async def query_agent(chat_request: ChatRequest, db: Session = Depends(get_db)):
+
+
+
+
+
+
+
+@app.post("/academic", response_model=ChatResponse)
+async def query_agent(request: Request, chat_request: ChatRequest, db: Session = Depends(get_db)):
 
     question = chat_request.question
     userNo = chat_request.userNo
@@ -269,4 +276,4 @@ async def query_agent(chat_request: ChatRequest, db: Session = Depends(get_db)):
     return JSONResponse(content=chat_response.dict())
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)

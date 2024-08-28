@@ -26,7 +26,6 @@ import uuid
 from ...database.db import get_db
 from ...database import crud
 from sqlalchemy.orm import Session
-import uvicorn
 
 # # Load the job location data
 # with open('job_location.json', 'r', encoding='utf-8') as f:
@@ -568,8 +567,8 @@ def translate_to_user_language(text: str, target_language: str) -> str:
     return response.content.strip()
 
 
-
-async def search_jobs_endpoint(chat_request: ChatRequest, db: Session = Depends(get_db)):
+@app.post("/search_jobs", response_model=ChatResponse)
+async def search_jobs_endpoint(request: Request, chat_request: ChatRequest, db: Session = Depends(get_db)):
 
     question = chat_request.question
     userNo = chat_request.userNo
@@ -613,5 +612,6 @@ async def search_jobs_endpoint(chat_request: ChatRequest, db: Session = Depends(
     return JSONResponse(content=chat_response.dict())
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 
