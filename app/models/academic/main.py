@@ -6,7 +6,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from config import cross_encoder, openai, es_client, embedding 
-from embedding_indexing import index_exists, embed_and_index_university_data, embed_and_index_university_major, embed_and_index_major_details, embed_and_index_pdf_data, update_indices
+# from embedding_indexing import index_exists, embed_and_index_university_data, embed_and_index_university_major, embed_and_index_major_details, embed_and_index_pdf_data, update_indices
 from utils import trans_language, detect_language, korean_language, extract_entities, generate_elasticsearch_query, english_language
 from langchain.schema import BaseRetriever, Document
 from langchain.prompts import PromptTemplate
@@ -217,17 +217,17 @@ async def query_agent(chat_request: ChatRequest, db: Session = Depends(get_db)):
     chat_his_no = chat_request.chat_his_no
     is_new_session = chat_request.is_new_session
 
-    # 인덱스 초기화 확인 및 수행
-    if not index_exists('university_data') or \
-       not index_exists('university_major') or \
-       not index_exists('major_details') or \
-       not index_exists('pdf_data'):
-        print("Initial setup required. Running full indexing process...")
-        await embed_and_index_university_data()
-        await embed_and_index_university_major()
-        await embed_and_index_major_details()
-        await embed_and_index_pdf_data()
-        print("Initial indexing completed.")
+    # # 인덱스 초기화 확인 및 수행
+    # if not index_exists('university_data') or \
+    #    not index_exists('university_major') or \
+    #    not index_exists('major_details') or \
+    #    not index_exists('pdf_data'):
+    #     print("Initial setup required. Running full indexing process...")
+    #     await embed_and_index_university_data()
+    #     await embed_and_index_university_major()
+    #     await embed_and_index_major_details()
+    #     await embed_and_index_pdf_data()
+    #     print("Initial indexing completed.")
 
     # await update_indices()
 

@@ -112,241 +112,241 @@ def korean_language(text: str) -> str:
 
 
 # 2. 잡크롤링
-def jobploy_crawler(lang, pages=5):
-    if isinstance(pages, dict):
-        pages = 5
-    elif not isinstance(pages, int):
-        try:
-            pages = int(pages)
-        except ValueError:
-            pages = 5
+# def jobploy_crawler(lang, pages=5):
+#     if isinstance(pages, dict):
+#         pages = 5
+#     elif not isinstance(pages, int):
+#         try:
+#             pages = int(pages)
+#         except ValueError:
+#             pages = 5
 
-    chrome_driver_path = r"C:\chromedriver\chromedriver.exe"
+#     chrome_driver_path = r"C:\chromedriver\chromedriver.exe"
 
-    chrome_options = Options()
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--window-size=1920x1080")
-    # chrome_options.add_argument("--headless")
+#     chrome_options = Options()
+#     chrome_options.add_argument("--no-sandbox")
+#     chrome_options.add_argument("--disable-dev-shm-usage")
+#     chrome_options.add_argument("--window-size=1920x1080")
+#     # chrome_options.add_argument("--headless")
 
-    service = Service(chrome_driver_path)
-    driver = webdriver.Chrome(service=service, options=chrome_options)
+#     service = Service(chrome_driver_path)
+#     driver = webdriver.Chrome(service=service, options=chrome_options)
 
-    results = []
+#     results = []
 
-    try:
-        for page in range(1, pages + 1):
-            url = f"https://www.jobploy.kr/{lang}/recruit?page={page}"
-            driver.get(url)
+#     try:
+#         for page in range(1, pages + 1):
+#             url = f"https://www.jobploy.kr/{lang}/recruit?page={page}"
+#             driver.get(url)
 
-            WebDriverWait(driver, 20).until(
-                EC.presence_of_element_located((By.CLASS_NAME, "content"))
-            )
+#             WebDriverWait(driver, 20).until(
+#                 EC.presence_of_element_located((By.CLASS_NAME, "content"))
+#             )
 
-            job_listings = driver.find_elements(By.CSS_SELECTOR, ".item.col-6")
+#             job_listings = driver.find_elements(By.CSS_SELECTOR, ".item.col-6")
 
-            for job in job_listings:
-                title_element = job.find_element(By.CSS_SELECTOR, "h6.mb-1")
-                link_element = job.find_element(By.CSS_SELECTOR, "a").get_attribute("href")
-                pay_element = job.find_element(By.CSS_SELECTOR, "p.pay")
-                company_name_element = job.find_element(By.CSS_SELECTOR, "span.text-info")
-                badge_elements = job.find_elements(By.CSS_SELECTOR, ".badge.text-dark.bg-secondary-150.rounded-pill")
+#             for job in job_listings:
+#                 title_element = job.find_element(By.CSS_SELECTOR, "h6.mb-1")
+#                 link_element = job.find_element(By.CSS_SELECTOR, "a").get_attribute("href")
+#                 pay_element = job.find_element(By.CSS_SELECTOR, "p.pay")
+#                 company_name_element = job.find_element(By.CSS_SELECTOR, "span.text-info")
+#                 badge_elements = job.find_elements(By.CSS_SELECTOR, ".badge.text-dark.bg-secondary-150.rounded-pill")
 
-                if len(badge_elements) >= 3:
-                    location_element = badge_elements[0]
-                    task_element = badge_elements[1]
-                    closing_date_element = badge_elements[2]
-                    location = location_element.text
-                    task = task_element.text
-                    closing_date = closing_date_element.text
-                else:
-                    closing_date = "마감 정보 없음"
-                    location = "위치 정보 없음"
-                    task = "직무 정보 없음"
+#                 if len(badge_elements) >= 3:
+#                     location_element = badge_elements[0]
+#                     task_element = badge_elements[1]
+#                     closing_date_element = badge_elements[2]
+#                     location = location_element.text
+#                     task = task_element.text
+#                     closing_date = closing_date_element.text
+#                 else:
+#                     closing_date = "마감 정보 없음"
+#                     location = "위치 정보 없음"
+#                     task = "직무 정보 없음"
 
-                title = title_element.text
-                pay = pay_element.text
-                company_name = company_name_element.text
+#                 title = title_element.text
+#                 pay = pay_element.text
+#                 company_name = company_name_element.text
                 
-                results.append({
-                    "title": title,
-                    "company_name": company_name,
-                    "link": link_element,
-                    "closing_date": closing_date,
-                    "location": location,
-                    "pay": pay,
-                    "task": task,
-                    "language": lang
-                })
+#                 results.append({
+#                     "title": title,
+#                     "company_name": company_name,
+#                     "link": link_element,
+#                     "closing_date": closing_date,
+#                     "location": location,
+#                     "pay": pay,
+#                     "task": task,
+#                     "language": lang
+#                 })
 
-    finally:
-        driver.quit()
+#     finally:
+#         driver.quit()
            
-    return results
+#     return results
 
-# 크롤링 데이터 가져오기 및 파일로 저장
-default_lang = 'ko'  # 기본 언어를 한국어로 설정
-crawled_data = jobploy_crawler(lang=default_lang, pages=5)
+# # 크롤링 데이터 가져오기 및 파일로 저장
+# default_lang = 'ko'  # 기본 언어를 한국어로 설정
+# crawled_data = jobploy_crawler(lang=default_lang, pages=5)
 
 # 3. 엔터티 추출 함수 (ChatGPT 기반)
-def extract_entities(query):
-    system_message = """
-    # Role
-    You are an NER (Named Entity Recognition) machine that specializes in extracting entities from text.
+# def extract_entities(query):
+#     system_message = """
+#     # Role
+#     You are an NER (Named Entity Recognition) machine that specializes in extracting entities from text.
 
-    # Task
-    - Extract the following entities from the user query: LOCATION, MONEY, OCCUPATION, and PAY_TYPE.
-    - Return the extracted entities in a fixed JSON format, as shown below.
+#     # Task
+#     - Extract the following entities from the user query: LOCATION, MONEY, OCCUPATION, and PAY_TYPE.
+#     - Return the extracted entities in a fixed JSON format, as shown below.
 
-    # Entities
-    - **LOCATION**: Identifies geographical locations (e.g., cities, provinces). 
-    - In Korean, locations often end with "시" (si), "군" (gun), or "구" (gu).
-    - In English or other languages, locations may end with "-si", "-gun", or "-gu".
-    - Ensure "시" is not misinterpreted or separated from the city name.
-    - **Special Case**: "화성" should always be interpreted as "Hwaseong" in South Korea, and never as "Mars". This should override any other interpretation.
-    - **MONEY**: Identify any salary information mentioned in the text. This could be represented in different forms:
-    - Examples include "250만원", "300만 원", "5천만 원" etc.
-    - Convert amounts expressed in "만원" or "천원" to full numerical values. For example:
-        - "250만원" should be interpreted as 250 * 10,000 = 2,500,000원.
-        - "5천만원" should be interpreted as 5,000 * 10,000 = 50,000,000원.
-    - Extract the numerical value in its full form.
-    - **OCCUPATION**: Detects job titles or professions.
-    - **PAY_TYPE**: Identifies the type of payment mentioned. This could be:
-    - "연봉" or "annual salary" for yearly salary
-    - "월급" or "salary" for monthly salary
-    - "시급" or "hourly" for hourly salary
+#     # Entities
+#     - **LOCATION**: Identifies geographical locations (e.g., cities, provinces). 
+#     - In Korean, locations often end with "시" (si), "군" (gun), or "구" (gu).
+#     - In English or other languages, locations may end with "-si", "-gun", or "-gu".
+#     - Ensure "시" is not misinterpreted or separated from the city name.
+#     - **Special Case**: "화성" should always be interpreted as "Hwaseong" in South Korea, and never as "Mars". This should override any other interpretation.
+#     - **MONEY**: Identify any salary information mentioned in the text. This could be represented in different forms:
+#     - Examples include "250만원", "300만 원", "5천만 원" etc.
+#     - Convert amounts expressed in "만원" or "천원" to full numerical values. For example:
+#         - "250만원" should be interpreted as 250 * 10,000 = 2,500,000원.
+#         - "5천만원" should be interpreted as 5,000 * 10,000 = 50,000,000원.
+#     - Extract the numerical value in its full form.
+#     - **OCCUPATION**: Detects job titles or professions.
+#     - **PAY_TYPE**: Identifies the type of payment mentioned. This could be:
+#     - "연봉" or "annual salary" for yearly salary
+#     - "월급" or "salary" for monthly salary
+#     - "시급" or "hourly" for hourly salary
 
-    # Output Format
-    - The output should be a JSON object with the following structure:
-    {"LOCATION": "", "MONEY": "", "OCCUPATION": "", "PAY_TYPE": ""}
+#     # Output Format
+#     - The output should be a JSON object with the following structure:
+#     {"LOCATION": "", "MONEY": "", "OCCUPATION": "", "PAY_TYPE": ""}
 
-    # Policy
-    - If there is no relevant information for a specific entity, return null for that entity.
-    - Do not provide any explanations or additional information beyond the JSON output.
-    - The output should be strictly in the JSON format specified.
+#     # Policy
+#     - If there is no relevant information for a specific entity, return null for that entity.
+#     - Do not provide any explanations or additional information beyond the JSON output.
+#     - The output should be strictly in the JSON format specified.
 
-    # Examples
-    - Query: "화성에 연봉 3천만원 이상 주는 생산직 일자리 있어?"
-    Output: {'LOCATION': '화성', 'MONEY': '30,000,000', 'OCCUPATION': '생산', 'PAY_TYPE': '연봉'}
-    """
+#     # Examples
+#     - Query: "화성에 연봉 3천만원 이상 주는 생산직 일자리 있어?"
+#     Output: {'LOCATION': '화성', 'MONEY': '30,000,000', 'OCCUPATION': '생산', 'PAY_TYPE': '연봉'}
+#     """
 
-    messages = [
-        {"role": "system", "content": system_message},
-        {"role": "user", "content": query}
-    ]
+#     messages = [
+#         {"role": "system", "content": system_message},
+#         {"role": "user", "content": query}
+#     ]
 
-    # Generate the response from the model
-    response = llm(messages=messages)
+#     # Generate the response from the model
+#     response = llm(messages=messages)
     
-    print(f"==============================================")
-    print(response)
-    print(f"==============================================")
-    # Handle response based on its actual structure
-    response_content = response.choices[0].message.content if hasattr(response, 'choices') else str(response)
+#     print(f"==============================================")
+#     print(response)
+#     print(f"==============================================")
+#     # Handle response based on its actual structure
+#     response_content = response.choices[0].message.content if hasattr(response, 'choices') else str(response)
     
 
 
-    # Parse the JSON response
-    try:
-        entities = json.loads(response.content)
-    except json.JSONDecodeError as e:
-        print(f"Error parsing JSON: {e}")
-        entities = {"LOCATION": None, "MONEY": None, "OCCUPATION": None, "PAY_TYPE": None}
+#     # Parse the JSON response
+#     try:
+#         entities = json.loads(response.content)
+#     except json.JSONDecodeError as e:
+#         print(f"Error parsing JSON: {e}")
+#         entities = {"LOCATION": None, "MONEY": None, "OCCUPATION": None, "PAY_TYPE": None}
     
-    print("잘뽑아 왔나!!:", entities)
-    return entities
+#     print("잘뽑아 왔나!!:", entities)
+#     return entities
 
 # 4. 벡터 스토어 생성 함수
-def create_faiss_index(data):
-    # 텍스트와 메타데이터 생성
-    texts = [f"{item['title']} {item['company_name']} {item['link']} {item['closing_date']} {item['location']} {item['pay']} {item['task']}"
-             for item in data]
-    metadata = [{k: item[k] for k in ['title', 'company_name', 'link', 'closing_date', 'location', 'pay', 'task']} for item in data]
+# def create_faiss_index(data):
+#     # 텍스트와 메타데이터 생성
+#     texts = [f"{item['title']} {item['company_name']} {item['link']} {item['closing_date']} {item['location']} {item['pay']} {item['task']}"
+#              for item in data]
+#     metadata = [{k: item[k] for k in ['title', 'company_name', 'link', 'closing_date', 'location', 'pay', 'task']} for item in data]
     
-    # print("임베딩된:", texts)
-    # print(metadata);
+#     # print("임베딩된:", texts)
+#     # print(metadata);
 
-    # 벡터화
-    embeddings = OpenAIEmbeddings()
+#     # 벡터화
+#     embeddings = OpenAIEmbeddings()
     
-    # FAISS 인덱스 생성
-    vectorstore = FAISS.from_texts(texts, embeddings, metadatas=metadata)
+#     # FAISS 인덱스 생성
+#     vectorstore = FAISS.from_texts(texts, embeddings, metadatas=metadata)
     
-    return vectorstore
+#     return vectorstore
 
-faiss_index = create_faiss_index(crawled_data)
+# faiss_index = create_faiss_index(crawled_data)
 
 # 5. ElasticSearch 인덱스 생성 및 데이터 업로드
-def create_elasticsearch_index(data, index_name="jobs"):
-    # 기존 인덱스 삭제 (있을 경우)
-    if es_client.indices.exists(index=index_name):
-        es_client.indices.delete(index=index_name)
+# def create_elasticsearch_index(data, index_name="jobs"):
+#     # 기존 인덱스 삭제 (있을 경우)
+#     if es_client.indices.exists(index=index_name):
+#         es_client.indices.delete(index=index_name)
 
-    # 새로운 매핑 생성
-    mapping = {
-        "mappings": {
-            "properties": {
-                "title": {"type": "text"},
-                "company_name": {"type": "text"},
-                "link": {"type": "text"},
-                "closing_date": {"type": "text"},
-                "location": {"type": "text"},
-                "pay": {"type": "text"},
-                "pay_amount": {"type": "long"},  # 급여 필드를 정수형으로 추가
-                "pay_type": {"type": "text"},
-                "task": {"type": "text"},
-                "language": {"type": "keyword"}
-            }
-        }
-    }
+#     # 새로운 매핑 생성
+#     mapping = {
+#         "mappings": {
+#             "properties": {
+#                 "title": {"type": "text"},
+#                 "company_name": {"type": "text"},
+#                 "link": {"type": "text"},
+#                 "closing_date": {"type": "text"},
+#                 "location": {"type": "text"},
+#                 "pay": {"type": "text"},
+#                 "pay_amount": {"type": "long"},  # 급여 필드를 정수형으로 추가
+#                 "pay_type": {"type": "text"},
+#                 "task": {"type": "text"},
+#                 "language": {"type": "keyword"}
+#             }
+#         }
+#     }
 
-    # 인덱스 생성
-    es_client.indices.create(index=index_name, body=mapping)
+#     # 인덱스 생성
+#     es_client.indices.create(index=index_name, body=mapping)
 
-    # 데이터 인덱싱
-    for item in data:
-        pay_str = item.get("pay", "")
-        pay_amount = None
-        pay_type = None
+#     # 데이터 인덱싱
+#     for item in data:
+#         pay_str = item.get("pay", "")
+#         pay_amount = None
+#         pay_type = None
 
-        # 급여 유형 및 금액 처리
-        if "연봉" in pay_str or "annual salary" in pay_str.lower():
-            pay_type = "annual salary"
-        elif "월급" in pay_str or "salary" in pay_str.lower():
-            pay_type = "salary"
-        elif "시급" in pay_str or "hourly" in pay_str.lower():
-            pay_type = "hourly"
+#         # 급여 유형 및 금액 처리
+#         if "연봉" in pay_str or "annual salary" in pay_str.lower():
+#             pay_type = "annual salary"
+#         elif "월급" in pay_str or "salary" in pay_str.lower():
+#             pay_type = "salary"
+#         elif "시급" in pay_str or "hourly" in pay_str.lower():
+#             pay_type = "hourly"
 
         
 
 
-        if pay_type:
-            try:
-                # 숫자 부분만 추출하여 pay_amount로 변환
-                pay_amount = int(pay_str.split(':')[1].replace('원', '').replace('KRW', '').replace('$', '').replace(',', '').strip())
-            except ValueError:
-                pass
+#         if pay_type:
+#             try:
+#                 # 숫자 부분만 추출하여 pay_amount로 변환
+#                 pay_amount = int(pay_str.split(':')[1].replace('원', '').replace('KRW', '').replace('$', '').replace(',', '').strip())
+#             except ValueError:
+#                 pass
 
-        item["pay_type"] = pay_type
-        item["pay_amount"] = pay_amount
+#         item["pay_type"] = pay_type
+#         item["pay_amount"] = pay_amount
         
 
-        # FAISS용 텍스트 필드 추가
-        item["vector_text"] = f"{item['pay']} {item['task']} {item['location']}"
-        es_client.index(index=index_name, body=item)
+#         # FAISS용 텍스트 필드 추가
+#         item["vector_text"] = f"{item['pay']} {item['task']} {item['location']}"
+#         es_client.index(index=index_name, body=item)
 
-    print(f"Total {len(data)} documents indexed.")
+#     print(f"Total {len(data)} documents indexed.")
 
 # 6. 언어별 데이터 저장 함수
-def save_data_to_file(data, filename):
-    with open(filename, "w", encoding="utf-8") as file:
-        json.dump(data, file, ensure_ascii=False, indent=2)
+# def save_data_to_file(data, filename):
+#     with open(filename, "w", encoding="utf-8") as file:
+#         json.dump(data, file, ensure_ascii=False, indent=2)
 
-# 크롤링 데이터를 텍스트 파일로 저장
-save_data_to_file(crawled_data, f"crawled_data_{default_lang}.txt")
+# # 크롤링 데이터를 텍스트 파일로 저장
+# save_data_to_file(crawled_data, f"crawled_data_{default_lang}.txt")
 
-# ElasticSearch에 데이터 업로드
-create_elasticsearch_index(crawled_data)
+# # ElasticSearch에 데이터 업로드
+# create_elasticsearch_index(crawled_data)
 
 # 7. 검색 도구 함수 정의
 @tool
